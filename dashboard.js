@@ -461,22 +461,30 @@
     }
 
 // --- 4. PLAYBACK ENGINE ---
-    window.playTrack = function(id) {
+window.playTrack = function(id) {
         if (!id || !SONG_DATA[id] || !SONG_DATA[id].url) return;
         if (currentTrackId === id) { togglePlay(); return; } 
-        
-        currentTrackId = id; 
+
+        // 1. Find the album and track info safely
         var trackInfo = null;
         var album = ALBUMS.find(a => {
+            // Check if this album even has tracks defined yet
+            if (!TRACKS[a.id]) return false; 
             trackInfo = TRACKS[a.id].find(t => t.id === id);
             return !!trackInfo;
         });
-        if (!album) return;
 
-        // Audio Logic
+        // 2. If no album/track found, stop here so we don't break the UI
+        if (!album || !trackInfo) {
+            console.error("Playback Error: Track ID '" + id + "' not found in any album.");
+            return;
+        }
+
+        // 3. Audio Logic
+        currentTrackId = id;
         currentAlbumId = album.id; 
         audio.src = SONG_DATA[id].url; 
-        audio.play(); 
+        audio.play().catch(err => console.error("Audio Playback Blocked:", err)); 
         isPlaying = true;
 
         // Player Bar UI
