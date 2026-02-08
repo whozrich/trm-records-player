@@ -1,6 +1,6 @@
 environment:
   groups:
-    - keys # Make sure your GITHUB_TOKEN variable is in this group
+    - keys # Make sure your GITHUB_TOKEN is in this group in the Codemagic UI
 
 workflows:
   ios-debug-build:
@@ -11,14 +11,18 @@ workflows:
         script: |
           cd mobile
           
-          # 1. Force Git to use your token for BOTH https and ssh requests
+          # 1. Clear any old Git configurations that might be stuck
+          git config --global --remove-section url."https://github.com/" || true
+          
+          # 2. Re-apply the token specifically for Median/GoNative specs
+          # We use the ${GITHUB_TOKEN} syntax to ensure the variable is read
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
           
-          # 2. Manually add the private repo using the token so CocoaPods doesn't have to 'guess'
+          # 3. Add the repo manually to "prime" the system
           pod repo add gonativeio-gonative-specs "https://x-access-token:${GITHUB_TOKEN}@github.com/gonativeio/gonative-specs.git" || true
           
-          # 3. Install
+          # 4. Install Pods
           pod install
       - name: Build unsigned .ipa
         script: | 
