@@ -1,17 +1,17 @@
 {
-  "featuredId": "rich-album-001", 
+  "featuredId": "rich-album", 
   "albums": [
     {
-      "id": "rich-album-001",
+      "id": "rich-album",
       "artistId": "therichmusic",
       "name": "RICH",
-      "art": "https://your-image-url.com/art.jpg",
+      "art": "https://thumbs2.imgbox.com/21/07/fBkN1oX6_b.png",
       "genre": "Hip-Hop",
-      "releaseDate": "2024",
-      "fullDate": "January 20, 2024",
-      "type": "Studio Album",
-      "comingSoon": false,
-      "signUpLink": "",
+      "releaseDate": "2027",
+      "fullDate": "2027",
+      "type": "Album",
+      "comingSoon": true,
+      "signUpLink": "https://even.biz/l/rich-sign-up",
       "purchaseLinks": [
         { "label": "Limited Vinyl", "url": "https://yourshop.com/vinyl" },
         { "label": "Digital Download", "url": "https://yourshop.com/digital" }
@@ -20,7 +20,7 @@
   ],
   "tracks": {
     "rich-album-001": [
-      { "id": "track_01", "title": "Money Talk", "duration": "3:45", "hiddenName": false },
+      { "id": "track_01", "title": "Money Talk", "duration": "3:45", "hiddenName": true },
       { "id": "track_02", "title": "Night Shift", "duration": "2:15", "hiddenName": true }
     ]
   },
