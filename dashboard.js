@@ -85,6 +85,11 @@
 </div>
 
 <style>
+/* --- GLOBAL FONT RESET --- */
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
 /* --- MOBILE BLOCKER --- */
 #mobile-blocker {
     display: none;
@@ -97,10 +102,9 @@
     justify-content: center;
     text-align: center;
     padding: 40px;
-    font-family: 'Inter', sans-serif;
 }
 
-#mobile-blocker h1 { color: #00ff88; font-size: 24px; margin-bottom: 10px; }
+#mobile-blocker h1 { color: #00ff88; font-size: 24px; margin-bottom: 10px; font-weight: 800; }
 #mobile-blocker p { color: #666; font-size: 16px; line-height: 1.5; }
 
 /* Hide App on Mobile, Show Blocker */
@@ -109,35 +113,54 @@
     #mobile-blocker { display: flex; }
 }
 
-/* --- SIDEBAR CENTERING --- */
+/* --- SIDEBAR REFINEMENT --- */
 .sidebar-item { 
     display: flex; 
     align-items: center; 
-    justify-content: center; /* This centers the icon/image */
-    height: 48px;
+    justify-content: center; /* Centered when minimized */
+    height: 52px;
     width: 100%;
     cursor: pointer; 
-    transition: 0.2s; 
+    transition: background 0.2s ease; 
     margin-bottom: 4px;
-    border-radius: 8px;
+    border-radius: 10px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
-/* When sidebar is expanded, align left */
+.sidebar-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Space between Icon/Art and Text */
+.sidebar-item img, .sidebar-item svg {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* Desktop: When sidebar is expanded, push text away from art */
 #sidebar:not(.sidebar-minimized) .sidebar-item {
     justify-content: flex-start;
     padding-left: 15px;
 }
 
-.sidebar-item img {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
-    object-fit: cover;
-    flex-shrink: 0;
+#sidebar:not(.sidebar-minimized) .sidebar-item img,
+#sidebar:not(.sidebar-minimized) .sidebar-item svg {
+    margin-right: 14px; /* The gap fix */
 }
 
-.sidebar-item svg {
-    flex-shrink: 0;
+/* Sidebar Text Styling */
+.sidebar-full-elem {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Keeps long titles from breaking the layout */
 }
 
 /* Hide text when minimized */
