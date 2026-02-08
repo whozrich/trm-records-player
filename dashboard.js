@@ -604,21 +604,26 @@
     };
 
 // --- 6. INITIALIZATION & REFRESH INTERVAL ---
-    
-    // Check if we are on a local file system or Fourthwall
+
+    // 1. Cleanup old intervals to prevent memory leaks/duplicate fetches
+    if (window.trmInterval) clearInterval(window.trmInterval);
+
+    // 2. Cleanup old audio if it exists (Optional: remove this if you want music to persist through UI updates)
+    // if (window.trmAudio) { window.trmAudio.pause(); window.trmAudio.src = ""; }
+    // window.trmAudio = audio; // Track the current audio object globally
+
     const isLocal = window.location.protocol === 'file:';
 
     loadMusicData().then(() => {
-        // Force view to Home if it's stuck on Initializing
         const cv = document.getElementById('content-view');
-        if (cv.innerHTML.includes("INITIALIZING")) {
+        if (cv && cv.innerHTML.includes("INITIALIZING")) {
             viewHome();
         }
     });
 
-    // Only poll GitHub if we aren't in a restricted local file environment
     if (!isLocal) {
-        setInterval(loadMusicData, 5000);
+        // Store the interval ID on the window object so we can clear it next time
+        window.trmInterval = setInterval(loadMusicData, 5000);
     }
 
 })();
