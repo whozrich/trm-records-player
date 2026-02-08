@@ -1,28 +1,31 @@
 environment:
   groups:
-    - keys # Make sure your GITHUB_TOKEN is in this group in the Codemagic UI
+    - keys  # <--- MUST match the group name in Codemagic UI exactly
 
 workflows:
   ios-debug-build:
     name: iOS Debug Build
     instance_type: mac_mini_m2
     scripts:
+      - name: Verify Environment Variables
+        script: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ ERROR: GITHUB_TOKEN is not found. Check your group name in the UI."
+            exit 1
+          else
+            echo "✅ GITHUB_TOKEN is loaded."
+          fi
       - name: Force Token Authentication
         script: |
           cd mobile
-          
-          # 1. Clear any old Git configurations that might be stuck
-          git config --global --remove-section url."https://github.com/" || true
-          
-          # 2. Re-apply the token specifically for Median/GoNative specs
-          # We use the ${GITHUB_TOKEN} syntax to ensure the variable is read
+          # Override Git to use your token for any GitHub request
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
           
-          # 3. Add the repo manually to "prime" the system
+          # Manually add the private Median/GoNative spec repo
           pod repo add gonativeio-gonative-specs "https://x-access-token:${GITHUB_TOKEN}@github.com/gonativeio/gonative-specs.git" || true
           
-          # 4. Install Pods
+          # Install dependencies
           pod install
       - name: Build unsigned .ipa
         script: | 
