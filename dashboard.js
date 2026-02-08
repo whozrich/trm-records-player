@@ -12,13 +12,12 @@
             --accent-green: #00ff88;
         }
 
-        /* 1. LAYOUT ENGINE - Fixes the "Push" and "Cutoff" */
+        /* 1. LAYOUT ENGINE */
         body { 
             margin: 0; 
             background: #000; 
             color: #fff; 
             font-family: 'Inter', sans-serif; 
-            /* Changed from hidden to allow scrolling if header pushes content */
             overflow-x: hidden; 
             overflow-y: auto; 
             display: flex;
@@ -28,7 +27,7 @@
 
         .main-content-wrapper {
             display: flex;
-            flex-direction: row; /* Keeping sidebar and main content side-by-side */
+            flex-direction: row;
             flex: 1;
             margin-top: var(--header-height);
             width: 100%;
@@ -41,11 +40,13 @@
             overflow-x: hidden;
             padding: 0 4vw;
             box-sizing: border-box;
+            /* Added padding-bottom so the player doesn't sit flush against the very bottom */
+            padding-bottom: 100px; 
         }
 
         /* 2. DYNAMIC COMPONENTS */
         .featured-release-container {
-            max-height: 55vh; /* Slightly smaller to keep catalogue in view */
+            max-height: 55vh;
             width: 100%;
             overflow: hidden;
             border-radius: 12px;
@@ -72,13 +73,13 @@
         .progress-bar-line {
             flex-grow: 1;
             min-width: 0;
-            height: 3px; /* Sleeker height to save space */
+            height: 3px; 
             background: var(--accent-green);
             box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
             border-radius: 2px;
         }
 
-        /* 4. INTERACTIVE ELEMENTS (Original Styles) */
+        /* 4. INTERACTIVE ELEMENTS */
         .glow-card { 
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
             border: 1px solid #222 !important;
@@ -118,45 +119,8 @@
             margin-right: 10px;
         }
 
-        .track-row:not(.disabled):hover .track-num { display: none !important; }
-        .track-row:not(.disabled):hover .track-play-hover { 
-            display: flex !important; 
-            align-items: center;
-            justify-content: center;
-            color: var(--accent-green); 
-        }
-        
-        #search-input {
-            width: calc(100% - 20px);
-            background: #111;
-            border: 1px solid #222;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 0 10px 20px 10px;
-            font-family: inherit;
-            outline: none;
-            transition: 0.3s;
-        }
-        #search-input:focus { border-color: var(--accent-green); }
-
-        /* 5. SIDE PANELS & UTILS */
-        #info-panel {
-            position: fixed;
-            right: -400px;
-            top: 0;
-            width: 350px;
-            height: 100vh;
-            background: #080808;
-            border-left: 1px solid #222;
-            z-index: 90;
-            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            padding: 30px;
-            overflow-y: auto;
-        }
-        #info-panel.open { right: 0; }
-
-        .purchase-select, .signup-btn {
+        /* 5. DROPDOWN & PANEL FIXES */
+        .purchase-select {
             background: #111;
             color: #fff;
             border: 1px solid #333;
@@ -169,10 +133,25 @@
             outline: none;
             transition: 0.3s;
             margin-top: 15px;
-            text-decoration: none;
-            display: inline-block;
+            appearance: none; /* Cleaner look for the "Ways to Purchase" menu */
+            position: relative;
+            z-index: 5;
         }
-        .purchase-select:hover, .signup-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
+
+        #info-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 350px;
+            height: 100vh;
+            background: #080808;
+            border-left: 1px solid #222;
+            z-index: 100; /* Higher z-index to ensure it slides over the player */
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 30px;
+            overflow-y: auto;
+        }
+        #info-panel.open { right: 0; }
 
         /* 6. MOBILE LOGIC */
         @media (max-width: 768px) {
@@ -184,6 +163,7 @@
                 gap: 10px;
             }
             .featured-release-card h1 { font-size: 8vw; }
+            .fourthwall-custom-container { padding-bottom: 150px; } /* Extra space for mobile player */
         }
 
         ::-webkit-scrollbar { width: 8px; }
