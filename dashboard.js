@@ -25,7 +25,7 @@
         }
 
         #dashboard-wrapper {
-            position: fixed; /* Bypasses Fourthwall container limits */
+            position: fixed; 
             top: 0;
             left: 0;
             width: 100vw;
@@ -33,7 +33,7 @@
             display: flex; 
             flex-direction: column;
             overflow: hidden;
-            z-index: 9999999; /* Stays above all site elements */
+            z-index: 9999999; 
             background: #000;
         }
 
@@ -114,7 +114,7 @@
 
         /* 4. SIDEBAR & SEARCH FIX */
         .sidebar-container {
-            width: 240px; 
+            width: 260px; 
             background: #000; 
             border-right: 1px solid #111;
             display: flex; 
@@ -163,18 +163,29 @@
             transform: scale(1.05);
         }
 
-        /* 6. CATALOGUE HOVER FIX */
+        /* 6. CATALOGUE HOVER FIX - Adjusted for Image 2 Alignment */
         .sidebar-item {
-            padding: 10px 20px; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 15px; 
             cursor: pointer; 
             border-radius: 6px;
             margin: 2px 10px; 
             transition: 0.2s; 
             color: #b3b3b3;
+            font-size: 13px;
+            font-weight: 600;
         }
         .sidebar-item:hover {
             background: rgba(255,255,255,0.05);
             color: #fff;
+        }
+        .sidebar-item img {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            object-fit: cover;
         }
 
         /* 7. TRACK ROW COLLISIONS */
@@ -313,7 +324,7 @@
         </div>
 
         <div id="content-view">
-            <div style="padding: 40px;">Initializing TRM MUSIC PLAYER...</div>
+            <div style="padding: 40px; font-weight: 900; letter-spacing: 1px;">INITIALIZING TRM MUSIC PLAYER...</div>
         </div>
 
         <div id="info-panel">
@@ -643,12 +654,38 @@ function renderView(html) {
     window.seek = function(e) { if (!audio.duration) return; var rect = document.getElementById('progress-container').getBoundingClientRect(); audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration; };
     audio.ontimeupdate = function() { if (audio.duration) { document.getElementById('progress-bar').style.width = (audio.currentTime / audio.duration) * 100 + '%'; document.getElementById('current-time').innerText = formatTime(audio.currentTime); document.getElementById('total-duration').innerText = formatTime(audio.duration); } };
 
-    window.viewHome = function() {
-        var feat = ALBUMS[0];
-        var html = `<div style="padding: 40px;"><div class="glow-card" style="position:relative; height:350px; border-radius:20px; overflow:hidden; margin-bottom:50px; background:#111; display:flex; align-items:center;"><img src="${feat.art}" style="position:absolute; right:0; top:0; height:100%; width:50%; object-fit:cover; opacity:0.6; mask-image: linear-gradient(to left, black, transparent);"><div style="position:relative; padding:60px; z-index:2;"><span style="background:#00ff88; color:#000; padding:4px 12px; border-radius:4px; font-size:11px; font-weight:900; letter-spacing:1px;">FEATURED RELEASE</span><h1 style="font-size:72px; margin:15px 0; font-weight:900; letter-spacing:-3px;">${feat.name}</h1><button onclick="viewAlbum('${feat.id}')" style="background:#fff; color:#000; border:none; padding:12px 30px; border-radius:30px; font-weight:800; cursor:pointer; font-size:14px;">View Album</button></div></div><h2 style="margin-bottom:25px; font-size:24px; font-weight:900;">Catalogue</h2><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px;">`;
-        for (var i = 0; i < ALBUMS.length; i++) html += `<div onclick="viewAlbum('${ALBUMS[i].id}')" class="glow-card" style="background: #0f0f0f; padding: 20px; border-radius: 12px; cursor: pointer; ${ALBUMS[i].comingSoon ? 'border-style: dashed !important;' : ''}"><img src="${ALBUMS[i].art}" style="width: 100%; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); ${ALBUMS[i].comingSoon ? 'filter: grayscale(1);' : ''}"><h4 style="margin: 0; font-size:16px;">${ALBUMS[i].name}</h4><p style="color: #666; font-size: 13px; margin: 6px 0 0 0;">${ALBUMS[i].comingSoon ? 'COMING SOON' : ALBUMS[i].genre + ' • ' + ALBUMS[i].releaseDate}</p></div>`;
-        renderView(html + '</div></div>');
-    };
+// 1. Set the ID of the album you want to feature here
+var FEATURED_ALBUM_ID = 'rich-album'; 
+
+window.viewHome = function() {
+    var feat = ALBUMS.find(a => a.id === FEATURED_ALBUM_ID) || ALBUMS[0];
+    
+    var html = `
+        <div style="padding: 40px;">
+            <div class="glow-card" style="position:relative; height:350px; border-radius:20px; overflow:hidden; margin-bottom:50px; background:#111; display:flex; align-items:center;">
+                <img src="${feat.art}" style="position:absolute; right:0; top:0; height:100%; width:50%; object-fit:cover; opacity:0.6; mask-image: linear-gradient(to left, black, transparent);">
+                <div style="position:relative; padding:60px; z-index:2;">
+                    <span style="background:#00ff88; color:#000; padding:4px 12px; border-radius:4px; font-size:11px; font-weight:900; letter-spacing:1px;">FEATURED RELEASE</span>
+                    <h1 style="font-size:72px; margin:15px 0; font-weight:900; letter-spacing:-3px;">${feat.name}</h1>
+                    <button onclick="viewAlbum('${feat.id}')" style="background:#fff; color:#000; border:none; padding:12px 30px; border-radius:30px; font-weight:800; cursor:pointer; font-size:14px;">View Album</button>
+                </div>
+            </div>
+            
+            <h2 style="margin-bottom:25px; font-size:24px; font-weight:900;">Catalogue</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 25px;">
+    `;
+    for (var i = 0; i < ALBUMS.length; i++) {
+        html += `
+            <div onclick="viewAlbum('${ALBUMS[i].id}')" class="glow-card" style="background: #0f0f0f; padding: 20px; border-radius: 12px; cursor: pointer; ${ALBUMS[i].comingSoon ? 'border-style: dashed !important;' : ''}">
+                <img src="${ALBUMS[i].art}" style="width: 100%; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); ${ALBUMS[i].comingSoon ? 'filter: grayscale(1);' : ''}">
+                <h4 style="margin: 0; font-size:16px;">${ALBUMS[i].name}</h4>
+                <p style="color: #666; font-size: 13px; margin: 6px 0 0 0;">${ALBUMS[i].comingSoon ? 'COMING SOON' : ALBUMS[i].genre + ' • ' + ALBUMS[i].releaseDate}</p>
+            </div>
+        `;
+    }
+
+    renderView(html + '</div></div>');
+};
 
     window.viewArtist = function(id) {
         var art = ARTISTS[id], artAlbums = ALBUMS.filter(a => a.artistId === id);
