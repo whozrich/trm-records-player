@@ -1,5 +1,5 @@
 {
-  "featuredId": "memories-ep", 
+  "featuredId": "memories-ep",
   "albums": [
     {
       "id": "memories-ep",
@@ -12,22 +12,24 @@
       "fullDate": "December 5th, 2025",
       "type": "EP",
       "signUpLink": "",
-      "purchaseLinks": [
-
-      ]
+      "purchaseLinks": []
     }
   ],
   "tracks": {
     "memories-ep": [
-      { "id": "decision-made", "title": "First Memory", "duration": "1:50", "hiddenName": false },
+      {
+        "id": "decision-made",
+        "title": "First Memory",
+        "duration": "1:50",
+        "hiddenName": false
+      }
     ]
   },
   "songData": {
-    "decision-made":
-    {
-        "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
-        "lyrics": "...",
-        "credits": "..."
+    "decision-made": {
+      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "lyrics": "...",
+      "credits": "..."
     }
   }
 }
