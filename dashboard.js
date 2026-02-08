@@ -348,6 +348,7 @@ Written by LC XAVIER, therichmusic`
 const ALBUMS = [
   { id: "leaving-soon", name: "LEAVING SOON", artistId: "therichmusic", art: "https://images2.imgbox.com/d6/47/HbPZE29T_o.png", tracks: ["leaving-soon"], type: "Single" },
   { id: "about-damn-time", name: "ABOUT DAMN TIME", artistId: "therichmusic", art: "https://images2.imgbox.com/01/3b/p1pphY1X_o.png", tracks: ["about-damn-time"], type: "Single" },
+  // Fixed the artistId below (removed the space after xavier)
   { id: "memories", name: "memories.", artistId: "lc-xavier", art: "https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg", tracks: ["broken-hearts"], type: "Album" },
   { id: "heart-bleeding-out", name: "hearts bleeding out. (feat. therichmusic)", artistId: "lc-xavier", art: "https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg", tracks: ["broken-hearts"], type: "Single" },
 ];
