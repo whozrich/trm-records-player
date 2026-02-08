@@ -85,13 +85,12 @@
 </div>
 
 <style>
-
-    /* --- MOBILE BLOCKER --- */
+/* --- MOBILE BLOCKER --- */
 #mobile-blocker {
     display: none;
     position: fixed;
     inset: 0;
-    background: #000;
+    background: #050505;
     z-index: 9999;
     flex-direction: column;
     align-items: center;
@@ -104,33 +103,47 @@
 #mobile-blocker h1 { color: #00ff88; font-size: 24px; margin-bottom: 10px; }
 #mobile-blocker p { color: #666; font-size: 16px; line-height: 1.5; }
 
+/* Hide App on Mobile, Show Blocker */
 @media (max-width: 1024px) {
     #app-container { display: none !important; }
     #mobile-blocker { display: flex; }
 }
-  .icon-btn { background: none; border: none; color: #666; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; outline: none; }
-  .icon-btn:hover, .icon-btn.active { color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
-  .active-glow { transition: 0.3s; }
-  .active-glow:hover { filter: drop-shadow(0 0 8px #00ff88); }
-  .main-play-glow:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 10px 25px rgba(0, 255, 136, 0.5); }
-  .main-play-glow:active { transform: scale(0.95); }
-  .track-row { display: grid; grid-template-columns: 40px 1fr 1fr 60px; padding: 12px; border-radius: 8px; cursor: pointer; align-items: center; transition: 0.2s; position: relative; }
-  .track-row:hover { background: rgba(255,255,255,0.07); }
-  .track-row .row-number { display: block; }
-  .track-row .row-play-icon { display: none; color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
-  .track-row:hover .row-number { display: none; }
-  .track-row:hover .row-play-icon { display: block; }
-  .track-row.playing .track-title-text { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
-  .sidebar-minimized .sidebar-full-elem { display: none; }
-  .sidebar-minimized { width: 85px !important; }
-  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 2px; }
-  .sidebar-item:hover { background: rgba(255,255,255,0.05); }
-  .social-icon { width: 20px; height: 20px; filter: invert(1); opacity: 0.6; transition: 0.3s; }
-  .social-icon:hover { opacity: 1; filter: invert(1) drop-shadow(0 0 8px #00ff88); }
-  .result-card { background: #111; padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; border: 1px solid #222; }
-  .result-card:hover { border-color: #00ff88; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,255,136,0.1); }
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+/* --- SIDEBAR CENTERING --- */
+.sidebar-item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; /* This centers the icon/image */
+    height: 48px;
+    width: 100%;
+    cursor: pointer; 
+    transition: 0.2s; 
+    margin-bottom: 4px;
+    border-radius: 8px;
+}
+
+/* When sidebar is expanded, align left */
+#sidebar:not(.sidebar-minimized) .sidebar-item {
+    justify-content: flex-start;
+    padding-left: 15px;
+}
+
+.sidebar-item img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.sidebar-item svg {
+    flex-shrink: 0;
+}
+
+/* Hide text when minimized */
+.sidebar-minimized .sidebar-full-elem {
+    display: none;
+}
 </style>
 
 <script>
@@ -689,4 +702,5 @@ document.getElementById('progress-container').onclick = (e) => audio.currentTime
 document.getElementById('vol-slider').oninput = (e) => { audio.volume = e.target.value; if(audio.volume > 0) audio.muted = false; };
 function formatTime(s) { let m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
 
+init()
 </script>
