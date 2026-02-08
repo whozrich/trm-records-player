@@ -8,30 +8,51 @@
         body { margin: 0; background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
 
         /* Apply this to your main player container */
-.music-player-container {
+/* 1. The Main Wrapper - Prevents horizontal scroll */
+.fourthwall-custom-container {
     width: 100%;
-    max-width: 100vw; /* Ensures it never exceeds the screen width */
-    margin: 0 auto;
-    padding: 0 20px; /* Gives mobile users some breathing room on the edges */
-    box-sizing: border-box; /* Keeps padding from breaking the width */
+    max-width: 100%;
+    overflow-x: hidden; /* Hard stop for horizontal cutting */
+    padding: 0 4vw;     /* Scalable padding that shrinks on mobile */
+    box-sizing: border-box;
+}
+
+/* 2. The Featured Banner (Image 9/10) */
+.featured-release-card {
+    width: 100%;
+    aspect-ratio: 16 / 7; /* Keeps the rectangle shape without cropping text */
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    background-size: cover;
+    background-position: center;
 }
 
-/* For the progress bar and volume sliders (Images 1 & 2) */
-.progress-bar-wrapper {
+/* 3. The Progress Bar (Image 1) - The "Full Frame" fix */
+.audio-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     width: 100%;
-    flex-grow: 1;
 }
 
-/* Media Query for Mobile adjustments */
+.progress-bar-line {
+    flex-grow: 1; /* Forces the green line to take all available space */
+    min-width: 0;  /* Prevents the line from pushing past the screen */
+    height: 4px;
+    background: #00FF85; /* Your neon green */
+    box-shadow: 0 0 10px rgba(0, 255, 133, 0.5);
+}
+
+/* 4. Mobile Logic */
 @media (max-width: 768px) {
-    .featured-release-header {
-        font-size: 1.5rem; /* Scales down the large "RICH ERA" text */
+    .catalogue-grid {
+        grid-template-columns: 1fr 1fr; /* 2 columns on mobile instead of 4 */
+        gap: 10px;
     }
     
-    .catalogue-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Wraps album art */
+    .featured-release-card h1 {
+        font-size: 8vw; /* Text scales with screen size */
     }
 }
         
