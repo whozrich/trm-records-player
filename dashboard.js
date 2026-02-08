@@ -18,14 +18,31 @@
 }
 
 /* 2. The Featured Banner (Image 9/10) */
-.featured-release-card {
-    width: 100%;
-    aspect-ratio: 16 / 7; /* Keeps the rectangle shape without cropping text */
+/* 1. Define your header height variable (adjust 80px to match your actual header) */
+:root {
+    --header-height: 80px; 
+}
+
+/* 2. Adjust the main body wrapper */
+.main-content-wrapper {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    background-size: cover;
-    background-position: center;
+    min-height: calc(100vh - var(--header-height));
+    margin-top: var(--header-height); /* Only if header is fixed/absolute */
+}
+
+/* 3. Ensure the Hero/Featured section (Image 9) doesn't overflow */
+.featured-release-container {
+    max-height: 60vh; /* Limits the giant banner so the catalogue stays visible */
+    width: 100%;
+    overflow: hidden;
+}
+
+/* 4. Fix the Sidebar/Catalogue alignment (Image 10) */
+.sidebar-nav {
+    height: calc(100vh - var(--header-height));
+    position: sticky;
+    top: var(--header-height);
 }
 
 /* 3. The Progress Bar (Image 1) - The "Full Frame" fix */
