@@ -313,7 +313,7 @@
 <body>
 
 <div id="dashboard-wrapper">
-    <a href="/" class="exit-player-btn">✕ EXIT PLAYER</a>
+    <a href="https://trm-brand-shop.fourthwall.com" class="exit-player-btn">✕ EXIT PLAYER</a>
 
     <div class="main-viewport">
         <div class="sidebar-container">
@@ -513,7 +513,7 @@
             SONG_DATA = { 't1': { title: 'Money Talk', url: '', lyrics: 'Local test mode active.', credits: 'TRM' } };
             FEATURED_ALBUM_ID = 'rich';
             
-            renderSidebar();
+            renderSidebar();    
         }
     }
 
@@ -605,15 +605,18 @@
 
 // --- 6. INITIALIZATION & REFRESH INTERVAL ---
     
+    // Check if we are on a local file system or Fourthwall
     const isLocal = window.location.protocol === 'file:';
 
     loadMusicData().then(() => {
+        // Force view to Home if it's stuck on Initializing
         const cv = document.getElementById('content-view');
         if (cv.innerHTML.includes("INITIALIZING")) {
             viewHome();
         }
     });
 
+    // Only poll GitHub if we aren't in a restricted local file environment
     if (!isLocal) {
         setInterval(loadMusicData, 5000);
     }
