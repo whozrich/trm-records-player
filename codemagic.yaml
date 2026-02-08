@@ -1,43 +1,23 @@
-environment:
-  groups:
-    - keys  # <--- MUST match the group name in Codemagic UI exactly
-
 workflows:
   ios-debug-build:
     name: iOS Debug Build
     instance_type: mac_mini_m2
     scripts:
-      - name: Verify Environment Variables
-        script: |
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "❌ ERROR: GITHUB_TOKEN is not found. Check your group name in the UI."
-            exit 1
-          else
-            echo "✅ GITHUB_TOKEN is loaded."
-          fi
-      - name: Force Token Authentication
+      - name: Force Authentication
         script: |
           cd mobile
-          # Override Git to use your token for any GitHub request
-          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
+          # HARDCODED TOKEN - Bypasses the environment variable loading issue
+          T="ghp_vYqoNTM9Bn2pi8AcLKfVA6jkR8Q50u38K4FK"
           
-          # Manually add the private Median/GoNative spec repo
-          pod repo add gonativeio-gonative-specs "https://x-access-token:${GITHUB_TOKEN}@github.com/gonativeio/gonative-specs.git" || true
+          git config --global url."https://x-access-token:${T}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${T}@github.com/".insteadOf "git@github.com:"
           
-          # Install dependencies
+          pod repo add gonativeio-gonative-specs "https://x-access-token:${T}@github.com/gonativeio/gonative-specs.git" || true
           pod install
       - name: Build unsigned .ipa
         script: | 
           cd mobile
-          xcodebuild build \
-            -workspace "TRMMUSICPLAYER.xcworkspace" \
-            -scheme "TRMMUSICPLAYER" \
-            -configuration Debug \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+          xcodebuild build -workspace "TRMMUSICPLAYER.xcworkspace" -scheme "TRMMUSICPLAYER" -configuration Debug -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
       - name: Create IPA
         script: | 
           cd mobile
