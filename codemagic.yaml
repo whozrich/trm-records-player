@@ -1,20 +1,24 @@
 environment:
   groups:
-    - keys # This loads your GITHUB_TOKEN
+    - keys # Make sure your GITHUB_TOKEN variable is in this group
 
 workflows:
   ios-debug-build:
     name: iOS Debug Build
     instance_type: mac_mini_m2
     scripts:
-      - name: Install Pods (with Secret Token)
+      - name: Force Token Authentication
         script: |
           cd mobile
           
-          # This line tells the Mac to use your secret token for the private GoNative repo
-          git config --global url."https://$GITHUB_TOKEN@github.com/".insteadOf "https://github.com/"
-          git config --global url."https://$GITHUB_TOKEN@github.com/".insteadOf "git@github.com:"
+          # 1. Force Git to use your token for BOTH https and ssh requests
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
           
+          # 2. Manually add the private repo using the token so CocoaPods doesn't have to 'guess'
+          pod repo add gonativeio-gonative-specs "https://x-access-token:${GITHUB_TOKEN}@github.com/gonativeio/gonative-specs.git" || true
+          
+          # 3. Install
           pod install
       - name: Build unsigned .ipa
         script: | 
