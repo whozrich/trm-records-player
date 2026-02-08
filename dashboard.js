@@ -100,7 +100,23 @@
   .track-row.playing .track-title-text { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
   .sidebar-minimized .sidebar-full-elem { display: none; }
   .sidebar-minimized { width: 85px !important; }
-  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 2px; }
+  .sidebar-item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; /* This handles the centering */
+    gap: 12px; 
+    padding: 10px; 
+    border-radius: 10px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    margin-bottom: 2px; 
+}
+
+/* Add this to keep the text left-aligned when the sidebar is open */
+#sidebar:not(.sidebar-minimized) .sidebar-item {
+    justify-content: flex-start;
+    padding-left: 20px;
+}
   .sidebar-item:hover { background: rgba(255,255,255,0.05); }
   .social-icon { width: 20px; height: 20px; filter: invert(1); opacity: 0.6; transition: 0.3s; }
   .social-icon:hover { opacity: 1; filter: invert(1) drop-shadow(0 0 8px #00ff88); }
@@ -666,5 +682,4 @@ document.getElementById('progress-container').onclick = (e) => audio.currentTime
 document.getElementById('vol-slider').oninput = (e) => { audio.volume = e.target.value; if(audio.volume > 0) audio.muted = false; };
 function formatTime(s) { let m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
 
-init();
 </script>
