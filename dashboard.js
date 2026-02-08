@@ -466,9 +466,33 @@
             url: "https://audio.jukehost.co.uk/m5yGkyak8NFeWP9DeTObJvH46D1fDmiu",
             lyrics: "",
             credits: "" },
+        "drop-to-the-floor": {
+            id: "drop-to-the-floor",
+            title: "Drop To The Floor (feat. Tripple D)",
+            hiddenName: true,
+            duration: "??:??",
+            url: "",
+            lyrics: "",
+            credits: "" },
+         "rich-skill": {
+            id: "rich-skill",
+            title: "Skill",
+            hiddenName: true,
+            duration: "??:??",
+            url: "",
+            lyrics: "",
+            credits: "" },
     };
 
     var TRACKS = { 
+        'rich-album': [
+            SONG_DATA['rich-intro'],
+            SONG_DATA['rich-alone'],
+            SONG_DATA['heard-enough'],
+            SONG_DATA['rich-freestyle'],
+            SONG_DATA['drop-to-the-floor'],
+            SONG_DATA['rich-skill'],
+            SONG_DATA['about-damn-time']],
         'adt-single':[
             SONG_DATA['about-damn-time']],
         'memories': [
@@ -477,14 +501,9 @@
             SONG_DATA['distant-memory']],
         'hearts-bleeding-single': [
             SONG_DATA['hearts-bleeding']],
-        'rich-album': [
-            SONG_DATA['rich-intro'],
-            SONG_DATA['rich-alone'],
-            SONG_DATA['heard-enough'],
-            SONG_DATA['rich-freestyle'],
-            SONG_DATA['about-damn-time']],
         'rich-freestyle-single': [
             SONG_DATA['rich-freestyle']],
+
     };
 
     var audio = new Audio(), isPlaying = false, lastVolume = 0.5, currentTrackId = null, currentAlbumId = null, isShuffle = false, loopState = 0; 
@@ -493,12 +512,13 @@
     // --- VIEW HANDLER (RESTORES ANIMATION) ---
 function renderView(html) {
     const cv = document.getElementById('content-view');
-    // Force the scroll to the top every time a new page is loaded
-    cv.scrollTop = 0; 
-    // Re-inject the HTML wrapped in the animation div
+    // 1. Inject the content wrapped in the animation class
     cv.innerHTML = `<div class="view-animate">${html}</div>`;
-    // Ensure scrolling is enabled
-    cv.style.overflowY = 'auto'; 
+    
+    // 2. Force scroll reset after a tiny delay to ensure browser acknowledges new height
+    setTimeout(() => {
+        cv.scrollTo({ top: 0, behavior: 'instant' });
+    }, 10);
 }
 
     function formatTime(secs) { if (isNaN(secs)) return "0:00"; var min = Math.floor(secs / 60), sec = Math.floor(secs % 60); return min + ":" + (sec < 10 ? "0" + sec : sec); }
