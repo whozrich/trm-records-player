@@ -1,19 +1,6 @@
 {
-  "featuredId": "rich-album", 
+  "featuredId": "memories-ep", 
   "albums": [
-    {
-      "id": "rich-album",
-      "name": "RICH",
-      "artistId": "therichmusic",
-      "comingSoon": true,
-      "art": "https://thumbs2.imgbox.com/21/07/fBkN1oX6_b.png",
-      "genre": "Hip-Hop",
-      "releaseDate": "2027",
-      "fullDate": "2027",
-      "type": "Album",
-      "signUpLink": "https://even.biz/l/rich-sign-up",
-      "purchaseLinks": []
-    },
     {
       "id": "memories-ep",
       "name": "memories. the prelude.",
@@ -31,8 +18,6 @@
     }
   ],
   "tracks": {
-    "rich-album": [
-    ],
     "memories-ep": [
       { "id": "decision-made", "title": "First Memory", "duration": "1:50", "hiddenName": false },
     ]
