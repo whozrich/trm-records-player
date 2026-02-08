@@ -379,7 +379,7 @@
 <script>
 (function() {
     // --- 1. EXTERNAL DATA CONFIGURATION ---
-    const CATALOGUE_URL = 'https://raw.githubusercontent.com/whozrich/trm-records-player/refs/heads/main/catalogue.json';
+    const CATALOGUE_URL = 'https://raw.githubusercontent.com/whozrich/trm-records-player/main/catalogue.json';
     
     // Global Data Holders
     let ALBUMS = [];
