@@ -1,7 +1,7 @@
 {
   "featuredId": "memories-ep",
   "albums": [
-       {
+    {
       "id": "rich-album",
       "name": "RICH",
       "artistId": "therichmusic",
@@ -12,6 +12,19 @@
       "fullDate": "2027",
       "type": "Album",
       "signUpLink": "https://even.biz/l/rich-sign-up",
+      "purchaseLinks": []
+    },
+    {
+      "id": "about-damn-time-single",
+      "name": "ABOUT DAMN TIME",
+      "artistId": "therichmusic",
+      "comingSoon": true,
+      "art": "https://images2.imgbox.com/01/3b/p1pphY1X_o.png",
+      "genre": "Hip-Hop",
+      "releaseDate": "2026",
+      "fullDate": "March 17th, 2026",
+      "type": "Single",
+      "signUpLink": "",
       "purchaseLinks": []
     },
     {
@@ -37,10 +50,30 @@
         "hiddenName": false
       }
     ],
+    "about-damn-time": [
+      {
+        "id": "about-damn-time",
+        "title": "ABOUT DAMN TIME",
+        "duration": "3:54",
+        "hiddenName": false
+      }
+    ],
     "rich-album": [
       {
         "id": "rich-intro",
         "title": "Intro",
+        "duration": "??:??",
+        "hiddenName": true
+      },
+      {
+        "id": "rich-alone",
+        "title": "Alone",
+        "duration": "??:??",
+        "hiddenName": true
+      },
+      {
+        "id": "heard-enough",
+        "title": "Heard Enough (feat. Norad)",
         "duration": "??:??",
         "hiddenName": true
       }
@@ -59,8 +92,32 @@
     {
       "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
       "credits": [
-        "Produced By:",
-        "Written By: LC XAVIER"
+        "Produced By: therichmusic",
+        "Written By: therichmusic"
+      ]
+    },
+    "rich-alone":
+    {
+      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "credits": [
+        "Produced By: therichmusic",
+        "Written By: therichmusic"
+      ]
+    },
+    "heard-enough":
+    {
+      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "credits": [
+        "Produced By: therichmusic",
+        "Written By: therichmusic, Norad"
+      ]
+    },
+    "about-damn-time":
+    {
+      "url": "https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz",
+      "credits": [
+        "Produced By: H3 Music",
+        "Written By: therichmusic"
       ]
     }
   }
