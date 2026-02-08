@@ -2,84 +2,90 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TRM Dashboard - Local Lab</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { margin: 0; background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
-
-        /* Apply this to your main player container */
-/* 1. The Main Wrapper - Prevents horizontal scroll */
-.fourthwall-custom-container {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden; /* Hard stop for horizontal cutting */
-    padding: 0 4vw;     /* Scalable padding that shrinks on mobile */
-    box-sizing: border-box;
-}
-
-/* 2. The Featured Banner (Image 9/10) */
-/* 1. Define your header height variable (adjust 80px to match your actual header) */
-:root {
-    --header-height: 80px; 
-}
-
-/* 2. Adjust the main body wrapper */
-.main-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    min-height: calc(100vh - var(--header-height));
-    margin-top: var(--header-height); /* Only if header is fixed/absolute */
-}
-
-/* 3. Ensure the Hero/Featured section (Image 9) doesn't overflow */
-.featured-release-container {
-    max-height: 60vh; /* Limits the giant banner so the catalogue stays visible */
-    width: 100%;
-    overflow: hidden;
-}
-
-/* 4. Fix the Sidebar/Catalogue alignment (Image 10) */
-.sidebar-nav {
-    height: calc(100vh - var(--header-height));
-    position: sticky;
-    top: var(--header-height);
-}
-
-/* 3. The Progress Bar (Image 1) - The "Full Frame" fix */
-.audio-progress-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 100%;
-}
-
-.progress-bar-line {
-    flex-grow: 1; /* Forces the green line to take all available space */
-    min-width: 0;  /* Prevents the line from pushing past the screen */
-    height: 4px;
-    background: #00FF85; /* Your neon green */
-    box-shadow: 0 0 10px rgba(0, 255, 133, 0.5);
-}
-
-/* 4. Mobile Logic */
-@media (max-width: 768px) {
-    .catalogue-grid {
-        grid-template-columns: 1fr 1fr; /* 2 columns on mobile instead of 4 */
-        gap: 10px;
-    }
-    
-    .featured-release-card h1 {
-        font-size: 8vw; /* Text scales with screen size */
-    }
-}
         
+        :root {
+            --header-height: 56px; 
+            --accent-green: #00ff88;
+        }
+
+        /* 1. LAYOUT ENGINE - Fixes the "Push" and "Cutoff" */
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Inter', sans-serif; 
+            /* Changed from hidden to allow scrolling if header pushes content */
+            overflow-x: hidden; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main-content-wrapper {
+            display: flex;
+            flex-direction: row; /* Keeping sidebar and main content side-by-side */
+            flex: 1;
+            margin-top: var(--header-height);
+            width: 100%;
+        }
+
+        .fourthwall-custom-container {
+            flex: 1;
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            padding: 0 4vw;
+            box-sizing: border-box;
+        }
+
+        /* 2. DYNAMIC COMPONENTS */
+        .featured-release-container {
+            max-height: 55vh; /* Slightly smaller to keep catalogue in view */
+            width: 100%;
+            overflow: hidden;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .sidebar-nav {
+            width: 260px;
+            height: calc(100vh - var(--header-height));
+            position: sticky;
+            top: var(--header-height);
+            background: #000;
+            z-index: 10;
+        }
+
+        /* 3. COMPACT PLAYER & PROGRESS BAR */
+        .audio-progress-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .progress-bar-line {
+            flex-grow: 1;
+            min-width: 0;
+            height: 3px; /* Sleeker height to save space */
+            background: var(--accent-green);
+            box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+            border-radius: 2px;
+        }
+
+        /* 4. INTERACTIVE ELEMENTS (Original Styles) */
         .glow-card { 
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
             border: 1px solid #222 !important;
         }
         .glow-card:hover { 
             transform: translateY(-5px); 
-            border-color: #00ff88 !important; 
+            border-color: var(--accent-green) !important; 
             box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2); 
         }
 
@@ -90,12 +96,12 @@
         #play-btn:hover {
             transform: scale(1.1);
             box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
-            background: #00ff88 !important;
+            background: var(--accent-green) !important;
         }
         
         #volume-icon-wrapper { transition: 0.3s; color: #666; }
         #volume-icon-wrapper:hover { 
-            color: #00ff88; 
+            color: var(--accent-green); 
             filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.6));
         }
 
@@ -117,13 +123,11 @@
             display: flex !important; 
             align-items: center;
             justify-content: center;
-            color: #00ff88; 
+            color: var(--accent-green); 
         }
         
-        .sidebar-item:hover { background: #1a1a1a; border-radius: 8px; }
-
         #search-input {
-            width: 80%;
+            width: calc(100% - 20px);
             background: #111;
             border: 1px solid #222;
             color: #fff;
@@ -134,14 +138,15 @@
             outline: none;
             transition: 0.3s;
         }
-        #search-input:focus { border-color: #00ff88; }
+        #search-input:focus { border-color: var(--accent-green); }
 
+        /* 5. SIDE PANELS & UTILS */
         #info-panel {
             position: fixed;
             right: -400px;
             top: 0;
             width: 350px;
-            height: calc(100vh - 100px);
+            height: 100vh;
             background: #080808;
             border-left: 1px solid #222;
             z-index: 90;
@@ -150,24 +155,6 @@
             overflow-y: auto;
         }
         #info-panel.open { right: 0; }
-
-        .social-link {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: #111;
-            border-radius: 50%;
-            color: #666;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-decoration: none;
-        }
-        .social-link:hover {
-            transform: scale(1.2);
-            background: #222;
-            color: #00ff88;
-        }
 
         .purchase-select, .signup-btn {
             background: #111;
@@ -185,21 +172,26 @@
             text-decoration: none;
             display: inline-block;
         }
-        .purchase-select:hover, .signup-btn:hover { border-color: #00ff88; color: #00ff88; }
+        .purchase-select:hover, .signup-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
 
-        .control-toggle { cursor: pointer; color: #666; transition: 0.2s; }
-        .control-toggle:hover { color: #fff; }
-        .control-toggle.active { color: #00ff88; filter: drop-shadow(0 0 5px rgba(0,255,136,0.4)); }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+        /* 6. MOBILE LOGIC */
+        @media (max-width: 768px) {
+            .main-content-wrapper { flex-direction: column; }
+            .sidebar-nav { width: 100%; height: auto; position: relative; top: 0; }
+            .catalogue-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .featured-release-card h1 { font-size: 8vw; }
+        }
+
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
-<body>
 
 <div id="dashboard-wrapper" style="display: flex; height: 100vh; flex-direction: column;">
     <div style="display: flex; flex: 1; overflow: hidden;">
