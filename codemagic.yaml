@@ -3,24 +3,26 @@ workflows:
     name: iOS Debug Build
     instance_type: mac_mini_m2
     scripts:
-      - name: Build unsigned .ipa
+      - name: Fix Permissions and Build
         script: | 
           cd mobile
-          # No 'pod install' here! We are using the files you pushed.
+          # THIS IS THE FIX: Give execution permissions to all Pod scripts
+          chmod -R +x Pods/Target\ Support\ Files/
+          
           xcodebuild build \
             -workspace "TRMMUSICPLAYER.xcworkspace" \
             -scheme "TRMMUSICPLAYER" \
             -configuration Debug \
             -sdk iphoneos \
+            -derivedDataPath "build" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
-      - name: Create IPA
+      - name: Create Unsigned IPA
         script: | 
           cd mobile
-          mkdir -p build/ios/ipa/Payload
-          # This finds the compiled app and zips it into an IPA
-          cp -r $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphoneos/*.app build/ios/ipa/Payload
-          cd build/ios/ipa && zip -r TRM_Player.ipa Payload
+          mkdir -p build/ipa/Payload
+          cp -r build/Build/Products/Debug-iphoneos/*.app build/ipa/Payload/
+          cd build/ipa && zip -r TRM_Player.ipa Payload
     artifacts:
-      - mobile/build/ios/ipa/*.ipa
+      - mobile/build/ipa/*.ipa
