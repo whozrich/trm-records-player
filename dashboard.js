@@ -460,10 +460,11 @@
         renderView(html + (artistHits.length === 0 && trackHits.length === 0 && albumHits.length === 0 ? '<p style="color:#444;">No results found.</p></div>' : '</div>'));
     }
 
-    // --- 4. PLAYBACK ENGINE ---
+// --- 4. PLAYBACK ENGINE ---
     window.playTrack = function(id) {
         if (!id || !SONG_DATA[id] || !SONG_DATA[id].url) return;
         if (currentTrackId === id) { togglePlay(); return; } 
+        
         currentTrackId = id; 
         var trackInfo = null;
         var album = ALBUMS.find(a => {
@@ -472,12 +473,47 @@
         });
         if (!album) return;
 
-        currentAlbumId = album.id; audio.src = SONG_DATA[id].url; audio.play(); isPlaying = true;
-        document.getElementById('player-art').src = album.art; document.getElementById('player-art').style.display = 'block';
-        document.getElementById('player-title').innerText = trackInfo.title; document.getElementById('player-artist').innerText = ARTISTS[album.artistId].name;
+        // Audio Logic
+        currentAlbumId = album.id; 
+        audio.src = SONG_DATA[id].url; 
+        audio.play(); 
+        isPlaying = true;
+
+        // Player Bar UI
+        document.getElementById('player-art').src = album.art; 
+        document.getElementById('player-art').style.display = 'block';
+        document.getElementById('player-title').innerText = trackInfo.title; 
+        document.getElementById('player-artist').innerText = ARTISTS[album.artistId].name;
         document.getElementById('player-artist').onclick = function() { viewArtist(album.artistId); };
-        document.getElementById('panel-content').innerHTML = `<div style="margin-bottom:30px;"><h2 style="margin:0 0 5px 0;">${trackInfo.title}</h2><p style="color:#666; font-size:13px; margin:0;">${ARTISTS[album.artistId].name}</p></div><div style="margin-bottom:30px;"><h4 style="font-size:11px; letter-spacing:1px; color:#444; margin-bottom:15px;">LYRICS</h4><div style="line-height:1.8; font-size:15px; color:#ccc;">${SONG_DATA[id].lyrics || 'No lyrics available.'}</div></div><div><h4 style="font-size:11px; letter-spacing:1px; color:#444; margin-bottom:15px;">CREDITS</h4><div style="line-height:1.6; font-size:13px; color:#888;">${SONG_DATA[id].credits}</div></div>`;
-        updatePlayButton(); refreshTracklistDisplay();
+
+        // --- Hybrid Lyrics Logic ---
+        // 1. Try window.TRM_LYRICS (from lyrics.js)
+        // 2. Try SONG_DATA[id].lyrics (from catalogue.json)
+        // 3. Default to 'No lyrics available'
+        let rawLyrics = (window.TRM_LYRICS && window.TRM_LYRICS[id]) 
+                        ? window.TRM_LYRICS[id] 
+                        : (SONG_DATA[id].lyrics || 'No lyrics available.');
+        
+        // Convert line breaks to <br> tags
+        const formattedLyrics = rawLyrics.trim().replace(/\n/g, '<br>');
+
+        // Update Info Panel (Lyrics + Credits)
+        document.getElementById('panel-content').innerHTML = `
+            <div style="margin-bottom:30px;">
+                <h2 style="margin:0 0 5px 0;">${trackInfo.title}</h2>
+                <p style="color:#666; font-size:13px; margin:0;">${ARTISTS[album.artistId].name}</p>
+            </div>
+            <div style="margin-bottom:30px;">
+                <h4 style="font-size:11px; letter-spacing:1px; color:#444; margin-bottom:15px;">LYRICS</h4>
+                <div style="line-height:1.8; font-size:15px; color:#ccc;">${formattedLyrics}</div>
+            </div>
+            <div>
+                <h4 style="font-size:11px; letter-spacing:1px; color:#444; margin-bottom:15px;">CREDITS</h4>
+                <div style="line-height:1.6; font-size:13px; color:#888;">${SONG_DATA[id].credits || 'TRM Records'}</div>
+            </div>`;
+
+        updatePlayButton(); 
+        refreshTracklistDisplay();
     };
 
     window.togglePlay = function() { if (!audio.src) return; isPlaying ? audio.pause() : audio.play(); isPlaying = !isPlaying; updatePlayButton(); refreshTracklistDisplay(); };
@@ -491,31 +527,44 @@
 
 // --- 5. DATA LOADING & LIVE POLLING ---
     async function loadMusicData() {
-        try {
-            const response = await fetch(CATALOGUE_URL + '?t=' + new Date().getTime());
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
-            ALBUMS = data.albums;
-            TRACKS = data.tracks;
-            SONG_DATA = data.songData;
-            FEATURED_ALBUM_ID = data.featuredId;
+    try {
+        // 1. Load the lyrics script
+        const lyricsRes = await fetch('https://raw.githubusercontent.com/whozrich/trm-records-player/main/lyrics.js?t=' + Date.now());
+        const lyricsCode = await lyricsRes.text();
+        
+        // 2. Inject or Update the lyrics script
+        let oldScript = document.getElementById('trm-lyrics-data');
+        if (oldScript) oldScript.remove(); // Remove the old one before adding the new one
 
-            renderSidebar();
-            console.log("Catalogue synced with GitHub.");
-        } catch (e) {
-            console.warn("GitHub fetch failed (Common in local testing). Using local fallback data.");
-            // LOCAL FALLBACK DATA (For testing when GitHub is blocked)
-            ALBUMS = [
-                { id: 'rich', name: 'RICH', artistId: 'therichmusic', art: 'https://via.placeholder.com/300', genre: 'Hip-Hop', releaseDate: '2024', fullDate: 'January 1, 2024', type: 'album' }
-            ];
-            TRACKS = { 'rich': [{ id: 't1', title: 'Money Talk', duration: '3:45' }] };
-            SONG_DATA = { 't1': { title: 'Money Talk', url: '', lyrics: 'Local test mode active.', credits: 'TRM' } };
-            FEATURED_ALBUM_ID = 'rich';
-            
-            renderSidebar();    
+        const script = document.createElement('script');
+        script.id = 'trm-lyrics-data';
+        script.textContent = lyricsCode;
+        document.head.appendChild(script);
+
+        // 3. Load the Catalogue
+        const response = await fetch(CATALOGUE_URL + '?t=' + new Date().getTime());
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        ALBUMS = data.albums;
+        TRACKS = data.tracks;
+        SONG_DATA = data.songData;
+        FEATURED_ALBUM_ID = data.featuredId;
+
+        renderSidebar();
+        console.log("Catalogue & Lyrics synced.");
+
+        // Clear initializing screen if needed
+        if (typeof isInitialLoad !== 'undefined' && isInitialLoad) {
+            isInitialLoad = false;
+            viewHome();
         }
+    } catch (e) {
+        console.warn("Sync failed. Using fallback.", e);
+        // ... your existing fallback logic ...
+        renderSidebar();    
     }
+}
 
     function renderSidebar() {
         var nav = document.getElementById('sidebar-nav');
