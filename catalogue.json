@@ -26,18 +26,15 @@
       "type": "EP",
       "signUpLink": "",
       "purchaseLinks": [
-        // { "label": "Stream on Spotify", "url": "https://spotify.com/..." }
+
       ]
     }
   ],
   "tracks": {
     "rich-album": [
-    //   { "id": "t1", "title": "Money Talk", "duration": "3:45", "hiddenName": true },
-    //   { "id": "t2", "title": "Night Shift", "duration": "2:15", "hiddenName": true }
     ],
     "memories-ep": [
       { "id": "decision-made", "title": "First Memory", "duration": "1:50", "hiddenName": false },
-    //   { "id": "t4", "title": "Faded", "duration": "2:10", "hiddenName": false }
     ]
   },
   "songData": {
