@@ -1,12 +1,25 @@
 {
   "featuredId": "memories-ep",
   "albums": [
+       {
+      "id": "rich-album",
+      "name": "RICH",
+      "artistId": "therichmusic",
+      "comingSoon": true,
+      "art": "https://images2.imgbox.com/21/07/fBkN1oX6_o.png",
+      "genre": "Hip-Hop",
+      "releaseDate": "2027",
+      "fullDate": "2027",
+      "type": "Album",
+      "signUpLink": "https://even.biz/l/rich-sign-up",
+      "purchaseLinks": []
+    },
     {
       "id": "memories-ep",
       "name": "memories. the prelude.",
       "artistId": "lc-xavier",
       "comingSoon": false,
-      "art": "https://thumbs2.imgbox.com/06/4d/eRxEyirW_b.jpg",
+      "art": "https://images2.imgbox.com/06/4d/eRxEyirW_o.jpg",
       "genre": "R&B / Soul",
       "releaseDate": "2025",
       "fullDate": "December 5th, 2025",
