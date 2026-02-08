@@ -1,0 +1,6 @@
+framework module Pods_TRMMUSICPLAYER {
+  umbrella header "Pods-TRMMUSICPLAYER-umbrella.h"
+
+  export *
+  module * { export * }
+}
