@@ -16,14 +16,29 @@
         }
 
         /* 1. LAYOUT & STACKING */
-        body { 
-            margin: 0; background: #000; color: #fff; 
-            font-family: 'Inter', sans-serif; overflow: hidden;
-        }
+body { 
+    margin: 0; 
+    background: #000; 
+    color: #fff; 
+    font-family: 'Inter', sans-serif; 
+    overflow: hidden; /* Prevent the WHOLE page from scrolling */
+    height: 100vh;
+    width: 100vw;
+}
 
-        #dashboard-wrapper {
-            height: 100vh; display: flex; flex-direction: column;
-        }
+#dashboard-wrapper {
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.main-viewport {
+    display: flex; 
+    flex: 1; 
+    overflow: hidden; /* Critical: keeps the sidebar/content inside the 100vh */
+    height: calc(100vh - 100px); /* Total height minus player height */
+}
 
         /* 2. THE PLAYER (KING OF Z-INDEX) */
         #mini-player {
@@ -57,10 +72,15 @@
         #info-panel.open { right: 0; visibility: visible; }
 
         /* 4. SIDEBAR & SEARCH FIX */
-        .sidebar-container {
-            width: 240px; background: #000; border-right: 1px solid #111;
-            display: flex; flex-direction: column; flex-shrink: 0;
-        }
+ .sidebar-container {
+    width: 240px; 
+    background: #000; 
+    border-right: 1px solid #111;
+    display: flex; 
+    flex-direction: column; 
+    flex-shrink: 0;
+    height: 100%;
+}
 
         #search-input {
             width: calc(100% - 32px); background: #111; border: 1px solid #222;
@@ -248,12 +268,14 @@
 }
 
 #content-view {
-    flex: 1;
-    overflow-y: auto; /* This is the "on" switch for scrolling */
+flex: 1;
+    overflow-y: auto !important; /* Force vertical scroll */
     overflow-x: hidden;
-    height: 100%; /* Ensures it fills the available vertical space */
-    scroll-behavior: smooth; /* Makes that reset to the top look nice */
-    -webkit-overflow-scrolling: touch; /* Better scrolling for mobile/trackpads */
+    height: 100%; /* Fill the main-viewport */
+    background: linear-gradient(to bottom, #121212, #000);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
 }
 
 /* Optional: Make the scrollbar look cleaner and more 'TRM' */
@@ -272,7 +294,8 @@
 <body>
 
 <div id="dashboard-wrapper">
-    <div style="display: flex; flex: 1; overflow: hidden;">
+    <div class="main-viewport" style="display: flex; flex: 1; overflow: hidden; height: calc(100vh - 100px);">
+        
         <div class="sidebar-container">
             <div id="sidebar-nav" style="padding: 20px 10px;">
                 <div class="sidebar-item" onclick="viewHome()">Home</div>
@@ -283,7 +306,7 @@
                 </div>
         </div>
 
-        <div id="content-view" style="flex: 1; overflow-y: auto; background: linear-gradient(to bottom, #121212, #000); scroll-behavior: smooth;">
+        <div id="content-view">
             <div style="padding: 40px;">Initializing TRM...</div>
         </div>
 
@@ -309,7 +332,7 @@
             <div style="display: flex; align-items: center; gap: 24px;">
                 <div id="shuffle-btn" class="control-toggle" onclick="toggleShuffle()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></div>
                 <div class="control-toggle" onclick="prevTrack()"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></div>
-                <button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
                     <svg id="play-icon" viewBox="0 0 24 24" width="20" height="20" fill="black"><path d="M8 5v14l11-7z"/></svg>
                 </button>
                 <div class="control-toggle" onclick="nextTrack()"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></div>
@@ -356,14 +379,16 @@
 
     var ALBUMS = [
         {
-            id: 'adt-single',
-            name: 'ABOUT DAMN TIME',
-            type: 'Single',
-            releaseDate: 2026,
-            fullDate: 'March 17th, 2026',
+            id: 'rich-album',
+            name: 'RICH',
+            type: 'Album',
+            releaseDate: 2027,
+            fullDate: 'TBA 2027',
             genre: 'Hip-Hop',
-            art: 'https://images2.imgbox.com/01/3b/p1pphY1X_o.png',
+            art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
             artistId: 'therichmusic',
+            comingSoon: true,
+            signUpLink: 'https://even.biz/l/rich-sign-up',
             purchaseLinks: [] },
         {
             id: 'leaving-soon-single',
@@ -373,6 +398,16 @@
             fullDate: 'February 7th, 2026',
             genre: 'Hip-Hop',
             art: 'https://images2.imgbox.com/d6/47/HbPZE29T_o.png',
+            artistId: 'therichmusic',
+            purchaseLinks: [] },
+        {
+            id: 'adt-single',
+            name: 'ABOUT DAMN TIME',
+            type: 'Single',
+            releaseDate: 2026,
+            fullDate: 'March 17th, 2026',
+            genre: 'Hip-Hop',
+            art: 'https://images2.imgbox.com/01/3b/p1pphY1X_o.png',
             artistId: 'therichmusic',
             purchaseLinks: [] },
         {
@@ -392,18 +427,6 @@
             genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
             artistId: 'lc-xavier',
             comingSoon: true,
-            purchaseLinks: [] },
-        {
-            id: 'rich-album',
-            name: 'RICH',
-            type: 'Album',
-            releaseDate: 2027,
-            fullDate: 'TBA 2027',
-            genre: 'Hip-Hop',
-            art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
-            artistId: 'therichmusic',
-            comingSoon: true,
-            signUpLink: 'https://even.biz/l/rich-sign-up',
             purchaseLinks: [] },
         {
             id: 'rich-freestyle-single',
