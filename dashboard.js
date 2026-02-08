@@ -213,7 +213,82 @@ Written by therichmusic`
     id: "about-damn-time", artistId: "therichmusic", title: "ABOUT DAMN TIME", albumId: "rich-era",
     cover: "https://images2.imgbox.com/01/3b/p1pphY1X_o.png",
     url: "https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz.mp3",
-    lyrics: "It's about damn time...",
+    lyrics: `[Intro]
+Huh, huh, huh, huh
+About Damn-
+
+[Verse 1]
+Said to the doubters it's about damn time
+Hate it when I flex on you through a rhyme
+Generic bars, then it ain't pass the line
+I ain't care bitch, this shit 'bouta be mine
+Part-Time Boyfriend, bitch that's a lie
+Say that you ain't believe, I'd say it's our time
+If I were you I'd ask myself to commit
+Keep the peace? Bitch I already tried, hey, yeah
+
+[Chorus]
+They say bounce back
+They say bounce back
+They say bounce back
+I say it's about time
+They say bounce back
+They say bounce back
+They say bounce back
+I say it's about time
+I say it's about time
+
+[Verse 2]
+Said to the doubters it's about damn time
+Bitch, I already know I'm not in my prime
+I'm so broke I can't even afford a dime
+Thinkin' we slick bitch, you ain't even a slime
+That's right we know yo ass ain't grime
+Sayin' you loaded, bitch where's the nine?
+If I'm not your first chapter, then I must be the spine, yeah
+
+[Bridge]
+They say it's about time
+They say it's about time
+They say it's about time
+They say it's about time, yeah
+
+[Verse 3]
+Said to the doubters it's about damn time
+Tell 'em that the skill took years to refine
+Deep Seek, there ain't nothin' to find
+I ain't know bitch, this life just ain't mine
+
+[Pre-Chorus]
+They say it's about time
+They say it's about time
+They say it's about time
+They say it's about time, yeah
+
+[Chorus]
+They say bounce back
+They say bounce back
+They say bounce back
+I say it's about time
+They say bounce back
+They say bounce back
+They say bounce back
+I say it's about time
+I say it's about time
+
+[Outro]
+They say it's about time
+They say it's about time
+They say it's about time
+They say it's about time, yeah
+They say it's about time
+They say it's about time
+They say it's about time
+They say it's about time, yeah
+They say it's about time
+They say it's about time
+They say it's about time
+They say it's about time, yeah`,
     credits: `Produced by H3 Music
 Written by therichmusic`
   },
