@@ -120,6 +120,11 @@
 </style>
 
 <script>
+  // --- CONFIGURATION ---
+// Change these IDs to control what appears on the Home Screen
+const FEATURED_RELEASE_ID = 'leaving-soon'; 
+const RECENT_RELEASE_IDS = ['leaving-soon', 'memories'];
+
 // --- DATA ---
 const ARTISTS = {
   "therichmusic": {
@@ -361,7 +366,7 @@ let lastView = { type: 'album', id: 'leaving-soon' };
 const audio = document.getElementById('audio-engine');
 
 function init() {
-    renderSidebar('');
+    renderSidebar();
     document.getElementById('global-search').addEventListener('input', (e) => {
         const query = e.target.value;
         renderSidebar(query);
@@ -369,7 +374,7 @@ function init() {
     });
     setupSidebarDrag();
     setupKeyboardShortcuts();
-    viewAlbum('rich-era');
+    viewHome(); // Set Home as the default start page
 }
 
 // --- NAVIGATION LOGIC ---
@@ -502,6 +507,40 @@ function viewArtist(id) {
     `;
 }
 
+function viewHome() {
+    lastView = { type: 'home', id: null };
+    const contentView = document.getElementById('content-view');
+    
+    // Find the data for featured/recent releases
+    const featured = ALBUMS.find(a => a.id === FEATURED_RELEASE_ID);
+    const recents = ALBUMS.filter(a => RECENT_RELEASE_IDS.includes(a.id));
+
+    contentView.innerHTML = `
+        <div class="hero-banner" onclick="viewAlbum('${featured.id}')" style="cursor:pointer; margin-bottom:40px;">
+            <div class="hero-content" style="display:flex; gap:30px; align-items:center; background:rgba(255,255,255,0.05); padding:40px; border-radius:20px;">
+                <img src="${featured.art}" style="width:200px; height:200px; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+                <div>
+                    <span style="background:#00ff88; color:#000; padding:4px 12px; border-radius:4px; font-size:10px; font-weight:900;">FEATURED RELEASE</span>
+                    <h1 style="font-size:48px; margin:15px 0;">${featured.name}</h1>
+                    <p style="color:#888;">${ARTISTS[featured.artistId].name}</p>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="margin-bottom:20px;">Recent Releases</h2>
+        <div class="release-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:25px;">
+            ${recents.map(album => `
+                <div class="card" onclick="viewAlbum('${album.id}')" style="cursor:pointer; background:#111; padding:15px; border-radius:15px;">
+                    <img src="${album.art}" style="width:100%; border-radius:10px; margin-bottom:15px;">
+                    <h4 style="margin:0;">${album.name}</h4>
+                    <p style="margin:5px 0 0; color:#666; font-size:12px;">${ARTISTS[album.artistId].name}</p>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    contentView.scrollTop = 0;
+}
+
 function handleSearch(query) {
     lastView = { type: 'search', id: query };
     const q = query.toLowerCase();
@@ -541,12 +580,27 @@ function updateView() {
 }
 
 // --- TOOLS ---
-function renderSidebar(q) {
-    const cont = document.getElementById('sidebar-scroll');
-    cont.innerHTML = '';
-    ALBUMS.filter(a => a.name.toLowerCase().includes(q.toLowerCase())).forEach(a => {
-        cont.innerHTML += `<div class="sidebar-item" onclick="viewAlbum('${a.id}')"><img src="${a.art}" style="width:35px; border-radius:4px;"><div class="sidebar-full-elem">${a.name}</div></div>`;
-    });
+function renderSidebar() {
+    const sidebarNav = document.getElementById('sidebar-nav');
+    const sidebarReleases = document.getElementById('sidebar-releases');
+
+    // 1. Add the Home Button at the very top
+    sidebarNav.innerHTML = `
+        <div class="sidebar-item" onclick="viewHome()">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            <span class="sidebar-full-elem">Home</span>
+        </div>
+    `;
+
+    // 2. Your existing Album List logic
+    sidebarReleases.innerHTML = ALBUMS.map(album => `
+        <div class="sidebar-item" onclick="viewAlbum('${album.id}')">
+            <img src="${album.art}" class="sidebar-icon">
+            <span class="sidebar-full-elem">${album.name}</span>
+        </div>
+    `).join('');
 }
 
 function toggleShuffle() { isShuffle = !isShuffle; document.getElementById('shuffle-btn').classList.toggle('active', isShuffle); }
