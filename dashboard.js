@@ -6,6 +6,34 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { margin: 0; background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+
+        /* Apply this to your main player container */
+.music-player-container {
+    width: 100%;
+    max-width: 100vw; /* Ensures it never exceeds the screen width */
+    margin: 0 auto;
+    padding: 0 20px; /* Gives mobile users some breathing room on the edges */
+    box-sizing: border-box; /* Keeps padding from breaking the width */
+    display: flex;
+    flex-direction: column;
+}
+
+/* For the progress bar and volume sliders (Images 1 & 2) */
+.progress-bar-wrapper {
+    width: 100%;
+    flex-grow: 1;
+}
+
+/* Media Query for Mobile adjustments */
+@media (max-width: 768px) {
+    .featured-release-header {
+        font-size: 1.5rem; /* Scales down the large "RICH ERA" text */
+    }
+    
+    .catalogue-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Wraps album art */
+    }
+}
         
         .glow-card { 
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; 
