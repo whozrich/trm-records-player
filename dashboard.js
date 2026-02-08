@@ -100,22 +100,36 @@
   .track-row.playing .track-title-text { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
   .sidebar-minimized .sidebar-full-elem { display: none; }
   .sidebar-minimized { width: 85px !important; }
-  .sidebar-item { 
+.sidebar-item { 
     display: flex; 
     align-items: center; 
-    justify-content: center; /* This handles the centering */
-    gap: 12px; 
-    padding: 10px; 
+    justify-content: center; /* Force center for icons */
+    padding: 12px; 
     border-radius: 10px; 
     cursor: pointer; 
     transition: 0.2s; 
-    margin-bottom: 2px; 
+    margin-bottom: 5px;
+    width: 100%; /* Ensure it spans the container */
 }
 
-/* Add this to keep the text left-aligned when the sidebar is open */
+/* When sidebar is OPEN/WIDE, align everything to the left */
 #sidebar:not(.sidebar-minimized) .sidebar-item {
     justify-content: flex-start;
     padding-left: 20px;
+}
+
+/* Fix for the tiny images in the sidebar */
+.sidebar-item img {
+    width: 35px;
+    height: 35px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0; /* Prevents the image from squishing */
+}
+
+/* Ensure the Home Icon matches the image sizing */
+.sidebar-item svg {
+    flex-shrink: 0;
 }
   .sidebar-item:hover { background: rgba(255,255,255,0.05); }
   .social-icon { width: 20px; height: 20px; filter: invert(1); opacity: 0.6; transition: 0.3s; }
@@ -390,15 +404,15 @@ function viewHome() {
     const featured = ALBUMS.find(a => a.id === FEATURED_RELEASE_ID);
     
     let html = `
-        <div onclick="viewAlbum('${featured.id}')" style="position: relative; width: 100%; height: 350px; border-radius: 20px; overflow: hidden; cursor: pointer; margin-bottom: 40px; border: 1px solid #333;" class="active-glow">
-            <img src="${featured.art}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; filter: blur(15px);">
-            <div style="position: absolute; inset: 0; background: linear-gradient(to top, #050505 5%, transparent 100%); display: flex; align-items: flex-end; padding: 40px;">
-                <div style="display: flex; gap: 30px; align-items: center;">
-                    <img src="${featured.art}" style="width: 180px; height: 180px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div onclick="viewAlbum('${featured.id}')" style="position: relative; width: 100%; min-height: 350px; border-radius: 20px; overflow: hidden; cursor: pointer; margin-bottom: 40px; border: 1px solid #333;" class="active-glow">
+            <img src="${featured.art}" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.3; filter: blur(20px);">
+            <div style="position: relative; background: linear-gradient(to top, #050505 10%, transparent); padding: 40px; height: 100%; display: flex; align-items: flex-end;">
+                <div class="hero-banner-inner" style="display: flex; gap: 30px; align-items: center;">
+                    <img src="${featured.art}" style="width: 150px; height: 150px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                     <div>
                         <span style="background: #00ff88; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 900; letter-spacing: 1px;">FEATURED RELEASE</span>
-                        <h1 style="font-size: 48px; margin: 10px 0; letter-spacing: -2px;">${featured.name}</h1>
-                        <p style="color: #00ff88; font-weight: 700; font-size: 18px;">${ARTISTS[featured.artistId].name}</p>
+                        <h1 style="margin: 10px 0; letter-spacing: -2px;">${featured.name}</h1>
+                        <p style="color: #00ff88; font-weight: 700;">${ARTISTS[featured.artistId].name}</p>
                     </div>
                 </div>
             </div>
