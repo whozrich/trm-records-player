@@ -246,6 +246,27 @@
 .social-link svg {
     fill: currentColor;
 }
+
+#content-view {
+    flex: 1;
+    overflow-y: auto; /* This is the "on" switch for scrolling */
+    overflow-x: hidden;
+    height: 100%; /* Ensures it fills the available vertical space */
+    scroll-behavior: smooth; /* Makes that reset to the top look nice */
+    -webkit-overflow-scrolling: touch; /* Better scrolling for mobile/trackpads */
+}
+
+/* Optional: Make the scrollbar look cleaner and more 'TRM' */
+#content-view::-webkit-scrollbar {
+    width: 6px;
+}
+#content-view::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+#content-view::-webkit-scrollbar-thumb:hover {
+    background: #00ff88;
+}
     </style>
 </head>
 <body>
