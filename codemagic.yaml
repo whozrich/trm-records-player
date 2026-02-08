@@ -1,16 +1,18 @@
 workflows:
   ios-debug-build:
     name: iOS Debug Build
-    # This line tells Codemagic where your project actually is now
-    working_directory: mobile 
     instance_type: mac_mini_m2
     max_build_duration: 60
     scripts:
       - name: Build unsigned .ipa
         script: | 
+          # Step 1: Enter your mobile folder
+          cd mobile
+          
+          # Step 2: Build using the correct name
           xcodebuild build \
-            -project "TRM RECORDS PLAYER.xcodeproj" \
-            -scheme "TRM RECORDS PLAYER" \
+            -project "TRMMUSICPLAYER.xcodeproj" \
+            -scheme "TRMMUSICPLAYER" \
             -configuration Debug \
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
@@ -18,8 +20,9 @@ workflows:
             CODE_SIGN_IDENTITY=""
       - name: Create IPA
         script: | 
+          cd mobile
           mkdir -p build/ios/ipa/Payload
           cp -r $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphoneos/*.app build/ios/ipa/Payload
           cd build/ios/ipa && zip -r TRM_Player.ipa Payload
     artifacts:
-      - build/ios/ipa/*.ipa
+      - mobile/build/ios/ipa/*.ipa
