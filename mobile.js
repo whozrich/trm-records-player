@@ -1,48 +1,42 @@
-// TRM Records - Mobile Placeholder
-const mobileHTML = `
 <style>
+    /* Reset Fourthwall default padding if any */
     body, html {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
-        background-color: #000;
+        background-color: #000 !important;
         display: flex;
         justify-content: center;
         align-items: center;
-        overflow: hidden;
         font-family: 'Inter', sans-serif;
+        color: white;
     }
 
     .mobile-container {
         text-align: center;
-        padding: 20px;
+        padding: 40px 20px;
+        z-index: 10;
     }
 
     .logo-placeholder {
         font-weight: 900;
-        font-size: 24px;
+        font-size: 28px;
         letter-spacing: -1px;
-        color: #fff;
-        margin-bottom: 10px;
-        opacity: 0.8;
+        margin-bottom: 12px;
     }
 
-    .glitch-text {
+    .status-text {
         color: #00ff88;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
         text-transform: uppercase;
-        text-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        text-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
     }
 </style>
 
 <div class="mobile-container">
     <div class="logo-placeholder">TRM RECORDS</div>
-    <div class="glitch-text">Currently unavailable... soon 👀</div>
+    <div class="status-text">Currently unavailable... soon 👀</div>
 </div>
-`;
-
-// Inject into the root
-document.getElementById('app-root').innerHTML = mobileHTML;
