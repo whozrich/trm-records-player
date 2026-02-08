@@ -36,10 +36,27 @@
         "duration": "3:54",
         "hiddenName": false
       }
+    ],
+    "rich-album": [
+      {
+        "id": "rich-intro",
+        "title": "Intro",
+        "duration": "??:??",
+        "hiddenName": true
+      }
     ]
   },
   "songData": {
-    "decision-made": {
+    "decision-made":
+    {
+      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "credits": [
+        "Produced By:",
+        "Written By: LC XAVIER"
+      ]
+    },
+    "rich-intro":
+    {
       "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
       "credits": [
         "Produced By:",
