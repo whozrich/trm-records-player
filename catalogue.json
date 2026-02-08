@@ -1,5 +1,5 @@
 {
-  "featuredId": "memories-ep",
+  "featuredId": "rich-album",
   "albums": [
     {
       "id": "rich-album",
@@ -76,6 +76,12 @@
         "title": "Heard Enough (feat. Norad)",
         "duration": "??:??",
         "hiddenName": true
+      },
+            {
+        "id": "about-damn-time",
+        "title": "About Damn Time",
+        "duration": "2:45",
+        "hiddenName": false
       }
     ]
   },
