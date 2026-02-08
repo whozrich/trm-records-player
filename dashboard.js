@@ -716,5 +716,6 @@ document.getElementById('progress-container').onclick = (e) => audio.currentTime
 document.getElementById('vol-slider').oninput = (e) => { audio.volume = e.target.value; if(audio.volume > 0) audio.muted = false; };
 function formatTime(s) { let m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
 
+document.addEventListener('DOMContentLoaded', init);
 init();
 </script>
