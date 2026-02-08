@@ -85,30 +85,99 @@
 </div>
 
 <style>
-  .icon-btn { background: none; border: none; color: #666; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; outline: none; }
-  .icon-btn:hover, .icon-btn.active { color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
-  .active-glow { transition: 0.3s; }
-  .active-glow:hover { filter: drop-shadow(0 0 8px #00ff88); }
-  .main-play-glow:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 10px 25px rgba(0, 255, 136, 0.5); }
-  .main-play-glow:active { transform: scale(0.95); }
-  .track-row { display: grid; grid-template-columns: 40px 1fr 1fr 60px; padding: 12px; border-radius: 8px; cursor: pointer; align-items: center; transition: 0.2s; position: relative; }
-  .track-row:hover { background: rgba(255,255,255,0.07); }
-  .track-row .row-number { display: block; }
-  .track-row .row-play-icon { display: none; color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
-  .track-row:hover .row-number { display: none; }
-  .track-row:hover .row-play-icon { display: block; }
-  .track-row.playing .track-title-text { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
-  .sidebar-minimized .sidebar-full-elem { display: none; }
-  .sidebar-minimized { width: 85px !important; }
-  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 2px; }
-  .sidebar-item:hover { background: rgba(255,255,255,0.05); }
-  .social-icon { width: 20px; height: 20px; filter: invert(1); opacity: 0.6; transition: 0.3s; }
-  .social-icon:hover { opacity: 1; filter: invert(1) drop-shadow(0 0 8px #00ff88); }
-  .result-card { background: #111; padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; border: 1px solid #222; }
-  .result-card:hover { border-color: #00ff88; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,255,136,0.1); }
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+/* --- GLOBAL FONT RESET --- */
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* --- MOBILE BLOCKER --- */
+#mobile-blocker {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #050505;
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+}
+
+#mobile-blocker h1 { color: #00ff88; font-size: 24px; margin-bottom: 10px; font-weight: 800; }
+#mobile-blocker p { color: #666; font-size: 16px; line-height: 1.5; }
+
+/* Hide App on Mobile, Show Blocker */
+@media (max-width: 1024px) {
+    #app-container { display: none !important; }
+    #mobile-blocker { display: flex; }
+}
+
+/* --- SIDEBAR REFINEMENT --- */
+.sidebar-item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; /* Centered when minimized */
+    height: 52px;
+    width: 100%;
+    cursor: pointer; 
+    transition: background 0.2s ease; 
+    margin-bottom: 4px;
+    border-radius: 10px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.sidebar-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Space between Icon/Art and Text */
+.sidebar-item img, .sidebar-item svg {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* Desktop: When sidebar is expanded, push text away from art */
+#sidebar:not(.sidebar-minimized) .sidebar-item {
+    justify-content: flex-start;
+    padding-left: 15px;
+}
+
+#sidebar:not(.sidebar-minimized) .sidebar-item img,
+#sidebar:not(.sidebar-minimized) .sidebar-item svg {
+    margin-right: 14px; /* The gap fix */
+}
+
+/* Sidebar Text Styling */
+.sidebar-full-elem {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Keeps long titles from breaking the layout */
+}
+
+/* Hide text when minimized */
+.sidebar-minimized .sidebar-full-elem {
+    display: none;
+}
 </style>
+
+<body>
+    <div id="mobile-blocker">
+        <h1 style="color: #00ff88; font-family: sans-serif;">Desktop Only</h1>
+        <p style="color: #666; font-family: sans-serif;">Please visit on a computer for the full TRM experience.</p>
+    </div>
+
+    <div id="app-container">
+        </div>
+</body>
 
 <script>
 // --- CONFIG ---
@@ -371,25 +440,36 @@ function init() {
 // --- NAVIGATION LOGIC ---
 function viewHome() {
     lastView = { type: 'home', id: null };
-    const featured = ALBUMS.find(a => a.id === FEATURED_RELEASE_ID);
+    const contentView = document.getElementById('content-view');
     
-    let html = `
-        <div onclick="viewAlbum('${featured.id}')" style="position: relative; width: 100%; height: 350px; border-radius: 20px; overflow: hidden; cursor: pointer; margin-bottom: 40px; border: 1px solid #333;" class="active-glow">
-            <img src="${featured.art}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; filter: blur(15px);">
-            <div style="position: absolute; inset: 0; background: linear-gradient(to top, #050505 5%, transparent 100%); display: flex; align-items: flex-end; padding: 40px;">
-                <div style="display: flex; gap: 30px; align-items: center;">
-                    <img src="${featured.art}" style="width: 180px; height: 180px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                    <div>
-                        <span style="background: #00ff88; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 900; letter-spacing: 1px;">FEATURED RELEASE</span>
-                        <h1 style="font-size: 48px; margin: 10px 0; letter-spacing: -2px;">${featured.name}</h1>
-                        <p style="color: #00ff88; font-weight: 700; font-size: 18px;">${ARTISTS[featured.artistId].name}</p>
-                    </div>
+    // Grabbing the first album as the "Featured" one
+    const featured = ALBUMS[0]; 
+
+    contentView.innerHTML = `
+        <div class="hero-banner" onclick="viewAlbum('${featured.id}')">
+            <div class="hero-inner">
+                <img src="${featured.art}" class="hero-art">
+                <div class="hero-text">
+                    <span class="badge">FEATURED RELEASE</span>
+                    <h1>${featured.name}</h1>
+                    <p>therichmusic</p>
                 </div>
             </div>
         </div>
-        <h2 style="font-size: 24px; margin-bottom: 20px; letter-spacing: -1px;">Recent Releases</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 25px;">
+
+        <h2 class="section-title">Recent Releases</h2>
+        <div class="album-grid">
+            ${ALBUMS.map(album => `
+                <div class="album-card" onclick="viewAlbum('${album.id}')">
+                    <img src="${album.art}">
+                    <h3>${album.name}</h3>
+                    <p>therichmusic</p>
+                </div>
+            `).join('')}
+        </div>
     `;
+    contentView.scrollTop = 0;
+}
 
     RECENT_RELEASE_IDS.forEach(id => {
         const alb = ALBUMS.find(a => a.id === id);
@@ -666,5 +746,5 @@ document.getElementById('progress-container').onclick = (e) => audio.currentTime
 document.getElementById('vol-slider').oninput = (e) => { audio.volume = e.target.value; if(audio.volume > 0) audio.muted = false; };
 function formatTime(s) { let m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
 
-init();
+init()
 </script>
