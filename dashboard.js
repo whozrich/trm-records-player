@@ -108,11 +108,38 @@
         }
 
         /* 7. TRACK ROW COLLISIONS */
-        .track-row {
-            display: flex; align-items: center; padding: 12px;
-            gap: 20px; cursor: pointer; border-radius: 8px;
-        }
-        .track-row:hover { background: rgba(0, 255, 136, 0.05); }
+/* TRACK ROW HOVER GLOW */
+.track-row {
+    display: flex; 
+    padding: 12px 25px; 
+    border-radius: 10px; 
+    cursor: pointer; 
+    align-items: center; 
+    transition: all 0.2s ease; /* Smooth transition for the glow */
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+}
+
+.track-row:hover {
+    background: rgba(0, 255, 136, 0.04); /* Very faint green tint */
+    box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.05), 0 0 10px rgba(0, 255, 136, 0.02);
+    border-color: rgba(0, 255, 136, 0.1);
+    transform: translateX(4px); /* Subtle shift to the right */
+}
+
+/* Ensure the disabled (Coming Soon) tracks don't glow */
+.track-row.disabled {
+    cursor: default;
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
+.track-row.disabled:hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    border-color: transparent;
+}
 
         .track-index-col {
             width: 25px; flex-shrink: 0; font-weight: 900; color: #444;
@@ -292,9 +319,9 @@
             bio: 'The driving force of TRM Records, defining a new era of Hip-Hop and Lofi textures.',
             socials: [
                 { name: 'Instagram', url: 'https://instagram.com/themusicrich', icon: '<path d="M7 2c-2.761 0-5 2.239-5 5v10c0 2.761 2.239 5 5 5h10c2.761 0 5-2.239 5-5v-10c0-2.761-2.239-5-5-5h-10zm0 2h10c1.657 0 3 1.343 3 3v10c0 1.657-1.343 3-3 3h-10c-1.657 0-3-1.343-3-3v-10c0-1.657 1.343-3 3-3zm10 2c-.552 0-1 .448-1 1s.448 1 1 1 1-.448 1-1-.448-1-1-1zm-5 1c-2.761 0-5 2.239-5 5s2.239 5 5 5 5-2.239 5-5-2.239-5-5-5zm0 2c1.657 0 3 1.343 3 3s-1.343 3-3 3-3-1.343-3-3 1.343-3 3-3z"/>' },
-                { name: 'Spotify', url: '#', icon: '<path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.305c-.215.352-.676.463-1.028.248-2.856-1.745-6.45-2.14-10.682-1.173-.404.092-.81-.158-.902-.562-.092-.404.158-.81.562-.902 4.634-1.06 8.59-.604 11.798 1.353.353.215.464.676.25 1.028v.008zm1.466-3.26c-.27.44-.844.577-1.285.308-3.268-2.008-8.25-2.592-12.115-1.42-.497.15-1.02-.132-1.17-.629-.15-.497.132-1.02.629-1.17 4.417-1.34 9.914-.683 13.633 1.605.44.27.577.844.308 1.285v.022zm.126-3.398c-3.92-2.327-10.373-2.542-14.13-1.402-.602.183-1.24-.16-1.423-.76-.183-.603.16-1.24.76-1.423 4.306-1.306 11.44-1.05 15.952 1.628.542.322.72.1.398.542-.32.6-.02 1.222-.542 1.542-.016.012-.016.012-.018.012z"/>' },
-                { name: 'Twitter', url: '#', icon: '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>' },
-                { name: 'YouTube', url: '#', icon: '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.872.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>' }
+                { name: 'Spotify', url: 'https://open.spotify.com/artist/1NY2OmKCkvxTom76PebI2M', icon: '<path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.305c-.215.352-.676.463-1.028.248-2.856-1.745-6.45-2.14-10.682-1.173-.404.092-.81-.158-.902-.562-.092-.404.158-.81.562-.902 4.634-1.06 8.59-.604 11.798 1.353.353.215.464.676.25 1.028v.008zm1.466-3.26c-.27.44-.844.577-1.285.308-3.268-2.008-8.25-2.592-12.115-1.42-.497.15-1.02-.132-1.17-.629-.15-.497.132-1.02.629-1.17 4.417-1.34 9.914-.683 13.633 1.605.44.27.577.844.308 1.285v.022zm.126-3.398c-3.92-2.327-10.373-2.542-14.13-1.402-.602.183-1.24-.16-1.423-.76-.183-.603.16-1.24.76-1.423 4.306-1.306 11.44-1.05 15.952 1.628.542.322.72.1.398.542-.32.6-.02 1.222-.542 1.542-.016.012-.016.012-.018.012z"/>' },
+                { name: 'Twitter', url: 'https://x.com/therichmusic', icon: '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>' },
+                { name: 'YouTube', url: 'https://youtube.com/@themusicrich', icon: '<path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.872.505 9.377.505 9.377.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>' }
             ]
         },
         'lc-xavier': { 
@@ -307,38 +334,151 @@
     };
 
     var ALBUMS = [
-        { id: 'adt-single', name: 'ABOUT DAMN TIME', type: 'Single', releaseDate: 2026, fullDate: 'March 17th, 2026', genre: 'Hip-Hop', art: 'https://images2.imgbox.com/01/3b/p1pphY1X_o.png', artistId: 'therichmusic', purchaseLinks: [] },
-        { id: 'memories', name: 'memories. the prelude.', type: 'Album', releaseDate: 2025, fullDate: 'November 11th, 2025', genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg', artistId: 'lc-xavier', purchaseLinks: [] },
-        { id: 'hearts-bleeding-single', name: 'hearts bleeding out. (feat. therichmusic)', type: 'Single', releaseDate: 2026, fullDate: 'March 13th, 2026', genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg', artistId: 'lc-xavier', purchaseLinks: [] },
-        { id: 'rich-album', name: 'RICH', type: 'Album', releaseDate: 2027, fullDate: 'TBA 2027', genre: 'Hip-Hop', art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png', artistId: 'therichmusic', comingSoon: true, signUpLink: 'https://even.biz/l/rich-sign-up', purchaseLinks: [] }
+        {
+            id: 'adt-single',
+            name: 'ABOUT DAMN TIME',
+            type: 'Single',
+            releaseDate: 2026,
+            fullDate: 'March 17th, 2026',
+            genre: 'Hip-Hop',
+            art: 'https://images2.imgbox.com/01/3b/p1pphY1X_o.png',
+            artistId: 'therichmusic',
+            purchaseLinks: [] },
+        {
+            id: 'memories',
+            name: 'memories. the prelude.',
+            type: 'EP', releaseDate: 2025,
+            fullDate: 'November 11th, 2025',
+            genre: 'Hip-Hop',
+            art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
+            artistId: 'lc-xavier',
+            purchaseLinks: [] },
+        {
+            id: 'hearts-bleeding-single',
+            name: 'hearts bleeding out. (feat. therichmusic)',
+            type: 'Single', releaseDate: 2026,
+            fullDate: 'March 13th, 2026',
+            genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
+            artistId: 'lc-xavier',
+            comingSoon: true,
+            purchaseLinks: [] },
+        {
+            id: 'rich-album',
+            name: 'RICH',
+            type: 'Album',
+            releaseDate: 2027,
+            fullDate: 'TBA 2027',
+            genre: 'Hip-Hop',
+            art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
+            artistId: 'therichmusic',
+            comingSoon: true,
+            signUpLink: 'https://even.biz/l/rich-sign-up',
+            purchaseLinks: [] },
+        {
+            id: 'rich-freestyle-single',
+            name: 'RICH (Freestyle)',
+            type: 'Single', releaseDate: 2025,
+            fullDate: 'December 26th, 2026',
+            genre: 'Hip-Hop', art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
+            artistId: 'therichmusic',
+            comingSoon: false,
+            purchaseLinks: [] },
     ];
 
     var SONG_DATA = {
-        "about-damn-time": { id: "about-damn-time", title: "ABOUT DAMN TIME", duration: "2:54", url: "https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz.mp3", lyrics: ``, credits: `` },
-        "hearts-bleeding": { id: "hearts-bleeding", title: "hearts bleeding out. (feat. therichmusic)", duration: "3:25", url: "https://audio.jukehost.co.uk/0JTJWdbckRjoGCg2vGel5QQ1kSwnWNql", lyrics: ``, credits: `` },
-        "decision-made": { id: "decision-made", title: "decision made.", duration: "3:54", url: "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R", lyrics: ``, credits: `` },
-        "distant-memory": { id: "distant-memory", title: "distant memory. (feat. therichmusic)", duration: "3:54", url: "https://audio.jukehost.co.uk/vS9x0OUdE7NpGLTNj6k7d0sizmkRCKIX", lyrics: ``, credits: `` },
-        "rich-intro": { id: "rich-intro", title: "Intro", hiddenName: true, duration: "??:??", url: "", lyrics: "", credits: "" },
-        "rich-alone": { id: "rich-alone", title: "Alone", hiddenName: true, duration: "??:??", url: "", lyrics: "", credits: "" },
-        "heard-enough": { id: "heard-enough", title: "Heard Enough (feat. Norad)", hiddenName: true, duration: "??:??", url: "", lyrics: "", credits: "" },
+        "about-damn-time": {
+            id: "about-damn-time",
+            title: "ABOUT DAMN TIME",
+            duration: "2:54",
+            url:"https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz.mp3",
+            lyrics: ``,
+            credits: `` },
+        "hearts-bleeding": {
+            id:"hearts-bleeding",
+            title: "hearts bleeding out. (feat. therichmusic)",
+            duration: "3:25",
+            url: "https://audio.jukehost.co.uk/0JTJWdbckRjoGCg2vGel5QQ1kSwnWNql",
+            lyrics: ``,
+            credits: `` },
+        "decision-made": {
+            id: "decision-made",
+            title: "decision made.",
+            duration: "3:54",
+            url: "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R",
+            lyrics: ``,
+            credits: `` },
+        "distant-memory": {
+            id: "distant-memory",
+            title: "distant memory. (feat. therichmusic)",
+            duration: "3:54",
+            url: "https://audio.jukehost.co.uk/vS9x0OUdE7NpGLTNj6k7d0sizmkRCKIX",
+            lyrics: ``,
+            credits: `` },
+        "rich-intro": {
+            id: "rich-intro",
+            title: "Intro",
+            hiddenName: true,
+            duration: "??:??",
+            url: "",
+            lyrics: "",
+            credits: "" },
+        "rich-alone": {
+            id: "rich-alone",
+            title: "Alone",
+            hiddenName: true,
+            duration: "??:??",
+            url: "",
+            lyrics: "",
+            credits: "" },
+        "heard-enough": {
+            id: "heard-enough",
+            title: "Heard Enough (feat. Norad)",
+            hiddenName: true,
+            duration: "??:??",
+            url: "",
+            lyrics: "",
+            credits: "" },
+        "rich-freestyle": {
+            id: "rich-freestyle",
+            title: "RICH (Freestyle)",
+            duration: "1:29",
+            url: "https://audio.jukehost.co.uk/m5yGkyak8NFeWP9DeTObJvH46D1fDmiu",
+            lyrics: "",
+            credits: "" },
     };
 
     var TRACKS = { 
-        'adt-single': [SONG_DATA['about-damn-time']],
-        'memories': [SONG_DATA['decision-made'], SONG_DATA['hearts-bleeding'], SONG_DATA['distant-memory']],
-        'hearts-bleeding-single': [SONG_DATA['hearts-bleeding']],
-        'rich-album': [SONG_DATA['rich-intro'], SONG_DATA['rich-alone'], SONG_DATA['heard-enough'], SONG_DATA['about-damn-time']]
+        'adt-single':[
+            SONG_DATA['about-damn-time']],
+        'memories': [
+            SONG_DATA['decision-made'],
+            SONG_DATA['hearts-bleeding'],
+            SONG_DATA['distant-memory']],
+        'hearts-bleeding-single': [
+            SONG_DATA['hearts-bleeding']],
+        'rich-album': [
+            SONG_DATA['rich-intro'],
+            SONG_DATA['rich-alone'],
+            SONG_DATA['heard-enough'],
+            SONG_DATA['rich-freestyle'],
+            SONG_DATA['about-damn-time']],
+        'rich-freestyle-single': [
+            SONG_DATA['rich-freestyle']],
     };
 
     var audio = new Audio(), isPlaying = false, lastVolume = 0.5, currentTrackId = null, currentAlbumId = null, isShuffle = false, loopState = 0; 
     var SVG_PLAY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>', SVG_PAUSE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
     // --- VIEW HANDLER (RESTORES ANIMATION) ---
-    function renderView(html) {
-        const cv = document.getElementById('content-view');
-        cv.innerHTML = `<div class="view-animate">${html}</div>`;
-        cv.scrollTop = 0;
-    }
+function renderView(html) {
+    const cv = document.getElementById('content-view');
+    // Force the scroll to the top every time a new page is loaded
+    cv.scrollTop = 0; 
+    // Re-inject the HTML wrapped in the animation div
+    cv.innerHTML = `<div class="view-animate">${html}</div>`;
+    // Ensure scrolling is enabled
+    cv.style.overflowY = 'auto'; 
+}
 
     function formatTime(secs) { if (isNaN(secs)) return "0:00"; var min = Math.floor(secs / 60), sec = Math.floor(secs % 60); return min + ":" + (sec < 10 ? "0" + sec : sec); }
     window.togglePanel = function() { document.getElementById('info-panel').classList.toggle('open'); };
@@ -413,11 +553,25 @@
             purchaseHtml += `</select>`;
         }
         var html = `<div style="padding: 60px 40px;"><div style="display: flex; gap: 40px; align-items: flex-end; margin-bottom: 50px;"><div style="position:relative;"><img src="${alb.art}" style="width: 280px; height: 280px; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); ${alb.comingSoon ? 'filter:grayscale(1) brightness(0.5);' : ''}">${alb.comingSoon ? '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-weight:900; color:#00ff88; letter-spacing:2px; font-size:12px; width:100%; text-align:center;">COMING SOON</div>' : ''}</div><div><p style="color: #00ff88; font-weight: 800; font-size: 13px; margin: 0; letter-spacing:1px;">${alb.genre.toUpperCase()}</p><h1 style="font-size: 80px; margin: 10px 0; font-weight: 900; letter-spacing: -4px;">${alb.name}</h1><p onclick="viewArtist('${alb.artistId}')" style="cursor:pointer; color: #b3b3b3; font-size:18px;">${ARTISTS[alb.artistId].name} • ${alb.releaseDate}</p>${purchaseHtml}</div></div>`;
-        for (var j = 0; j < tks.length; j++) { 
-            var isCur = (tks[j].id === currentTrackId); 
-            var displayTitle = (alb.comingSoon && tks[j].hiddenName) ? `Track ${j+1}` : tks[j].title;
-            html += `<div class="track-row ${alb.comingSoon ? 'disabled' : ''}" data-id="${tks[j].id}" onclick="${alb.comingSoon ? '' : "playTrack('"+tks[j].id+"')"}" style="display: flex; padding: 15px 25px; border-radius: 10px; cursor: pointer; align-items: center; color: ${isCur ? '#00ff88' : '#fff'};"><div class="track-index-col"><span class="track-num">${j+1}</span><span class="track-play-hover" style="display:none;">${(isCur && isPlaying) ? SVG_PAUSE : SVG_PLAY}</span></div><span style="flex: 1; font-weight: 600; font-size:15px;">${displayTitle}</span><span style="color:#666; font-size:13px;">${tks[j].duration}</span></div>`; 
-        }
+// Inside window.viewAlbum loop...
+for (var j = 0; j < tks.length; j++) { 
+    var isCur = (tks[j].id === currentTrackId); 
+    var displayTitle = (alb.comingSoon && tks[j].hiddenName) ? `Track ${j+1}` : tks[j].title;
+    
+    // Check if the album is coming soon to disable hover/click
+    var rowClass = alb.comingSoon ? "track-row disabled" : "track-row";
+    var clickAction = alb.comingSoon ? "" : `onclick="playTrack('${tks[j].id}')"`;
+
+    html += `
+    <div class="${rowClass}" data-id="${tks[j].id}" ${clickAction}>
+        <div class="track-index-col" style="width: 30px; display: flex; align-items: center;">
+            <span class="track-num" style="font-size: 13px; color: #666;">${j+1}</span>
+            <span class="track-play-hover" style="display:none;">${(isCur && isPlaying) ? SVG_PAUSE : SVG_PLAY}</span>
+        </div>
+        <span style="flex: 1; font-weight: 600; font-size:15px; margin-left: 10px;">${displayTitle}</span>
+        <span style="color:#666; font-size:13px; font-family: monospace;">${tks[j].duration}</span>
+    </div>`; 
+}
         renderView(html + `<div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #111; color: #444; font-size: 12px; font-weight: 800;">${alb.type.toUpperCase()} RELEASED ${alb.fullDate.toUpperCase()}<br>© 2026 TRM RECORDS</div></div>`); 
     };
 
