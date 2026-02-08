@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,77 +13,127 @@
             --neon-glow: drop-shadow(0 0 8px rgba(0, 255, 136, 0.6));
         }
 
-        /* 1. LAYOUT & STACKING */
-body { 
-    margin: 0; 
-    background: #000; 
-    color: #fff; 
-    font-family: 'Inter', sans-serif; 
-    overflow: hidden; /* Prevent the WHOLE page from scrolling */
-    height: 100vh;
-    width: 100vw;
-}
+        /* 1. LAYOUT & STACKING - FORCED FULL SCREEN OVERLAY */
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
 
-#dashboard-wrapper {
-    height: 100vh; 
-    display: flex; 
-    flex-direction: column;
-    overflow: hidden;
-}
+        #dashboard-wrapper {
+            position: fixed; /* Bypasses Fourthwall container limits */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 9999999; /* Stays above all site elements */
+            background: #000;
+        }
 
-.main-viewport {
-    display: flex; 
-    flex: 1; 
-    overflow: hidden; /* Critical: keeps the sidebar/content inside the 100vh */
-    height: calc(100vh - 100px); /* Total height minus player height */
-}
+        .main-viewport {
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+            height: calc(100vh - 100px); 
+        }
 
-        /* 2. THE PLAYER (KING OF Z-INDEX) */
+        /* EXIT BUTTON */
+        .exit-player-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            z-index: 10000001;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 18px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 900;
+            text-decoration: none;
+            letter-spacing: 1.5px;
+            backdrop-filter: blur(10px);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .exit-player-btn:hover {
+            background: #ff4444;
+            border-color: #ff4444;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+        }
+
+        /* 2. THE PLAYER */
         #mini-player {
-            height: 100px; background: #050505; border-top: 1px solid #111;
-            display: flex; align-items: center; padding: 0 25px; gap: 30px;
+            height: 100px; 
+            background: #050505; 
+            border-top: 1px solid #111;
+            display: flex; 
+            align-items: center; 
+            padding: 0 25px; 
+            gap: 30px;
             position: relative;
-            z-index: 10000 !important; /* Above EVERYTHING */
+            z-index: 10000000 !important;
         }
 
         /* CATALOGUE GLOW EFFECT */
-.glow-card {
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
+        .glow-card {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
 
-.glow-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(0, 255, 136, 0.2);
-    border-color: rgba(0, 255, 136, 0.3);
-}
+        .glow-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 255, 136, 0.2);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
 
         /* 3. THE SLIDE-OUT PANEL */
         #info-panel {
-            position: fixed; right: -450px; top: 0; width: 350px; height: calc(100vh - 100px);
-            background: rgba(8, 8, 8, 0.98); backdrop-filter: blur(15px);
+            position: fixed; 
+            right: -450px; 
+            top: 0; 
+            width: 350px; 
+            height: calc(100vh - 100px);
+            background: rgba(8, 8, 8, 0.98); 
+            backdrop-filter: blur(15px);
             border-left: 1px solid #222;
-            z-index: 999; /* Below the player bar */
+            z-index: 999999; 
             transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            visibility: hidden; padding: 30px;
+            visibility: hidden; 
+            padding: 30px;
         }
         #info-panel.open { right: 0; visibility: visible; }
 
         /* 4. SIDEBAR & SEARCH FIX */
- .sidebar-container {
-    width: 240px; 
-    background: #000; 
-    border-right: 1px solid #111;
-    display: flex; 
-    flex-direction: column; 
-    flex-shrink: 0;
-    height: 100%;
-}
+        .sidebar-container {
+            width: 240px; 
+            background: #000; 
+            border-right: 1px solid #111;
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0;
+            height: 100%;
+        }
 
         #search-input {
-            width: calc(100% - 32px); background: #111; border: 1px solid #222;
-            color: #fff; padding: 12px; border-radius: 8px; margin: 16px;
-            outline: none; transition: 0.3s; box-sizing: border-box;
+            width: calc(100% - 32px); 
+            background: #111; 
+            border: 1px solid #222;
+            color: #fff; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin: 16px;
+            outline: none; 
+            transition: 0.3s; 
+            box-sizing: border-box;
         }
         #search-input:focus {
             border-color: var(--accent-green);
@@ -98,14 +146,12 @@ body {
             transition: 0.2s ease;
         }
 
-        /* Restore Hover Glows */
         .control-toggle:hover svg, #vol-svg:hover, .social-link:hover svg {
             color: var(--accent-green) !important;
             filter: var(--neon-glow);
             transform: scale(1.1);
         }
 
-        /* Active State for Shuffle/Loop */
         .control-toggle.active svg {
             color: var(--accent-green) !important;
             filter: var(--neon-glow);
@@ -119,8 +165,12 @@ body {
 
         /* 6. CATALOGUE HOVER FIX */
         .sidebar-item {
-            padding: 10px 20px; cursor: pointer; border-radius: 6px;
-            margin: 2px 10px; transition: 0.2s; color: #b3b3b3;
+            padding: 10px 20px; 
+            cursor: pointer; 
+            border-radius: 6px;
+            margin: 2px 10px; 
+            transition: 0.2s; 
+            color: #b3b3b3;
         }
         .sidebar-item:hover {
             background: rgba(255,255,255,0.05);
@@ -128,186 +178,142 @@ body {
         }
 
         /* 7. TRACK ROW COLLISIONS */
-/* TRACK ROW HOVER GLOW */
-.track-row {
-    display: flex; 
-    padding: 12px 25px; 
-    border-radius: 10px; 
-    cursor: pointer; 
-    align-items: center; 
-    transition: all 0.2s ease; /* Smooth transition for the glow */
-    border: 1px solid transparent;
-    margin-bottom: 2px;
-}
-
-.track-row:hover {
-    background: rgba(0, 255, 136, 0.04); /* Very faint green tint */
-    box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.05), 0 0 10px rgba(0, 255, 136, 0.02);
-    border-color: rgba(0, 255, 136, 0.1);
-    transform: translateX(4px); /* Subtle shift to the right */
-}
-
-/* Ensure the disabled (Coming Soon) tracks don't glow */
-.track-row.disabled {
-    cursor: default;
-    opacity: 0.5;
-    filter: grayscale(1);
-}
-
-.track-row.disabled:hover {
-    background: transparent;
-    box-shadow: none;
-    transform: none;
-    border-color: transparent;
-}
-
-        .track-index-col {
-            width: 25px; flex-shrink: 0; font-weight: 900; color: #444;
+        .track-row {
+            display: flex; 
+            padding: 12px 25px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            align-items: center; 
+            transition: all 0.2s ease; 
+            border: 1px solid transparent;
+            margin-bottom: 2px;
         }
 
-        /* Album Art Fix */
+        .track-row:hover {
+            background: rgba(0, 255, 136, 0.04); 
+            box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.05), 0 0 10px rgba(0, 255, 136, 0.02);
+            border-color: rgba(0, 255, 136, 0.1);
+            transform: translateX(4px); 
+        }
+
+        .track-row.disabled {
+            cursor: default;
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .track-index-col {
+            width: 25px; 
+            flex-shrink: 0; 
+            font-weight: 900; 
+            color: #444;
+        }
+
         .album-view-header {
-            display: flex; gap: 40px; align-items: flex-end; margin-bottom: 40px;
+            display: flex; 
+            gap: 40px; 
+            align-items: flex-end; 
+            margin-bottom: 40px;
         }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
 
-        /* 1. ANIMATION SYSTEM */
-    @keyframes fadeInScale {
-        from { opacity: 0; transform: scale(0.98); }
-        to { opacity: 1; transform: scale(1); }
-    }
+        /* 8. ANIMATION SYSTEM */
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
 
-    .view-animate {
-        animation: fadeInScale 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
+        .view-animate {
+            animation: fadeInScale 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
 
-    /* 2. BUTTON & LINK RESTORATION */
-    .signup-btn {
-        display: inline-block;
-        background: #00ff88;
-        color: #000 !important;
-        padding: 12px 24px;
-        border-radius: 30px;
-        font-weight: 800;
-        font-size: 13px;
-        text-decoration: none !important;
-        letter-spacing: 1px;
-        transition: 0.3s;
-        margin-top: 15px;
-    }
+        /* 9. BUTTON & LINK RESTORATION */
+        .signup-btn {
+            display: inline-block;
+            background: #00ff88;
+            color: #000 !important;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 13px;
+            text-decoration: none !important;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            margin-top: 15px;
+        }
 
-    .signup-btn:hover {
-        background: #fff;
-        box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
-        transform: translateY(-2px);
-    }
+        .signup-btn:hover {
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+            transform: translateY(-2px);
+        }
 
-    .purchase-select {
-        background: #111;
-        color: #fff;
-        border: 1px solid #333;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 700;
-        cursor: pointer;
-        outline: none;
-        margin-top: 15px;
-    }
+        .purchase-select {
+            background: #111;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            margin-top: 15px;
+        }
 
-    .purchase-select:hover {
-        border-color: #00ff88;
-    }
+        .purchase-select:hover { border-color: #00ff88; }
 
-    /* 3. SIDEBAR HOVER RESTORATION */
-    .sidebar-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 15px;
-        cursor: pointer;
-        border-radius: 8px;
-        transition: 0.2s;
-        color: #b3b3b3;
-    }
+        .social-link {
+            color: #666; 
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            text-decoration: none;
+        }
 
-    .sidebar-item:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
-    }
+        .social-link:hover {
+            color: #00ff88; 
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.2);
+        }
 
-    .sidebar-item img {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-    }
-
-    .social-link {
-    color: #666; /* Default gray */
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.03);
-    text-decoration: none;
-}
-
-.social-link:hover {
-    color: #00ff88; /* Glow green on hover */
-    background: rgba(0, 255, 136, 0.1);
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 255, 136, 0.2);
-}
-
-.social-link svg {
-    fill: currentColor;
-}
-
-#content-view {
-flex: 1;
-    overflow-y: auto !important; /* Force vertical scroll */
-    overflow-x: hidden;
-    height: 100%; /* Fill the main-viewport */
-    background: linear-gradient(to bottom, #121212, #000);
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    position: relative;
-}
-
-/* Optional: Make the scrollbar look cleaner and more 'TRM' */
-#content-view::-webkit-scrollbar {
-    width: 6px;
-}
-#content-view::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-#content-view::-webkit-scrollbar-thumb:hover {
-    background: #00ff88;
-}
+        #content-view {
+            flex: 1;
+            overflow-y: auto !important; 
+            overflow-x: hidden;
+            height: 100%; 
+            background: linear-gradient(to bottom, #121212, #000);
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
     </style>
 </head>
 <body>
 
 <div id="dashboard-wrapper">
-    <div class="main-viewport" style="display: flex; flex: 1; overflow: hidden; height: calc(100vh - 100px);">
-        
+    <a href="/" class="exit-player-btn">✕ EXIT PLAYER</a>
+
+    <div class="main-viewport">
         <div class="sidebar-container">
             <div id="sidebar-nav" style="padding: 20px 10px;">
                 <div class="sidebar-item" onclick="viewHome()">Home</div>
             </div>
             <input type="text" id="search-input" placeholder="Search everything..." onkeyup="handleGlobalSearch(this.value)">
             <div style="padding: 10px 20px; color: #444; font-size: 11px; font-weight: 800; letter-spacing: 1.5px;">CATALOGUE</div>
-            <div id="sidebar-releases" style="flex: 1; overflow-y: auto; padding-bottom: 20px;">
-                </div>
+            <div id="sidebar-releases" style="flex: 1; overflow-y: auto; padding-bottom: 20px;"></div>
         </div>
 
         <div id="content-view">
-            <div style="padding: 40px;">Initializing TRM...</div>
+            <div style="padding: 40px;">Initializing TRM MUSIC PLAYER...</div>
         </div>
 
         <div id="info-panel">
@@ -332,7 +338,7 @@ flex: 1;
             <div style="display: flex; align-items: center; gap: 24px;">
                 <div id="shuffle-btn" class="control-toggle" onclick="toggleShuffle()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg></div>
                 <div class="control-toggle" onclick="prevTrack()"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></div>
-                <button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
+                <button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; cursor: pointer;">
                     <svg id="play-icon" viewBox="0 0 24 24" width="20" height="20" fill="black"><path d="M8 5v14l11-7z"/></svg>
                 </button>
                 <div class="control-toggle" onclick="nextTrack()"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></div>
@@ -354,6 +360,8 @@ flex: 1;
         </div>
     </div>
 </div>
+</body>
+</html>
 
 <script>
 (function() {
