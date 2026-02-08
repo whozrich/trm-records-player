@@ -383,13 +383,36 @@ flex: 1;
             name: 'RICH',
             type: 'Album',
             releaseDate: 2027,
-            fullDate: 'TBA 2027',
+            fullDate: '2027',
             genre: 'Hip-Hop',
             art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
             artistId: 'therichmusic',
             comingSoon: true,
             signUpLink: 'https://even.biz/l/rich-sign-up',
-            purchaseLinks: [] },
+            purchaseLinks: []
+        },
+        {
+            id: 'memories-album',
+            name: 'memories.',
+            type: 'EP', releaseDate: 2026,
+            fullDate: '2026',
+            genre: 'Hip-Hop',
+            art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
+            artistId: 'lc-xavier',
+            comingSoon: true,
+            // signUpLink: 'https://even.biz/l/rich-sign-up',
+            purchaseLinks: []
+        },
+        {
+            id: 'hearts-bleeding-single',
+            name: 'hearts bleeding out. (feat. therichmusic)',
+            type: 'Single', releaseDate: 2026,
+            fullDate: 'March 13th, 2026',
+            genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
+            artistId: 'lc-xavier',
+            comingSoon: true,
+            purchaseLinks: []
+        },
         {
             id: 'leaving-soon-single',
             name: 'LEAVING SOON',
@@ -399,7 +422,8 @@ flex: 1;
             genre: 'Hip-Hop',
             art: 'https://images2.imgbox.com/d6/47/HbPZE29T_o.png',
             artistId: 'therichmusic',
-            purchaseLinks: [] },
+            purchaseLinks: []
+        },
         {
             id: 'adt-single',
             name: 'ABOUT DAMN TIME',
@@ -409,7 +433,8 @@ flex: 1;
             genre: 'Hip-Hop',
             art: 'https://images2.imgbox.com/01/3b/p1pphY1X_o.png',
             artistId: 'therichmusic',
-            purchaseLinks: [] },
+            purchaseLinks: []
+        },
         {
             id: 'memories',
             name: 'memories. the prelude.',
@@ -418,16 +443,8 @@ flex: 1;
             genre: 'Hip-Hop',
             art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
             artistId: 'lc-xavier',
-            purchaseLinks: [] },
-        {
-            id: 'hearts-bleeding-single',
-            name: 'hearts bleeding out. (feat. therichmusic)',
-            type: 'Single', releaseDate: 2026,
-            fullDate: 'March 13th, 2026',
-            genre: 'Hip-Hop', art: 'https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg',
-            artistId: 'lc-xavier',
-            comingSoon: true,
-            purchaseLinks: [] },
+            purchaseLinks: []
+        },
         {
             id: 'rich-freestyle-single',
             name: 'RICH (Freestyle)',
@@ -436,7 +453,8 @@ flex: 1;
             genre: 'Hip-Hop', art: 'https://images2.imgbox.com/21/07/fBkN1oX6_o.png',
             artistId: 'therichmusic',
             comingSoon: false,
-            purchaseLinks: [] },
+            purchaseLinks: []
+        },
     ];
 
     var SONG_DATA = {
@@ -532,20 +550,29 @@ flex: 1;
             SONG_DATA['rich-freestyle'],
             SONG_DATA['drop-to-the-floor'],
             SONG_DATA['rich-skill'],
-            SONG_DATA['about-damn-time']],
+            SONG_DATA['about-damn-time']
+        ],
         'adt-single':[
-            SONG_DATA['about-damn-time']],
+            SONG_DATA['about-damn-time']
+        ],
         'leaving-soon-single':[
-            SONG_DATA['leaving-soon']],
+            SONG_DATA['leaving-soon']
+        ],
         'memories': [
             SONG_DATA['decision-made'],
-            SONG_DATA['hearts-bleeding'],
-            SONG_DATA['distant-memory']],
+            SONG_DATA['distant-memory']
+        ],
+        'memories-album':[
+            SONG_DATA['decision-made'],
+            SONG_DATA['distant-memory'],
+            SONG_DATA['hearts-bleeding']
+        ],
         'hearts-bleeding-single': [
-            SONG_DATA['hearts-bleeding']],
+            SONG_DATA['hearts-bleeding']
+        ],
         'rich-freestyle-single': [
-            SONG_DATA['rich-freestyle']],
-
+            SONG_DATA['rich-freestyle']
+        ],
     };
 
     var audio = new Audio(), isPlaying = false, lastVolume = 0.5, currentTrackId = null, currentAlbumId = null, isShuffle = false, loopState = 0; 
