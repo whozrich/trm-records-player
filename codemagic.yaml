@@ -1,17 +1,24 @@
+environment:
+  groups:
+    - keys # This loads your GITHUB_TOKEN
+
 workflows:
   ios-debug-build:
     name: iOS Debug Build
     instance_type: mac_mini_m2
-    max_build_duration: 60
     scripts:
+      - name: Install Pods (with Secret Token)
+        script: |
+          cd mobile
+          
+          # This line tells the Mac to use your secret token for the private GoNative repo
+          git config --global url."https://$GITHUB_TOKEN@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://$GITHUB_TOKEN@github.com/".insteadOf "git@github.com:"
+          
+          pod install
       - name: Build unsigned .ipa
         script: | 
           cd mobile
-          
-          # Step 1: Clean the build environment just in case
-          xcodebuild clean -workspace "TRMMUSICPLAYER.xcworkspace" -scheme "TRMMUSICPLAYER"
-          
-          # Step 2: Build using the existing Pods folder
           xcodebuild build \
             -workspace "TRMMUSICPLAYER.xcworkspace" \
             -scheme "TRMMUSICPLAYER" \
@@ -24,7 +31,6 @@ workflows:
         script: | 
           cd mobile
           mkdir -p build/ios/ipa/Payload
-          # This copies the compiled app from the build folder
           cp -r $HOME/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphoneos/*.app build/ios/ipa/Payload
           cd build/ios/ipa && zip -r TRM_Player.ipa Payload
     artifacts:
