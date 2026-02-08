@@ -366,6 +366,16 @@
             artistId: 'therichmusic',
             purchaseLinks: [] },
         {
+            id: 'leaving-soon-single',
+            name: 'LEAVING SOON',
+            type: 'Single',
+            releaseDate: 2026,
+            fullDate: 'February 7th, 2026',
+            genre: 'Hip-Hop',
+            art: 'https://images2.imgbox.com/d6/47/HbPZE29T_o.png',
+            artistId: 'therichmusic',
+            purchaseLinks: [] },
+        {
             id: 'memories',
             name: 'memories. the prelude.',
             type: 'EP', releaseDate: 2025,
@@ -414,25 +424,32 @@
             url:"https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz.mp3",
             lyrics: ``,
             credits: `` },
+        "leaving-soon": {
+            id: "leaving-soon",
+            title: "LEAVING SOON",
+            duration: "2:54",
+            url:"https://audio.jukehost.co.uk/MnDDdmw7m8kveT1b9Ihz48RcGNZKTYk7.mp3",
+            lyrics: ``,
+            credits: `` },
         "hearts-bleeding": {
             id:"hearts-bleeding",
             title: "hearts bleeding out. (feat. therichmusic)",
             duration: "3:25",
-            url: "https://audio.jukehost.co.uk/0JTJWdbckRjoGCg2vGel5QQ1kSwnWNql",
+            url: "https://audio.jukehost.co.uk/0JTJWdbckRjoGCg2vGel5QQ1kSwnWNql.mp3",
             lyrics: ``,
             credits: `` },
         "decision-made": {
             id: "decision-made",
             title: "decision made.",
             duration: "3:54",
-            url: "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R",
+            url: "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
             lyrics: ``,
             credits: `` },
         "distant-memory": {
             id: "distant-memory",
             title: "distant memory. (feat. therichmusic)",
             duration: "3:54",
-            url: "https://audio.jukehost.co.uk/vS9x0OUdE7NpGLTNj6k7d0sizmkRCKIX",
+            url: "https://audio.jukehost.co.uk/vS9x0OUdE7NpGLTNj6k7d0sizmkRCKIX.mp3",
             lyrics: ``,
             credits: `` },
         "rich-intro": {
@@ -495,6 +512,8 @@
             SONG_DATA['about-damn-time']],
         'adt-single':[
             SONG_DATA['about-damn-time']],
+        'leaving-soon-single':[
+            SONG_DATA['leaving-soon']],
         'memories': [
             SONG_DATA['decision-made'],
             SONG_DATA['hearts-bleeding'],
