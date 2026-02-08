@@ -7,6 +7,12 @@
         <button onclick="toggleSidebarSize()" class="icon-btn active-glow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
         <input type="text" id="global-search" placeholder="Search..." style="flex:1; background: #111; border: 1px solid #222; color: #fff; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;" class="sidebar-full-elem">
       </div>
+
+      <div style="padding: 10px 20px; cursor: pointer; display: flex; align-items: center; gap: 12px;" onclick="viewHome()" class="sidebar-item active-glow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span class="sidebar-full-elem" style="font-weight: 700;">Home</span>
+      </div>
+
       <div id="sidebar-scroll" style="flex: 1; overflow-y: auto; padding: 0 10px 20px;"></div>
       <div id="drag-handle" style="position: absolute; right: -2px; top: 0; bottom: 0; width: 6px; cursor: ew-resize; background: transparent; z-index: 20;"></div>
     </div>
@@ -31,7 +37,7 @@
       <img id="mini-cover" onclick="toggleFullscreen()" src="" style="width: 65px; height: 65px; border-radius: 8px; cursor: pointer; border: 1px solid #222; background: #111; object-fit: cover;" class="active-glow">
       <div style="max-width: 200px; overflow: hidden;">
         <div id="mini-title" onclick="handleTitleClick()" style="font-size: 14px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; cursor: pointer;">No Track Selected</div>
-        <div id="mini-artist" onclick="viewArtist(currentTrack.artistId)" style="font-size: 12px; color: #00ff88; cursor: pointer;">Select a song</div>
+        <div id="mini-artist" onclick="if(currentTrack) viewArtist(currentTrack.artistId)" style="font-size: 12px; color: #00ff88; cursor: pointer;">Select a song</div>
       </div>
     </div>
 
@@ -39,11 +45,9 @@
       <div style="display: flex; align-items: center; gap: 20px;">
         <button id="shuffle-btn" class="icon-btn" onclick="toggleShuffle()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg></button>
         <button class="icon-btn" onclick="skipTrack(-1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6L18 18V6z"/></svg></button>
-        
         <button id="play-btn" onclick="togglePlay()" class="main-play-glow" style="background: #fff; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s transform ease, 0.3s box-shadow;">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="#000"><path id="play-path" d="M8 5v14l11-7z"/></svg>
         </button>
-
         <button class="icon-btn" onclick="skipTrack(1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6zm9-12h2v12h-2z"/></svg></button>
         <button id="loop-btn" class="icon-btn" onclick="toggleLoop()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></button>
       </div>
@@ -59,7 +63,6 @@
     <div style="display: flex; align-items: center; justify-content: flex-end; width: 30%; gap: 18px;">
        <button id="lyrics-btn" class="icon-btn" onclick="togglePanel('lyrics')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
        <button id="credits-btn" class="icon-btn" onclick="togglePanel('credits')"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></button>
-       
        <div style="display: flex; align-items: center; gap: 8px;">
            <button onclick="toggleMute()" class="icon-btn" id="vol-btn" style="padding:0; width: 25px;">
                <svg id="vol-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -84,42 +87,34 @@
 <style>
   .icon-btn { background: none; border: none; color: #666; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; outline: none; }
   .icon-btn:hover, .icon-btn.active { color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
-  
-  /* Restoration of Glow Effects */
   .active-glow { transition: 0.3s; }
   .active-glow:hover { filter: drop-shadow(0 0 8px #00ff88); }
-
   .main-play-glow:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 10px 25px rgba(0, 255, 136, 0.5); }
   .main-play-glow:active { transform: scale(0.95); }
-
   .track-row { display: grid; grid-template-columns: 40px 1fr 1fr 60px; padding: 12px; border-radius: 8px; cursor: pointer; align-items: center; transition: 0.2s; position: relative; }
   .track-row:hover { background: rgba(255,255,255,0.07); }
-  
   .track-row .row-number { display: block; }
   .track-row .row-play-icon { display: none; color: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
   .track-row:hover .row-number { display: none; }
   .track-row:hover .row-play-icon { display: block; }
-  
   .track-row.playing .track-title-text { color: #00ff88; font-weight: 700; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
-  .track-row.playing .row-number { color: #00ff88; }
-
   .sidebar-minimized .sidebar-full-elem { display: none; }
   .sidebar-minimized { width: 85px !important; }
-  
   .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; margin-bottom: 2px; }
   .sidebar-item:hover { background: rgba(255,255,255,0.05); }
-
   .social-icon { width: 20px; height: 20px; filter: invert(1); opacity: 0.6; transition: 0.3s; }
   .social-icon:hover { opacity: 1; filter: invert(1) drop-shadow(0 0 8px #00ff88); }
-  
   .result-card { background: #111; padding: 20px; border-radius: 15px; cursor: pointer; transition: 0.3s; border: 1px solid #222; }
   .result-card:hover { border-color: #00ff88; transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,255,136,0.1); }
-  
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 </style>
 
 <script>
+// --- CONFIG ---
+const FEATURED_RELEASE_ID = "memories"; 
+const RECENT_RELEASE_IDS = ["leaving-soon", "about-damn-time", "heart-bleeding-out"];
+
 // --- DATA ---
 const ARTISTS = {
   "therichmusic": {
@@ -348,16 +343,17 @@ Written by LC XAVIER, therichmusic`
 const ALBUMS = [
   { id: "leaving-soon", name: "LEAVING SOON", artistId: "therichmusic", art: "https://images2.imgbox.com/d6/47/HbPZE29T_o.png", tracks: ["leaving-soon"], type: "Single" },
   { id: "about-damn-time", name: "ABOUT DAMN TIME", artistId: "therichmusic", art: "https://images2.imgbox.com/01/3b/p1pphY1X_o.png", tracks: ["about-damn-time"], type: "Single" },
-  // Fixed the artistId below (removed the space after xavier)
   { id: "memories", name: "memories.", artistId: "lc-xavier", art: "https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg", tracks: ["broken-hearts"], type: "Album" },
   { id: "heart-bleeding-out", name: "hearts bleeding out. (feat. therichmusic)", artistId: "lc-xavier", art: "https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg", tracks: ["broken-hearts"], type: "Single" },
 ];
+
+// !!! PASTE YOUR "TRACKS" CONST HERE !!!
 
 // --- APP STATE ---
 let currentTrack = null;
 let isShuffle = false;
 let activePanelType = null; 
-let lastView = { type: 'album', id: 'leaving-soon' };
+let lastView = { type: 'home', id: null };
 const audio = document.getElementById('audio-engine');
 
 function init() {
@@ -369,14 +365,51 @@ function init() {
     });
     setupSidebarDrag();
     setupKeyboardShortcuts();
-    viewAlbum('rich-era');
+    viewHome(); // Start at Home
 }
 
 // --- NAVIGATION LOGIC ---
+function viewHome() {
+    lastView = { type: 'home', id: null };
+    const featured = ALBUMS.find(a => a.id === FEATURED_RELEASE_ID);
+    
+    let html = `
+        <div onclick="viewAlbum('${featured.id}')" style="position: relative; width: 100%; height: 350px; border-radius: 20px; overflow: hidden; cursor: pointer; margin-bottom: 40px; border: 1px solid #333;" class="active-glow">
+            <img src="${featured.art}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4; filter: blur(15px);">
+            <div style="position: absolute; inset: 0; background: linear-gradient(to top, #050505 5%, transparent 100%); display: flex; align-items: flex-end; padding: 40px;">
+                <div style="display: flex; gap: 30px; align-items: center;">
+                    <img src="${featured.art}" style="width: 180px; height: 180px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                    <div>
+                        <span style="background: #00ff88; color: #000; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 900; letter-spacing: 1px;">FEATURED RELEASE</span>
+                        <h1 style="font-size: 48px; margin: 10px 0; letter-spacing: -2px;">${featured.name}</h1>
+                        <p style="color: #00ff88; font-weight: 700; font-size: 18px;">${ARTISTS[featured.artistId].name}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <h2 style="font-size: 24px; margin-bottom: 20px; letter-spacing: -1px;">Recent Releases</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 25px;">
+    `;
+
+    RECENT_RELEASE_IDS.forEach(id => {
+        const alb = ALBUMS.find(a => a.id === id);
+        if (alb) {
+            html += `
+                <div class="result-card" onclick="viewAlbum('${alb.id}')">
+                    <img src="${alb.art}" style="width: 100%; aspect-ratio: 1; border-radius: 10px; margin-bottom: 15px; object-fit: cover;">
+                    <div style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${alb.name}</div>
+                    <div style="font-size: 12px; color: #00ff88;">${ARTISTS[alb.artistId].name}</div>
+                </div>
+            `;
+        }
+    });
+
+    html += `</div>`;
+    document.getElementById('content-view').innerHTML = html;
+}
+
 function handleTitleClick() {
     if (!currentTrack) return;
-    // If we are currently on the album page for this song, go to the song page.
-    // Otherwise, go to the album page.
     if (lastView.type === 'album' && lastView.id === currentTrack.albumId) {
         viewSongPage(currentTrack.id);
     } else {
@@ -386,10 +419,7 @@ function handleTitleClick() {
 
 // --- PLAYER ENGINE ---
 function playTrack(id) {
-    if (currentTrack?.id === id) {
-        togglePlay();
-        return;
-    }
+    if (currentTrack?.id === id) { togglePlay(); return; }
     currentTrack = TRACKS[id];
     audio.src = currentTrack.url;
     audio.play();
@@ -444,13 +474,9 @@ function viewAlbum(id) {
             const isThisPlaying = (currentTrack?.id === tid && !audio.paused);
             return `
             <div class="track-row ${currentTrack?.id === tid ? 'playing' : ''}" onclick="playTrack('${tid}')">
-                <div class="row-num-container" style="width: 25px;">
+                <div style="width: 25px;">
                     <span class="row-number">${i+1}</span>
-                    <span class="row-play-icon">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="${isThisPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/>
-                        </svg>
-                    </span>
+                    <span class="row-play-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="${isThisPlaying ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z'}"/></svg></span>
                 </div>
                 <span class="track-title-text" onclick="event.stopPropagation(); viewSongPage('${tid}')">${TRACKS[tid].title}</span>
                 <span style="color:#777;">${ARTISTS[TRACKS[tid].artistId].name}</span>
@@ -515,7 +541,7 @@ function handleSearch(query) {
             html += `<div class="result-card" onclick="viewArtist('${k}')" style="text-align: center; width: 180px;">
                         <img src="${ARTISTS[k].pfp}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
                         <div style="font-weight: bold;">${ARTISTS[k].name}</div>
-                     </div>`;
+                      </div>`;
         });
         html += `</div>`;
     }
@@ -526,7 +552,7 @@ function handleSearch(query) {
                         <img src="${a.art}" style="width: 100%; border-radius: 10px; margin-bottom: 15px;">
                         <div style="font-weight: bold;">${a.name}</div>
                         <div style="font-size: 12px; color: #666;">${ARTISTS[a.artistId].name}</div>
-                     </div>`;
+                      </div>`;
         });
         html += `</div>`;
     }
@@ -534,13 +560,13 @@ function handleSearch(query) {
 }
 
 function updateView() {
-    if (lastView.type === 'album') viewAlbum(lastView.id);
+    if (lastView.type === 'home') viewHome();
+    else if (lastView.type === 'album') viewAlbum(lastView.id);
     else if (lastView.type === 'song') viewSongPage(lastView.id);
     else if (lastView.type === 'artist') viewArtist(lastView.id);
     else if (lastView.type === 'search') handleSearch(lastView.id);
 }
 
-// --- TOOLS ---
 function renderSidebar(q) {
     const cont = document.getElementById('sidebar-scroll');
     cont.innerHTML = '';
@@ -556,34 +582,21 @@ function toggleMute() {
     audio.muted = !audio.muted;
     const icon = document.getElementById('vol-icon');
     const waves = icon.querySelector('.vol-waves');
-    if (audio.muted || audio.volume === 0) {
-        waves.style.display = 'none';
-        icon.style.color = '#ff4444';
-    } else {
-        waves.style.display = 'block';
-        icon.style.color = 'inherit';
-    }
+    if (audio.muted || audio.volume === 0) { waves.style.display = 'none'; icon.style.color = '#ff4444'; } 
+    else { waves.style.display = 'block'; icon.style.color = 'inherit'; }
 }
 
 function togglePanel(type) {
     if (!currentTrack) return;
     const p = document.getElementById('right-panel');
-    const lyricsBtn = document.getElementById('lyrics-btn');
-    const creditsBtn = document.getElementById('credits-btn');
-
-    if (activePanelType === type) {
-        closeRightPanel();
-        return;
-    }
-
+    if (activePanelType === type) { closeRightPanel(); return; }
     activePanelType = type;
     document.getElementById('panel-title').innerText = type.toUpperCase();
     document.getElementById('panel-body').innerText = currentTrack[type];
     p.style.width = '350px'; 
     p.style.borderLeft = '1px solid #1a1a1a';
-    
-    lyricsBtn.classList.toggle('active', type === 'lyrics');
-    creditsBtn.classList.toggle('active', type === 'credits');
+    document.getElementById('lyrics-btn').classList.toggle('active', type === 'lyrics');
+    document.getElementById('credits-btn').classList.toggle('active', type === 'credits');
 }
 
 function closeRightPanel() { 
@@ -613,34 +626,26 @@ function setupKeyboardShortcuts() {
     });
 }
 
-// --- HIGH PERFORMANCE SIDEBAR DRAG ---
 function setupSidebarDrag() {
     const s = document.getElementById('sidebar');
     const h = document.getElementById('drag-handle');
-    
     h.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        document.body.style.cursor = 'ew-resize';
-        
+        e.preventDefault(); document.body.style.cursor = 'ew-resize';
         const moveHandler = (ev) => {
-            // Use requestAnimationFrame for smooth 60fps dragging
             window.requestAnimationFrame(() => {
                 let newWidth = ev.clientX - s.getBoundingClientRect().left;
-                if (newWidth < 88) {
-                    s.classList.add('sidebar-minimized');
-                } else if (newWidth < 450) {
+                if (newWidth < 88) s.classList.add('sidebar-minimized');
+                else if (newWidth < 450) {
                     s.classList.remove('sidebar-minimized');
                     s.style.width = newWidth + 'px';
                 }
             });
         };
-        
         const upHandler = () => {
             document.removeEventListener('mousemove', moveHandler);
             document.removeEventListener('mouseup', upHandler);
             document.body.style.cursor = 'default';
         };
-        
         document.addEventListener('mousemove', moveHandler);
         document.addEventListener('mouseup', upHandler);
     });
@@ -652,7 +657,6 @@ function toggleSidebarSize() {
     if (!s.classList.contains('sidebar-minimized')) s.style.width = '280px';
 }
 
-// --- AUDIO EVENTS ---
 audio.onplay = () => handleAudioStatusChange(true);
 audio.onpause = () => handleAudioStatusChange(false);
 audio.onended = () => { if(!audio.loop) isShuffle ? skipTrack(1) : (audio.currentTime = 0, handleAudioStatusChange(false)); };
