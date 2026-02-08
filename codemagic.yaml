@@ -4,14 +4,21 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     scripts:
-      - name: Build unsigned .ipa
-        script: | 
-          # Step 1: Enter your mobile folder
+      - name: Install CocoaPods
+        script: |
+          # Step 1: Go into the mobile folder
           cd mobile
           
-          # Step 2: Build using the correct name
+          # Step 2: Install the missing dependencies
+          pod install
+      - name: Build unsigned .ipa
+        script: | 
+          cd mobile
+          
+          # Use the .xcworkspace file now instead of .xcodeproj
+          # CocoaPods creates a 'Workspace' which bundles your app + dependencies
           xcodebuild build \
-            -project "TRMMUSICPLAYER.xcodeproj" \
+            -workspace "TRMMUSICPLAYER.xcworkspace" \
             -scheme "TRMMUSICPLAYER" \
             -configuration Debug \
             -sdk iphoneos \
