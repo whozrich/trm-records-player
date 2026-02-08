@@ -77,6 +77,12 @@
         "duration": "??:??",
         "hiddenName": true
       },
+      {
+        "id": "rich-freestyle",
+        "title": "RICH (Freestyle)",
+        "duration": "??:??",
+        "hiddenName": false
+      },
             {
         "id": "about-damn-time",
         "title": "About Damn Time",
@@ -96,7 +102,7 @@
     },
     "rich-intro":
     {
-      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "url": "https://audio.jukehost.co.uk/tLBoZiWejwe6Qa8nkm676WNSIy4dtXeU",
       "credits": [
         "Produced By: therichmusic",
         "Written By: therichmusic"
@@ -104,7 +110,7 @@
     },
     "rich-alone":
     {
-      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "url": "https://audio.jukehost.co.uk/lFKHpx2ym7PYH3MaGl90dLLkHHOIJdz1",
       "credits": [
         "Produced By: therichmusic",
         "Written By: therichmusic"
@@ -112,7 +118,7 @@
     },
     "heard-enough":
     {
-      "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
+      "url": "https://audio.jukehost.co.uk/sr1J6sEKLxxROInzchPIxW5sxTRUeGWr",
       "credits": [
         "Produced By: therichmusic",
         "Written By: therichmusic, Norad"
@@ -121,6 +127,14 @@
     "about-damn-time":
     {
       "url": "https://audio.jukehost.co.uk/L6ChsEYAWXOzJYVrjnrt7LqKFddIsGYz",
+      "credits": [
+        "Produced By: H3 Music",
+        "Written By: therichmusic"
+      ]
+    },
+    "rich-freestyle":
+    {
+      "url": "https://audio.jukehost.co.uk/m5yGkyak8NFeWP9DeTObJvH46D1fDmiu",
       "credits": [
         "Produced By: H3 Music",
         "Written By: therichmusic"
