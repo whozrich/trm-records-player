@@ -1,34 +1,27 @@
 <style>
-    /* Reset Fourthwall default padding if any */
-    body, html {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #000 !important;
+    #mobile-placeholder {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: #000;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
+        z-index: 999999;
         font-family: 'Inter', sans-serif;
-        color: white;
     }
 
-    .mobile-container {
-        text-align: center;
-        padding: 40px 20px;
-        z-index: 10;
-    }
-
-    .logo-placeholder {
+    .m-logo {
         font-weight: 900;
-        font-size: 28px;
+        font-size: 24px;
         letter-spacing: -1px;
-        margin-bottom: 12px;
+        color: #fff;
+        margin-bottom: 8px;
     }
 
-    .status-text {
+    .m-status {
         color: #00ff88;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 700;
         letter-spacing: 2px;
         text-transform: uppercase;
@@ -36,7 +29,7 @@
     }
 </style>
 
-<div class="mobile-container">
-    <div class="logo-placeholder">TRM RECORDS</div>
-    <div class="status-text">Currently unavailable... soon 👀</div>
+<div id="mobile-placeholder">
+    <div class="m-logo">TRM RECORDS</div>
+    <div class="m-status">Currently unavailable... soon 👀</div>
 </div>
