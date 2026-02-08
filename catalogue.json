@@ -19,8 +19,8 @@
     "memories-ep": [
       {
         "id": "decision-made",
-        "title": "First Memory",
-        "duration": "1:50",
+        "title": "decision made.",
+        "duration": "3:54",
         "hiddenName": false
       }
     ]
@@ -28,8 +28,10 @@
   "songData": {
     "decision-made": {
       "url": "https://audio.jukehost.co.uk/uKuiOqFrnUes7PgqFNTpCUyQ1UCceV2R.mp3",
-      "lyrics": "...",
-      "credits": "..."
+      "credits": [
+        "Produced By:",
+        "Written By: LC XAVIER"
+      ]
     }
   }
 }
