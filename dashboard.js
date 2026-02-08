@@ -294,7 +294,7 @@ Written by therichmusic`
   },
   "broken-hearts": {
     id: "broken-hearts", artistId: "lc-xavier", title: "hearts bleeding out.", albumId: "collabs",
-    cover: "https://images2.imgbox.com/f0/3d/qX9Rz8YF_o.png",
+    cover: "https://thumbs2.imgbox.com/06/4d/eRxEyirW_t.jpg",
     url: "https://audio.jukehost.co.uk/0JTJWdbckRjoGCg2vGel5QQ1kSwnWNql",
     lyrics: `[Chorus: LC XAVIER]
 Heart's bleeding out (bleeding out)
