@@ -146,6 +146,16 @@
 }
 </style>
 
+<body>
+    <div id="mobile-blocker">
+        <h1 style="color: #00ff88; font-family: sans-serif;">Desktop Only</h1>
+        <p style="color: #666; font-family: sans-serif;">Please visit on a computer for the full TRM experience.</p>
+    </div>
+
+    <div id="app-container">
+        </div>
+</body>
+
 <script>
 // --- CONFIG ---
 const FEATURED_RELEASE_ID = "memories"; 
