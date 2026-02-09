@@ -1,5 +1,3 @@
-console.log("v1.0");
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1181,6 +1179,20 @@ window.handleDeepLinking = function() {
     }
 };
 
-audio.onended = () => (window.loopState === 2) ? (audio.currentTime = 0, audio.play()) : window.nextTrack();
-document.addEventListener('DOMContentLoaded', initApp);
+// --- BOOTSTRAP LOGIC ---
+    // This ensures supabase is defined before init() runs
+    window.addEventListener('load', () => {
+        if (typeof supabase !== 'undefined') {
+            const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
+            const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
+            // Use the global supabase variable from the CDN
+            window.supabaseClient = supabase.createClient(S_URL, S_KEY);
+            init();
+        } else {
+            console.error("TRM Error: Supabase CDN blocked or failed to load.");
+        }
+        
+        // The correct way to log the version to the console
+        console.log("TRM Records Player: v1.0");
+    });
 </script>
