@@ -491,17 +491,20 @@ flex: 1;
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // 1. Declare variables globally so they are accessible
-    let supabaseClient;
-    window.ALBUMS = [];
-    window.TRACKS = {};
-    window.ARTISTS = {};
-    let currentTrackId = null;
-    let currentArtistId = null;
-    let isShuffle = false;
-    let isRepeat = false;
-    const audio = new Audio();
-    const contentView = document.getElementById('content-view');
+// --- Global Variable Safeties ---
+window.ALBUMS = window.ALBUMS || [];
+window.TRACKS = window.TRACKS || {};
+window.ARTISTS = window.ARTISTS || {};
+
+// Check if audio is already declared in the window to avoid SyntaxErrors
+if (!window.audio) {
+    window.audio = new Audio();
+}
+const audio = window.audio; 
+
+// The rest of your variables
+let currentTrackId = null;
+let currentArtistId = null;
 
 let isSidebarCollapsed = localStorage.getItem('trm_sidebar_collapsed') === 'true';
 
