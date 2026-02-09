@@ -1,3 +1,5 @@
+console.log("v1.0");
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1182,5 +1184,3 @@ window.handleDeepLinking = function() {
 audio.onended = () => (window.loopState === 2) ? (audio.currentTime = 0, audio.play()) : window.nextTrack();
 document.addEventListener('DOMContentLoaded', initApp);
 </script>
-
-console.log("v1.0");
