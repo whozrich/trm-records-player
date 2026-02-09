@@ -529,7 +529,6 @@ window.onload = () => {
     };
 
     const STORAGE = {
-        getLikes: () => JSON.parse(localStorage.getItem('trm_likes') || '[]'),
         getRecent: () => JSON.parse(localStorage.getItem('trm_recent') || '[]'),
         toggleLike: (id) => {
             let likes = STORAGE.getLikes();
@@ -543,6 +542,25 @@ window.onload = () => {
             localStorage.setItem('trm_recent', JSON.stringify(recent.slice(0, 20)));
         }
     };
+
+window.getLikes = function() {
+    return JSON.parse(localStorage.getItem('trm_likes') || '[]');
+};
+
+window.getRecents = function() {
+    return JSON.parse(localStorage.getItem('trm_recents') || '[]');
+};
+
+window.toggleLike = function(trackId) {
+    let likes = window.getLikes();
+    if (likes.includes(trackId)) {
+        likes = likes.filter(id => id !== trackId);
+    } else {
+        likes.push(trackId);
+    }
+    localStorage.setItem('trm_likes', JSON.stringify(likes));
+};
+
 // --- 2. PLAYER & UI LOGIC ---
 
 function formatTime(secs) {
@@ -786,8 +804,10 @@ window.updateLikeButtonUI = function(trackId) {
 };
 
 window.handleLikeClick = function() {
-    if (!window.currentTrackId) return;
-    window.onload.toggleLike(window.currentTrackId);
+if (!window.currentTrackId) return;
+    if (typeof window.toggleLike === 'function') {
+        window.toggleLike(window.currentTrackId);
+    }
     window.updateLikeButtonUI(window.currentTrackId);
     
     // Refresh view if on Liked Songs page
@@ -796,7 +816,8 @@ window.handleLikeClick = function() {
 };
 
 window.viewLikedSongs = function() {
-    const likedIds = window.onload.getLikes();
+    // Call getLikes() directly
+    const likedIds = (typeof window.getLikes === 'function') ? window.getLikes() : [];
     const allTracks = Object.values(window.TRACKS).flat();
     // Unique tracks only (since tracks can belong to multiple albums)
     const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
@@ -829,7 +850,7 @@ function renderTrackRow(t, i) {
 }
 
 window.viewRecents = function() {
-    const recentIds = window.onload.getRecents();
+    const recentIds = (typeof window.getRecents === 'function') ? window.getRecents() : [];
     const allTracks = Object.values(window.TRACKS).flat();
     const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
     
