@@ -1195,4 +1195,4 @@ window.handleDeepLinking = function() {
         // The correct way to log the version to the console
         console.log("TRM Records Player: v1.0");
     });
-</script>
+</script> 
