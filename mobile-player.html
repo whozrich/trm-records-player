@@ -223,31 +223,45 @@
             }
         };
 
-        async function init() {
-            try {
-                const { data: artists } = await supabaseClient.from('artists').select('*');
-                artists?.forEach(a => window.ARTISTS[a.id] = a);
+       async function init() {
+    try {
+        const { data: artists } = await supabaseClient.from('artists').select('*');
+        artists?.forEach(a => window.ARTISTS[a.id] = a);
 
-                const { data: albums, error: albErr } = await supabaseClient.from('albums').select('*');
-                if(albErr) throw albErr;
-                window.ALBUMS = albums || [];
+        const { data: albumsData } = await supabaseClient.from('albums').select('*');
+        const { data: tracksData } = await supabaseClient.from('tracks').select('*');
 
-                const { data: tracks } = await supabaseClient.from('tracks').select('*').order('track_order', { ascending: true });
-                tracks?.forEach(t => {
-                    const aids = t.album_id.split(',').map(s => s.trim());
-                    aids.forEach(aid => {
-                        if (!window.TRACKS[aid]) window.TRACKS[aid] = [];
-                        window.TRACKS[aid].push(t);
-                    });
-                });
+        // Helper to sort albums by date
+        const parseDate = (str) => {
+            if (!str || str === 'RELEASED') return 0;
+            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
+            const timestamp = Date.parse(cleanDate);
+            return isNaN(timestamp) ? 0 : timestamp;
+        };
 
-                window.viewHome();
-                handleDeepLinking();
-            } catch (err) { 
-                console.error("Init Error:", err); 
-                contentView.innerHTML = `<div class="standard-padding">Error loading database.</div>`;
-            }
-        }
+        window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+
+        // Create a quick lookup map for tracks
+        const trackLookup = {};
+        tracksData?.forEach(t => { trackLookup[t.id] = t; });
+
+        // ARRAY IS LAW: Map tracks to albums based strictly on the JSONB array order
+        window.TRACKS = {};
+        window.ALBUMS.forEach(alb => {
+            const manualOrder = alb.track_ids || []; 
+            // Filter out any IDs that might not exist in the tracks table
+            window.TRACKS[alb.id] = manualOrder
+                .map(id => trackLookup[id])
+                .filter(Boolean); 
+        });
+
+        window.viewHome();
+        handleDeepLinking();
+    } catch (err) { 
+        console.error("Init Error:", err); 
+        contentView.innerHTML = `<div class="standard-padding">Error loading database.</div>`;
+    }
+}
 
         function resetScroll() { contentView.scrollTo(0, 0); }
 
@@ -323,79 +337,102 @@
             contentView.innerHTML = html;
         };
 
-        window.viewAlbum = (id) => {
-            window.currentViewId = 'album';
-            resetScroll();
-            const alb = window.ALBUMS.find(a => a.id === id);
-            const tracks = (window.TRACKS[id] || []).sort((a, b) => (a.track_order || 1) - (b.track_order || 1));
-            const artist = window.ARTISTS[alb.artist_id] || { name: "TRM Records" };
+window.viewAlbum = (id) => {
+    window.currentViewId = 'album';
+    contentView.scrollTo(0, 0);
+    const alb = window.ALBUMS.find(a => a.id === id);
+    if (!alb) return;
 
-            let html = `
-            <div class="view-animate">
-                <div style="padding: 40px 20px 20px; text-align:center;">
-                    <span class="material-icons" onclick="viewHome()" style="float:left;">chevron_left</span>
-                    <img src="${alb.art_url}" style="width:200px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-                    <h1 style="margin:15px 0 5px 0;">${alb.name}</h1>
-                    <p style="color:var(--accent-green); margin:0;" onclick="viewArtist('${alb.artist_id}')">${artist.name}</p>
-                </div>
-                <div class="standard-padding">
-                    ${tracks.map((t, i) => {
-                        const isActive = currentTrackId === t.id;
-                        const albumIds = t.album_id.split(',').map(s => s.trim());
-                        const isPlayableAnywhere = albumIds.some(aid => {
-                            const parentAlb = window.ALBUMS.find(a => a.id == aid);
-                            return parentAlb && !parentAlb.coming_soon;
-                        });
+    const tks = window.TRACKS[id] || [];
+    const artist = window.ARTISTS[alb.artist_id] || { name: "TRM Records" };
+    const isSingle = alb.type === 'Single' || tks.length === 1;
 
-                        return `
-                        <div class="track-row ${!isPlayableAnywhere ? 'disabled' : ''} ${isActive ? 'active-track' : ''}" 
-                             style="display:flex; padding:15px 0; border-bottom:1px solid #111;" 
-                             onclick="playTrack('${t.id}', true, '${alb.id}')">
-                            <span style="width:30px; color:${isActive ? 'var(--accent-green)' : '#555'};">${isActive ? '●' : (t.track_order || 1)}</span>
-                            <div style="flex:1;">
-                                <div style="font-weight:bold;">${!isPlayableAnywhere ? 'Track ' + (t.track_order || i+1) : t.title}</div>
-                                <div style="font-size:12px; opacity:0.7;">${artist.name}</div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>`;
-            contentView.innerHTML = html;
-        };
+    let html = `
+    <div class="view-animate">
+        <div style="padding: 40px 20px 20px; text-align:center; position: relative;">
+            <span class="material-icons" onclick="viewHome()" style="position: absolute; left: 20px; top: 40px;">chevron_left</span>
+            <img src="${alb.art_url}" style="width:220px; aspect-ratio:1; border-radius:12px; box-shadow:0 15px 40px rgba(0,0,0,0.6); object-fit: cover;">
+            <h1 style="margin:20px 0 5px 0; font-size: 28px; font-weight: 900;">${alb.name}</h1>
+            <div style="display:flex; align-items:center; justify-content:center; gap:15px; margin-top:5px;">
+                <p style="color:var(--accent-green); font-weight: bold; margin:0;" onclick="viewArtist('${alb.artist_id}')">${artist.name}</p>
+                <button class="share-circle" onclick="copyAlbumLink('${alb.id}')" style="background:rgba(255,255,255,0.1); border:none; color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                     <span class="material-icons" style="font-size:18px;">share</span>
+                </button>
+            </div>
+        </div>
+        <div class="standard-padding" style="padding-top: 10px;">
+            ${tks.map((t, i) => {
+                // PARITY RULE: Track is playable if ANY of its parent albums are released
+                const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+                const isPlayable = parentIds.some(aid => {
+                    const other = window.ALBUMS.find(a => a.id == aid);
+                    return other && !other.coming_soon;
+                });
 
-        window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
-            const allTracks = Object.values(window.TRACKS).flat();
-            const track = allTracks.find(t => t.id === trackId);
-            if (!track) return;
+                // Sequential Numbering based on array index
+                const trackNumber = i + 1;
+                const displayTitle = isPlayable ? t.title : `Track ${trackNumber}`;
+                const isActive = currentTrackId === t.id;
 
-            const albumIds = track.album_id.split(',').map(s => s.trim());
-            const playableAlbum = window.ALBUMS.find(a => albumIds.includes(a.id) && !a.coming_soon);
-            if (!playableAlbum) return;
+                return `
+                <div class="track-row ${!isPlayable ? 'disabled' : ''} ${isActive ? 'active-track' : ''}" 
+                     style="display:flex; align-items: center; padding:15px 0; border-bottom:1px solid #111; ${!isPlayable ? 'opacity:0.3; pointer-events:none;' : ''}" 
+                     ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
+                    <span style="width:35px; font-size: 14px; color:${isActive ? 'var(--accent-green)' : '#555'};">${isActive ? '▶' : trackNumber}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size: 15px;">${displayTitle}</div>
+                        <div style="font-size:12px; opacity:0.6;">${artist.name}</div>
+                    </div>
+                    <div style="font-size: 12px; color: #555;">${isPlayable ? (t.duration || '0:00') : '??:??'}</div>
+                </div>`;
+            }).join('')}
+        </div>
+    </div>`;
+    contentView.innerHTML = html;
+};
 
-            const targetAlbum = explicitAlbumId ? window.ALBUMS.find(a => a.id == explicitAlbumId) : playableAlbum;
+window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
+    // Find the track object from the global pool
+    const allTracks = Object.values(window.TRACKS).flat();
+    const track = allTracks.find(t => t.id === trackId);
+    if (!track) return;
 
-            currentTrackId = trackId;
-            currentArtistId = targetAlbum.artist_id;
-            audio.src = track.url;
-            STORAGE.addRecent(trackId);
-            if (autoPlay) audio.play();
+    // Determine which album context to use for art/artist
+    const parentIds = track.album_id.split(',').map(s => s.trim());
+    const playableAlbum = window.ALBUMS.find(a => parentIds.includes(a.id) && !a.coming_soon);
+    if (!playableAlbum) return;
 
-            document.getElementById('mini-player').style.display = 'flex';
-            document.getElementById('m-title').innerText = track.title;
-            document.getElementById('fp-title').innerText = track.title;
-            document.getElementById('m-art').src = targetAlbum.art_url;
-            document.getElementById('fp-art').src = targetAlbum.art_url;
-            
-            const artistName = window.ARTISTS[targetAlbum.artist_id]?.name || "TRM";
-            document.getElementById('m-artist').innerText = artistName;
-            document.getElementById('fp-artist').innerText = artistName;
-            
-            document.getElementById('m-play-btn').innerText = 'pause';
-            document.getElementById('fp-play-btn').innerText = 'pause';
-            updateFpFavIcon();
+    const targetAlbum = explicitAlbumId ? window.ALBUMS.find(a => a.id == explicitAlbumId) : playableAlbum;
 
-            if(window.currentViewId === 'album') viewAlbum(targetAlbum.id);
-        };
+    currentTrackId = trackId;
+    currentArtistId = targetAlbum.artist_id;
+    audio.src = track.url;
+    STORAGE.addRecent(trackId);
+    
+    if (autoPlay) {
+        audio.play().catch(e => console.log("Playback blocked by browser. User interaction required."));
+    }
+
+    // UI Updates
+    document.getElementById('mini-player').style.display = 'flex';
+    document.getElementById('m-title').innerText = track.title;
+    document.getElementById('fp-title').innerText = track.title;
+    document.getElementById('m-art').src = targetAlbum.art_url;
+    document.getElementById('fp-art').src = targetAlbum.art_url;
+    
+    const artistName = window.ARTISTS[targetAlbum.artist_id]?.name || "TRM";
+    document.getElementById('m-artist').innerText = artistName;
+    document.getElementById('fp-artist').innerText = artistName;
+    
+    document.getElementById('m-play-btn').innerText = 'pause';
+    document.getElementById('fp-play-btn').innerText = 'pause';
+    
+    updateFpFavIcon();
+
+    // Refresh current view to update the "active" row highlight
+    if(window.currentViewId === 'album') viewAlbum(targetAlbum.id);
+    if(window.currentViewId === 'library') viewLikedSongs(window.lastActiveTab || 'liked');
+};
 
         window.goToCurrentArtist = () => {
             if (currentArtistId) {

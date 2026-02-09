@@ -896,17 +896,12 @@ function updateVolumeIcon(vol) {
 }
 
 window.viewHome = function() {
-    const featured = window.ALBUMS.find(a => a.is_featured && !a.hidden) || window.ALBUMS.find(a => !a.hidden);
+    // Featured is either explicitly marked, or simply the newest one
+    const featured = window.ALBUMS.find(a => a.is_featured && !a.hidden) || 
+                 window.ALBUMS.find(a => !a.hidden && !a.coming_soon); // Added !coming_soon so you don't feature an unreleased album by accident
     
-    // Filter out hidden albums from the main catalogue
-    const publicCatalogue = window.ALBUMS.filter(alb => !alb.hidden).sort((a, b) => {
-        const parseDate = (str) => {
-            if (!str) return 0;
-            const clean = str.replace(/st|nd|rd|th/g, ""); 
-            return new Date(clean).getTime();
-        };
-        return parseDate(b.full_release_date) - parseDate(a.full_release_date);
-    });
+    // Albums are already sorted newest -> oldest from initApp
+    const publicCatalogue = window.ALBUMS.filter(alb => !alb.hidden);
 
     document.getElementById('content-view').innerHTML = `
     <div class="view-animate" style="padding: 40px;">
@@ -921,8 +916,7 @@ window.viewHome = function() {
                     <button class="signup-btn">View Album</button>
                 </div>
             </div>
-        </div>
-        ` : ''}
+        </div>` : ''}
 
         <h2 style="margin-bottom:24px; font-size: 24px; font-weight: 900;">Catalogue</h2>
         <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:30px;">
@@ -933,11 +927,11 @@ window.viewHome = function() {
                     <div style="color:${alb.coming_soon ? '#ff4444' : '#666'}; font-size:12px; margin-top:5px; font-weight: 700;">
                         ${alb.coming_soon ? 'COMING SOON' : (alb.full_release_date || 'RELEASED')}
                     </div>
-                </div>
-            `).join('')}
+                </div>`).join('')}
         </div>
     </div>`;
 };
+
 
 function initSidebarLogic() {
     const sidebar = document.getElementById('sidebar');
@@ -1015,8 +1009,7 @@ window.viewAlbum = function(id) {
     if (!alb) return;
     
     const artist = window.ARTISTS[alb.artist_id] || { name: "therichmusic", id: "" };
-    const tks = window.TRACKS[id] || [];
-    const isSingle = alb.type === 'Single' || tks.length === 1;
+    const tks = alb.track_list || []; 
     
     document.getElementById('content-view').innerHTML = `
     <div class="view-animate" style="padding:50px;">
@@ -1024,17 +1017,12 @@ window.viewAlbum = function(id) {
             <img src="${alb.art_url}" style="width:240px; height:240px; border-radius:12px; box-shadow: 0 15px 50px rgba(0,0,0,0.6);">
             <div>
                 <p style="color:var(--accent-green); font-weight:900; letter-spacing:1px; margin-bottom:8px;">${(alb.type || 'ALBUM').toUpperCase()}</p>
-                
                 <div style="display:flex; align-items:center; gap:20px;">
-                    <h1 style="font-size:84px; margin:0; font-weight:900; letter-spacing:-4px; line-height:1;">
-                        ${alb.name}
-                        ${alb.hidden ? '<span class="material-icons" style="font-size:24px; color:#ff4444; vertical-align:middle; margin-left:10px;" title="Unlisted Release">visibility_off</span>' : ''}
-                    </h1>
+                    <h1 style="font-size:84px; margin:0; font-weight:900; letter-spacing:-4px; line-height:1;">${alb.name}</h1>
                     <button onclick="copyAlbumLink('${alb.id}')" id="share-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; width:45px; height:45px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s;">
                         <span class="material-icons" style="font-size:20px;">share</span>
                     </button>
                 </div>
-
                 <div style="display:flex; align-items:center; gap:8px; margin-top:20px;">
                     <span onclick="viewArtist('${artist.id}')" style="cursor:pointer; text-decoration:underline; font-weight:700;">${artist.name}</span> 
                     <span style="color:#666;">•</span>
@@ -1045,24 +1033,22 @@ window.viewAlbum = function(id) {
 
         <div style="margin-top:40px;">
             ${tks.map((t, i) => {
-                // RULE: Playable if ANY album it belongs to is NOT "coming soon"
-                const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
+                // Parity check: Is this track released ANYWHERE?
+                const parentAlbumIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
                 const isPlayable = parentAlbumIds.some(aid => {
                     const otherAlb = window.ALBUMS.find(a => a.id === aid);
                     return otherAlb && !otherAlb.coming_soon;
                 });
 
-                // RULE: Metadata track_order for 2+ songs, else #1
-                const trackIndex = isSingle ? 1 : (t.track_order || (i + 1));
-                
-                // RULE: Mask title if hidden
-                const displayTitle = isPlayable ? t.title : `Track ${trackIndex}`;
+                // Use the map index 'i' to ensure 1, 2, 3... order
+                const trackNumber = i + 1;
+                const displayTitle = isPlayable ? t.title : `Track ${trackNumber}`;
                 
                 return `
                 <div class="track-row ${isPlayable ? '' : 'disabled'}" 
                      style="display:flex; align-items:center; padding:10px; border-radius:4px; ${isPlayable ? '' : 'opacity:0.3; cursor:default; pointer-events:none;'}"
-                     onclick="${isPlayable ? `playTrack('${t.id}', true, '${alb.id}')` : ''}">
-                    <div style="width:30px; color:#666;">${trackIndex}</div>
+                     ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
+                    <div style="width:30px; color:#666;">${trackNumber}</div>
                     <div style="flex:1; font-weight:700;">${displayTitle}</div>
                     <div style="color:#666;">${isPlayable ? (t.duration || '0:00') : '??:??'}</div>
                 </div>`;
@@ -1146,56 +1132,54 @@ function updatePlayerUI() {
 window.initApp = async function() {
     try {
         const { data: artists } = await supabaseClient.from('artists').select('*');
+        const { data: albums } = await supabaseClient.from('albums').select('*');
+        const { data: tracks } = await supabaseClient.from('tracks').select('*');
+
         window.ARTISTS = {};
         if (artists) artists.forEach(a => { window.ARTISTS[a.id] = a; });
 
-        const { data: albums } = await supabaseClient.from('albums').select('*');
-        const { data: tracks } = await supabaseClient.from('tracks').select('*');
-    
-        window.ALBUMS = albums || [];
+        // Helper to scrub "st, nd, rd, th" and sort by date
+        const parseDate = (str) => {
+            if (!str || str === 'RELEASED') return 0;
+            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
+            const timestamp = Date.parse(cleanDate);
+            return isNaN(timestamp) ? 0 : timestamp;
+        };
+
+        // Sort Albums by Release Date (Newest First)
+        window.ALBUMS = (albums || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+
+        // Map tracks by ID for quick lookup
+        const trackLookup = {};
+        if (tracks) tracks.forEach(t => { trackLookup[t.id] = t; });
+        
         window.TRACKS = {};
 
-        if (tracks) {
-            tracks.forEach(t => { 
-                const albumIds = t.album_id.split(',').map(id => id.trim());
-                albumIds.forEach(aid => {
-                    if (!window.TRACKS[aid]) window.TRACKS[aid] = [];
-                    window.TRACKS[aid].push({ ...t });
-                });
-            });
-            Object.keys(window.TRACKS).forEach(aid => {
-                window.TRACKS[aid].sort((a, b) => (a.track_order || 0) - (b.track_order || 0));
-            });
+        // DEPRECATION LOGIC: Build track_list strictly from the JSONB array
+        window.ALBUMS.forEach(alb => {
+            const manualOrder = alb.track_ids || []; 
+            
+            // The order in the array IS the order in the app
+            alb.track_list = manualOrder
+                .map(id => trackLookup[id])
+                .filter(Boolean); 
+
+            window.TRACKS[alb.id] = alb.track_list;
+        });
+
+        // Update Sidebar
+        const sb = document.getElementById('sidebar-releases');
+        if (sb) {
+            sb.innerHTML = window.ALBUMS.filter(alb => !alb.hidden).map(alb => `
+                <div class="sidebar-item" onclick="viewAlbum('${alb.id}')">
+                    <img src="${alb.art_url}" style="width:24px; height:24px; border-radius:2px; margin-right:10px;">
+                    <span>${alb.name}</span>
+                </div>`).join('');
         }
 
-const sb = document.getElementById('sidebar-releases');
-if (sb) {
-    // Only show albums in sidebar if NOT hidden
-    sb.innerHTML = window.ALBUMS.filter(alb => !alb.hidden).map(alb => `
-        <div class="sidebar-item" onclick="viewAlbum('${alb.id}')">
-            <img src="${alb.art_url}" style="width:24px; height:24px; border-radius:2px; margin-right:10px;">
-            <span>${alb.name}</span>
-        </div>`).join('');
-}
-        
-        // CRITICAL: Initialize the dragging logic AFTER elements exist
-        initSidebarLogic();
-        
         window.viewHome();
+        window.handleDeepLinking(); 
 
-        // Set the initial home view
-        window.viewHome();
-        
-        // Ensure data is ready before checking URL
-        if (window.ALBUMS.length > 0) {
-            window.handleDeepLinking(); 
-        }
-        
-        const lastId = localStorage.getItem('trm_last_track');
-        if (lastId) {
-            const allTracks = Object.values(window.TRACKS).flat();
-            if (allTracks.some(t => t.id === lastId)) window.playTrack(lastId, false); 
-        }
     } catch (e) { console.error("Initialization failed:", e); }
 }
 
