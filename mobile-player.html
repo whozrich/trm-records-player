@@ -1042,6 +1042,120 @@ window.prevTrack = () => {
 
 audio.onended = () => { if (!isRepeat) nextTrack(); };
 
+window.viewLibrary = (activeTab = 'liked') => {
+    window.currentViewId = 'library';
+    window.lastActiveTab = activeTab; 
+    contentView.scrollTo(0, 0);
+    setNav(2); 
+
+    if (!window.TRACKS || Object.keys(window.TRACKS).length === 0) {
+        contentView.innerHTML = `<div style="text-align:center; padding-top:100px; opacity:0.5;">Loading Data...</div>`;
+        setTimeout(() => viewLibrary(activeTab), 200);
+        return;
+    }
+
+    const ids = (activeTab === 'liked') ? STORAGE.getLikes() : STORAGE.getRecent();
+    const allTracks = Object.values(window.TRACKS).flat();
+    const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
+    
+    // Filter logic: Only show songs if the album is NOT "Coming Soon"
+    const displayTracks = (activeTab === 'liked')
+        ? uniqueTracks.filter(t => {
+            const isLiked = ids.includes(t.id);
+            const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
+            const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
+            return isLiked && (alb && !alb.coming_soon);
+        })
+        : ids.map(id => uniqueTracks.find(t => t.id === id)).filter(t => {
+            if (!t) return false;
+            const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
+            const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
+            return alb && !alb.coming_soon;
+        });
+
+    let html = `
+    <div class="standard-padding view-animate" style="padding-bottom: 120px;">
+        <h1 style="font-size: 34px; font-weight: 900; margin-bottom: 5px;">Library</h1>
+        
+        <div class="library-tabs ${activeTab === 'recent' ? 'tab-2-active' : ''}">
+            <div class="tab-indicator"></div>
+            <div class="lib-tab ${activeTab === 'liked' ? 'active' : ''}" onclick="viewLibrary('liked')">
+                <span class="material-icons">favorite</span> Liked
+            </div>
+            <div class="lib-tab ${activeTab === 'recent' ? 'active' : ''}" onclick="viewLibrary('recent')">
+                <span class="material-icons">history</span> Recent
+            </div>
+        </div>
+
+        <div id="library-list">
+            ${displayTracks.length > 0 ? displayTracks.map(t => {
+                const parentAlbumIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+                const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
+                const art = alb ? alb.art_url : 'https://thumbs2.imgbox.com/14/a7/fI8ktNrC_t.png';
+                const isLiked = STORAGE.getLikes().includes(t.id);
+
+                return `
+                <div class="result-item" 
+                     onclick="playTrack('${t.id}')"
+                     onmousedown="handleLongPressStart('${t.id}', 'track')" 
+                     onmouseup="handleLongPressEnd()"
+                     ontouchstart="handleLongPressStart('${t.id}', 'track')" 
+                     ontouchend="handleLongPressEnd()"
+                     style="display: flex; align-items: center; cursor: pointer; padding: 12px; border-radius: 16px; background: rgba(255,255,255,0.03); margin-bottom: 10px;">
+                    
+                    <img src="${art}" style="width: 55px; height: 55px; border-radius: 12px; margin-right: 15px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                    
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; font-size: 17px;">${t.title}</div>
+                        <div style="font-size: 13px; color: var(--text-dim);">${window.ARTISTS[alb?.artist_id]?.name || 'Artist'}</div>
+                    </div>
+                    
+                    <span class="material-icons" style="color: ${isLiked ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; font-size: 22px;">
+                        ${isLiked ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                </div>`;
+            }).join('') : `
+                <div style="text-align:center; margin-top:100px; opacity: 0.3;">
+                    <span class="material-icons" style="font-size: 60px;">library_music</span>
+                    <p style="margin-top: 15px; font-weight: 600;">${activeTab === 'liked' ? 'No liked songs yet.' : 'Your history is empty.'}</p>
+                </div>
+            `}
+        </div>
+    </div>`;
+    
+    contentView.innerHTML = html;
+};
+
+// Variable to hold the timer state
+let pressTimer;
+
+window.handleLongPressStart = (id, type = 'album') => {
+    // Clear any existing timer just in case
+    clearTimeout(pressTimer);
+
+    pressTimer = setTimeout(() => {
+        if (type === 'track') {
+            // Logic for a single track (from Library/Recent)
+            STORAGE.toggleLike(id);
+            if (navigator.vibrate) navigator.vibrate(40);
+            
+            // Refresh the library view if that's where we are
+            if (window.currentViewId === 'library') {
+                viewLibrary(window.lastActiveTab || 'liked');
+            }
+        } else {
+            // Logic for an entire album
+            bulkLikeAlbum(id);
+            if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        }
+    }, 800); // 800ms is the standard "long press" duration
+};
+
+window.handleLongPressEnd = () => {
+    // If the user lets go before 800ms, the timer is cancelled
+    clearTimeout(pressTimer);
+};
+
 // Attach scroll listener to the ONLY scrollable container
 contentView.addEventListener('scroll', () => {
     // LOCK: If we are on an album or artist page, keep the UI hidden regardless of scroll
