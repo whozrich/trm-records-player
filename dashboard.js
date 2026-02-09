@@ -490,18 +490,18 @@ flex: 1;
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-// --- 1. GLOBALS & CONFIG ---
-window.ALBUMS = [];
-window.TRACKS = {}; 
-window.ARTISTS = {}; // Ensure this is initialized as an object
-window.isPlaying = false;
-window.currentTrackId = null;
-window.currentAlbumId = null;
-window.isShuffle = false;
-window.loopState = 0; 
-window.preMuteVolume = 0.5;
+    // 1. Declare variables globally so they are accessible
+    let supabaseClient;
+    window.ALBUMS = [];
+    window.TRACKS = {};
+    window.ARTISTS = {};
+    let currentTrackId = null;
+    let currentArtistId = null;
+    let isShuffle = false;
+    let isRepeat = false;
+    const audio = new Audio();
+    const contentView = document.getElementById('content-view');
 
 let isSidebarCollapsed = localStorage.getItem('trm_sidebar_collapsed') === 'true';
 
@@ -513,24 +513,36 @@ const supabaseUrl = 'https://sxagulxljpzftqfnllhv.supabase.co';
 const supabaseKey = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-// --- LOCAL STORAGE MANAGER ---
-window.STORAGE = {
-    getLikes: () => JSON.parse(localStorage.getItem('trm_likes') || '[]'),
-    toggleLike: (trackId) => {
-        let likes = window.STORAGE.getLikes();
-        if (likes.includes(trackId)) likes = likes.filter(id => id !== trackId);
-        else likes.push(trackId);
-        localStorage.setItem('trm_likes', JSON.stringify(likes));
-        return likes.includes(trackId);
-    },
-    saveRecent: (trackId) => {
-        let recents = JSON.parse(localStorage.getItem('trm_recents') || '[]');
-        recents = [trackId, ...recents.filter(id => id !== trackId)].slice(0, 10);
-        localStorage.setItem('trm_recents', JSON.stringify(recents));
-    },
-    getRecents: () => JSON.parse(localStorage.getItem('trm_recents') || '[]')
-};
+window.onload = () => {
+        if (typeof supabase === 'undefined') {
+            console.error("Supabase failed to load. Check if an ad-blocker is blocking the CDN.");
+            document.getElementById('content-view').innerHTML = 
+                '<div class="standard-padding">Connection Error: Please disable ad-blockers for TRM Records.</div>';
+            return;
+        }
+        
+        const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
+        const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
+        supabaseClient = supabase.createClient(S_URL, S_KEY);
+        
+        init(); // Only run init after client is created
+    };
 
+    const STORAGE = {
+        getLikes: () => JSON.parse(localStorage.getItem('trm_likes') || '[]'),
+        getRecent: () => JSON.parse(localStorage.getItem('trm_recent') || '[]'),
+        toggleLike: (id) => {
+            let likes = STORAGE.getLikes();
+            likes = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id];
+            localStorage.setItem('trm_likes', JSON.stringify(likes));
+            return likes.includes(id);
+        },
+        addRecent: (id) => {
+            let recent = STORAGE.getRecent().filter(x => x !== id);
+            recent.unshift(id);
+            localStorage.setItem('trm_recent', JSON.stringify(recent.slice(0, 20)));
+        }
+    };
 // --- 2. PLAYER & UI LOGIC ---
 
 function formatTime(secs) {
@@ -686,7 +698,7 @@ window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
     // Refresh Panel and Metadata
     window.updateInfoPanel(track, album);
     window.updateLikeButtonUI(id);
-    window.STORAGE.saveRecent(id);
+    window.onload.saveRecent(id);
     localStorage.setItem('trm_last_track', id);
 
     if (autoPlay) {
@@ -758,14 +770,14 @@ window.viewArtist = function(artistId) {
 window.updateLikeButtonUI = function(trackId) {
     const icon = document.getElementById('main-heart-icon');
     if (!icon) return;
-    const isLiked = window.STORAGE.getLikes().includes(trackId);
+    const isLiked = window.onload.getLikes().includes(trackId);
     icon.innerText = isLiked ? 'favorite' : 'favorite_border';
     icon.parentElement.style.color = isLiked ? 'var(--accent-green)' : '#666';
 };
 
 window.handleLikeClick = function() {
     if (!window.currentTrackId) return;
-    window.STORAGE.toggleLike(window.currentTrackId);
+    window.onload.toggleLike(window.currentTrackId);
     window.updateLikeButtonUI(window.currentTrackId);
     
     // Refresh view if on Liked Songs page
@@ -774,7 +786,7 @@ window.handleLikeClick = function() {
 };
 
 window.viewLikedSongs = function() {
-    const likedIds = window.STORAGE.getLikes();
+    const likedIds = window.onload.getLikes();
     const allTracks = Object.values(window.TRACKS).flat();
     // Unique tracks only (since tracks can belong to multiple albums)
     const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
@@ -807,7 +819,7 @@ function renderTrackRow(t, i) {
 }
 
 window.viewRecents = function() {
-    const recentIds = window.STORAGE.getRecents();
+    const recentIds = window.onload.getRecents();
     const allTracks = Object.values(window.TRACKS).flat();
     const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
     
@@ -1170,3 +1182,5 @@ window.handleDeepLinking = function() {
 audio.onended = () => (window.loopState === 2) ? (audio.currentTime = 0, audio.play()) : window.nextTrack();
 document.addEventListener('DOMContentLoaded', initApp);
 </script>
+
+console.log("v1.0");
