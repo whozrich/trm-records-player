@@ -1122,7 +1122,7 @@ function updatePlayerUI() {
     if (icon) icon.innerHTML = window.isPlaying ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
 }
 
-async function initApp() {
+window.initApp = async function() {
     try {
         const { data: artists } = await supabaseClient.from('artists').select('*');
         window.ARTISTS = {};
