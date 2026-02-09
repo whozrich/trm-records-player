@@ -499,6 +499,8 @@ window.ARTISTS = window.ARTISTS || {};
 // Check if audio is already declared in the window to avoid SyntaxErrors
 if (!window.audio) {
     window.audio = new Audio();
+    window.audio.preload = "auto"; 
+    window.audio.volume = 0.5;
 }
 const audio = window.audio; 
 
@@ -508,7 +510,6 @@ let currentArtistId = null;
 
 let isSidebarCollapsed = localStorage.getItem('trm_sidebar_collapsed') === 'true';
 
-const audio = new Audio();
 audio.preload = "auto"; 
 audio.volume = 0.5;
 
@@ -524,11 +525,7 @@ window.onload = () => {
             return;
         }
         
-        const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
-        const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
-        supabaseClient = supabase.createClient(S_URL, S_KEY);
-        
-        init(); // Only run init after client is created
+        initApp(); // Only run init after client is created
     };
 
     const STORAGE = {
@@ -700,8 +697,7 @@ window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
 
     // Refresh Panel and Metadata
     window.updateInfoPanel(track, album);
-    window.updateLikeButtonUI(id);
-    window.onload.saveRecent(id);
+if (typeof saveRecent === 'function') saveRecent(trackId);
     localStorage.setItem('trm_last_track', id);
 
     if (autoPlay) {
@@ -771,11 +767,22 @@ window.viewArtist = function(artistId) {
 };
 
 window.updateLikeButtonUI = function(trackId) {
-    const icon = document.getElementById('main-heart-icon');
-    if (!icon) return;
-    const isLiked = window.onload.getLikes().includes(trackId);
-    icon.innerText = isLiked ? 'favorite' : 'favorite_border';
-    icon.parentElement.style.color = isLiked ? 'var(--accent-green)' : '#666';
+    const likeBtn = document.querySelector('.player-controls .like-btn i');
+    if (!likeBtn) return;
+
+    // Check if the user has liked this track
+    // If you don't have a global getLikes function yet, we default to false
+    const isLiked = (typeof window.getLikes === 'function') ? window.getLikes().includes(trackId) : false;
+
+    if (isLiked) {
+        likeBtn.classList.remove('fa-regular');
+        likeBtn.classList.add('fa-solid');
+        likeBtn.style.color = '#1db954';
+    } else {
+        likeBtn.classList.remove('fa-solid');
+        likeBtn.classList.add('fa-regular');
+        likeBtn.style.color = '#ffffff';
+    }
 };
 
 window.handleLikeClick = function() {
@@ -1041,8 +1048,8 @@ window.viewAlbum = function(id) {
             }).join('')}
         </div>
     </div>`;
-};
-
+}
+    
 window.copyAlbumLink = function(albumId) {
     // Construct the URL with the parameter
     const baseUrl = window.location.origin + window.location.pathname;
@@ -1190,7 +1197,7 @@ window.handleDeepLinking = function() {
             const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
             // Use the global supabase variable from the CDN
             window.supabaseClient = supabase.createClient(S_URL, S_KEY);
-            init();
+            initApp();
         } else {
             console.error("TRM Error: Supabase CDN blocked or failed to load.");
         }
@@ -1198,4 +1205,4 @@ window.handleDeepLinking = function() {
         // The correct way to log the version to the console
         console.log("TRM Records Player: v1.0");
     });
-</script> 
+</script>
