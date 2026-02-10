@@ -9,7 +9,7 @@
 :root {
     --bg-black: #000000;
     --ios-glass: rgba(20, 20, 20, 0.75);
-    --ios-blur: blur(35px) saturate(180%);
+--ios-blur: blur(20px) saturate(180%); /* Reduced from 35px */
     --ios-border: 0.5px solid rgba(255, 255, 255, 0.15);
     --accent-green: #00ff88;
     --text-main: #ffffff;
@@ -56,20 +56,22 @@ body, html {
 .bottom-nav {
     position: fixed; 
     bottom: 30px; 
-    left: 50%;
-    transform: translateX(-50%); 
-    width: calc(100% - 48px); 
+    /* Use left/right instead of left/transform for better stability on mobile */
+    left: 24px;
+    right: 24px;
+    width: auto; /* Let left/right define the width */
     max-width: 400px; 
+    margin: 0 auto; /* Centers the max-width container */
     height: 68px;
     background: var(--ios-glass);
-    backdrop-filter: var(--ios-blur);
     -webkit-backdrop-filter: var(--ios-blur);
+    backdrop-filter: var(--ios-blur);
     display: flex;
     justify-content: space-around; 
     align-items: center;
     border: var(--ios-border);
     border-radius: 40px; 
-    z-index: 1000;
+    z-index: 998; /* Keep below mini-player */
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s ease;
 }
@@ -128,35 +130,52 @@ body, html {
 /* --- THE MINI PLAYER (FLOATING CARD) --- */
 #mini-player {
     position: fixed; 
-    bottom: 110px;
+    /* Default position (Upward, when nav is visible) */
+    bottom: 110px; 
     left: var(--safe-pad); 
     right: var(--safe-pad);
     background: var(--ios-glass);
-    backdrop-filter: var(--ios-blur);
     -webkit-backdrop-filter: var(--ios-blur);
+    backdrop-filter: var(--ios-blur);
     border: var(--ios-border);
     border-radius: 24px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    z-index: 999;
+    z-index: 1000; /* Priority layer */
     display: none; 
     flex-direction: column;
-    overflow: hidden; /* CRITICAL: Clips the progress bar to the rounded corners */
-    
-    /* Smooth iOS Spring Animation */
+    overflow: hidden;
+
+    /* Hardware Acceleration to stop the iPhone lag */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: bottom, transform;
+
     transition: 
-        transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), 
+        transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), 
         bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1), 
         opacity 0.4s ease;
+}
+
+#mini-player, .bottom-nav {
+    /* Force GPU rendering */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0); 
+    /* Add this to prevent 'paint flashing' during animations */
+    will-change: transform, bottom;
 }
 
 .no-transition {
     transition: none !important;
 }
 
-#mini-player.nav-is-hidden { bottom: 30px !important; }
+#mini-player.nav-is-hidden { 
+    bottom: 30px !important; 
+}
+#mini-player.nav-visible {
+    bottom: 110px; /* 30px (base) + 68px (nav height) + 12px (gap) */
+}
 
 .nav-hidden {
-    transform: translate(-50%, 150px) !important;
+    transform: translateY(150px) !important;
     opacity: 0;
 }
 
@@ -595,11 +614,12 @@ window.toggleNavUI = (show) => {
 
     if (show) {
         navBar.classList.remove('nav-hidden');
-        if (window.currentTrackId) miniPlayer.classList.remove('nav-is-hidden');
+        // If nav shows, move miniplayer UP
+        miniPlayer.classList.remove('nav-is-hidden');
     } else {
         navBar.classList.add('nav-hidden');
-        // If a song is playing, move the player down to the nav's spot
-        if (window.currentTrackId) miniPlayer.classList.add('nav-is-hidden');
+        // If nav hides, move miniplayer DOWN
+        miniPlayer.classList.add('nav-is-hidden');
     }
 };
 
@@ -716,19 +736,19 @@ window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
     currentArtistId = targetAlbum.artist_id;
     audio.src = track.url;
 
-    const miniPlayer = document.getElementById('mini-player');
+const miniPlayer = document.getElementById('mini-player');
     const navBar = document.querySelector('.bottom-nav');
 
-    // UI Positioning
-    miniPlayer.classList.add('no-transition');
-    if (navBar && navBar.classList.contains('nav-hidden')) {
+    miniPlayer.style.display = 'flex';
+    
+    // Sync the player position with the current Nav visibility
+    if (navBar.classList.contains('nav-hidden')) {
         miniPlayer.classList.add('nav-is-hidden');
     } else {
         miniPlayer.classList.remove('nav-is-hidden');
     }
 
-    miniPlayer.style.display = 'flex';
-    miniPlayer.classList.remove('mini-hidden', 'paused'); // 'paused' removed to expand art
+    miniPlayer.classList.remove('mini-hidden', 'paused');
     miniPlayer.classList.add('mini-active');
 
     void miniPlayer.offsetWidth;
@@ -747,6 +767,31 @@ window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
     // Handle Play/Pause Icons
     document.getElementById('m-play-btn').innerText = 'pause';
     document.getElementById('fp-play-btn').innerText = 'pause';
+
+    if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: artistName,
+        album: targetAlbum.name,
+        artwork: [
+            { src: targetAlbum.art_url, sizes: '512x512', type: 'image/png' }
+        ]
+    });
+
+    // Handle Lock Screen Controls (Play/Pause/Next/Prev)
+    navigator.mediaSession.setActionHandler('play', () => {
+        window.togglePlay();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+        window.togglePlay();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+        window.prevTrack();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+        window.nextTrack();
+    });
+}
 
     // SAFE UPDATE: DYNAMIC BACKGROUND
     const bgVisual = document.getElementById('fp-bg-visual');
@@ -952,6 +997,18 @@ audio.ontimeupdate = () => {
     document.getElementById('time-dur').innerText = formatTime(audio.duration);
 };
 
+audio.onplay = () => {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = "playing";
+    }
+};
+
+audio.onpause = () => {
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = "paused";
+    }
+};
+
 function formatTime(sec) {
     if (isNaN(sec)) return "0:00";
     const m = Math.floor(sec / 60);
@@ -1001,15 +1058,40 @@ function setNav(idx) {
     }); 
 }
 
-function openFullPlayer() { 
-    const fp = document.getElementById('full-player'); 
-    fp.style.display = 'flex'; 
-    setTimeout(() => fp.classList.add('active'), 10); 
+function openFullPlayer() {
+    const fp = document.getElementById('full-player');
+    const mini = document.getElementById('mini-player');
+    
+    // 1. Show the player
+    fp.style.display = 'flex';
+    
+    // 2. Small delay for the CSS transition to trigger
+    requestAnimationFrame(() => {
+        fp.classList.add('active');
+        
+        // 3. Performance Trick: Hide the mini-player once the full player covers it
+        // This stops the iPhone from rendering the blurs underneath
+        setTimeout(() => {
+            if(fp.classList.contains('active')) {
+                mini.style.opacity = '0';
+                mini.style.pointerEvents = 'none';
+            }
+        }, 500);
+    });
 }
 
-function closeFullPlayer() { 
-    document.getElementById('full-player').classList.remove('active'); 
-    setTimeout(() => document.getElementById('full-player').style.display = 'none', 400); 
+function closeFullPlayer() {
+    const fp = document.getElementById('full-player');
+    const mini = document.getElementById('mini-player');
+    
+    fp.classList.remove('active');
+    mini.style.opacity = '1';
+    mini.style.pointerEvents = 'auto';
+    
+    // Hide display after transition finishes
+    setTimeout(() => {
+        if(!fp.classList.contains('active')) fp.style.display = 'none';
+    }, 500);
 }
 
 // --- TRACK NAVIGATION ---
