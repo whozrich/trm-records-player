@@ -1423,34 +1423,26 @@ window.playAlbum = function(albumId) {
 };
     
 window.copyAlbumLink = function(albumId) {
-    // FIX: Hardcode your domain here if window.location.origin gives you rawgithub links
-    // Example: const baseUrl = "https://therichmusic.com";
-    const baseUrl = window.location.origin + window.location.pathname;
+    // HARDCODE the Fourthwall URL so users don't see raw.githack
+    const baseUrl = "https://trm-brand-shop.fourthwall.com/music-player"; 
     const shareUrl = `${baseUrl}?album=${albumId}`;
 
     navigator.clipboard.writeText(shareUrl).then(() => {
         const btn = document.getElementById('share-btn');
         
-        // SAFETY CHECK: Only try to animate if the button actually exists
         if (btn) {
             const icon = btn.querySelector('.material-icons');
-            if (icon) {
-                const originalIcon = icon.innerText;
-                icon.innerText = 'check';
-                
-                // Visual Feedback
-                btn.style.background = 'var(--accent-green)';
-                btn.style.color = '#000';
+            const originalText = btn.innerHTML;
+            
+            if (icon) icon.innerText = 'check';
+            btn.style.background = 'var(--accent-green)';
+            btn.style.color = '#000';
 
-                setTimeout(() => {
-                    icon.innerText = originalIcon;
-                    btn.style.background = 'rgba(255,255,255,0.1)';
-                    btn.style.color = 'white';
-                }, 2000);
-            }
-        } else {
-            // Optional: Fallback alert if the button isn't found
-            console.log("Link copied, but share-btn element was not found for visual feedback.");
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+                btn.style.color = '';
+            }, 2000);
         }
     }).catch(err => {
         console.error('Could not copy text: ', err);
@@ -1614,13 +1606,31 @@ window.initApp = async function() {
 }
 
 window.handleDeepLinking = function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const albumId = urlParams.get('album');
+    // 1. Try to get params from the current frame first
+    let urlParams = new URLSearchParams(window.location.search);
+    let albumId = urlParams.get('album');
+
+    // 2. If nothing found, try to look at the Parent window (Fourthwall's address bar)
+    if (!albumId) {
+        try {
+            // window.parent is the Fourthwall page holding your script
+            const parentParams = new URLSearchParams(window.parent.location.search);
+            albumId = parentParams.get('album');
+        } catch (e) {
+            // This might trigger a security error if cross-origin is strict, 
+            // but it's the standard way to check the parent URL.
+            console.warn("Could not access parent URL parameters.");
+        }
+    }
 
     if (albumId) {
+        console.log("Deep link identified:", albumId);
         window.viewAlbum(albumId);
-        // Optional: Clean URL without refreshing page
-        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // 3. Optional: Clean URL (usually only works on the same domain)
+        try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {}
     }
 };
 
