@@ -1522,12 +1522,14 @@ function updatePlayerUI() {
 
 window.initApp = async function() {
     try {
+        console.log("TRM MUSIC PLAYER: Initializing v1.0.3.7...");
+
         // 1. FETCH DATA FROM SUPABASE
         const { data: artists } = await supabaseClient.from('artists').select('*');
         const { data: albums } = await supabaseClient.from('albums').select('*');
         const { data: tracks } = await supabaseClient.from('tracks').select('*');
 
-        // 2. INITIALIZE ARTISTS OBJECT (Map by ID for quick lookup)
+        // 2. INITIALIZE ARTISTS OBJECT
         window.ARTISTS = {};
         if (artists) {
             artists.forEach(a => { 
@@ -1535,7 +1537,7 @@ window.initApp = async function() {
             });
         }
 
-        // Helper to scrub "st, nd, rd, th" and sort by date accurately
+        // Date Parser for Sorting
         const parseDate = (str) => {
             if (!str || str === 'RELEASED') return 0;
             const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
@@ -1543,7 +1545,7 @@ window.initApp = async function() {
             return isNaN(timestamp) ? 0 : timestamp;
         };
 
-        // 3. INITIALIZE ALBUMS (Sort by Newest First)
+        // 3. INITIALIZE ALBUMS (Sorted by Date)
         window.ALBUMS = (albums || []).sort((a, b) => 
             parseDate(b.full_release_date) - parseDate(a.full_release_date)
         );
@@ -1561,8 +1563,6 @@ window.initApp = async function() {
         // 5. BUILD TRACK LISTS FOR EACH ALBUM
         window.ALBUMS.forEach(alb => {
             const manualOrder = alb.track_ids || []; 
-            
-            // The order in the track_ids array IS the order in the app
             alb.track_list = manualOrder
                 .map(id => trackLookup[id])
                 .filter(Boolean); 
@@ -1580,24 +1580,14 @@ window.initApp = async function() {
                 </div>`).join('');
         }
 
-// 7. DEEP LINKING VS HOME VIEW LOGIC
-        const urlParams = new URLSearchParams(window.location.search);
-        const albumId = urlParams.get('album');
+        // 7. THE DEEP LINK BRIDGE HANDSHAKE
+        // We removed the old if/else logic here.
+        // We now 'await' handleDeepLinking, which handles both local URL checks 
+        // AND the 2-second waiting room for the Fourthwall broadcast.
+        console.log("Checking for deep links via Bridge...");
+        await window.handleDeepLinking();
 
-        // Check if the album actually exists in our newly loaded data
-        const albumExists = window.ALBUMS.find(a => a.id === albumId);
-
-        if (albumId && albumExists) {
-            console.log("Deep link validated:", albumId);
-            // We use a 0ms timeout to push this to the end of the execution stack
-            // This prevents viewHome from accidentally triggering afterwards
-            setTimeout(() => {
-                window.handleDeepLinking(); 
-            }, 0);
-        } else {
-            console.log("No valid deep link, loading Home View.");
-            window.viewHome();
-        }
+        console.log("Initialization Complete.");
 
     } catch (e) { 
         console.error("Initialization failed:", e); 
