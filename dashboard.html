@@ -45,7 +45,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRM Music Player</title>
+    <title>TRM MUSIC PLAYER</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -1423,13 +1423,12 @@ window.playAlbum = function(albumId) {
 };
     
 window.copyAlbumLink = function(albumId) {
-    // HARDCODE the Fourthwall URL so users don't see raw.githack
     const baseUrl = "https://trm-brand-shop.fourthwall.com/music-player"; 
-    const shareUrl = `${baseUrl}?album=${albumId}`;
+    // Switching to the Hash (#) for better iframe compatibility
+    const shareUrl = `${baseUrl}#${albumId}`;
 
     navigator.clipboard.writeText(shareUrl).then(() => {
         const btn = document.getElementById('share-btn');
-        
         if (btn) {
             const icon = btn.querySelector('.material-icons');
             const originalText = btn.innerHTML;
@@ -1606,38 +1605,39 @@ window.initApp = async function() {
 }
 
 window.handleDeepLinking = function() {
-    // 1. Try the standard way first (Current Frame)
-    let searchParams = new URLSearchParams(window.location.search);
-    
-    // 2. Fallback: Check the Referrer (The Fourthwall Parent Page)
-    if (!searchParams.has('album')) {
-        try {
-            const referrerURL = new URL(document.referrer);
-            searchParams = referrerURL.searchParams;
-            console.log("Checking referrer for deep link:", document.referrer);
-        } catch (e) {
-            console.warn("Referrer check failed or empty.");
-        }
+    let albumId = null;
+
+    // 1. Try the Hash method (#album-id) - Most reliable for iframes
+    const hash = window.top.location.hash || window.location.hash;
+    if (hash) {
+        albumId = hash.replace('#', '');
+        console.log("Deep link detected via Hash:", albumId);
     }
 
-    const albumId = searchParams.get('album');
+    // 2. Fallback: Try the Query method (?album=id)
+    if (!albumId) {
+        try {
+            const topParams = new URLSearchParams(window.top.location.search);
+            albumId = topParams.get('album');
+        } catch (e) {
+            const localParams = new URLSearchParams(window.location.search);
+            albumId = localParams.get('album');
+        }
+        if (albumId) console.log("Deep link detected via Query:", albumId);
+    }
 
+    // 3. Final Validation & Render
     if (albumId) {
-        // Check if the album exists in our global data
         const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === albumId);
         
         if (albumExists) {
-            console.log("Deep link validated via Referrer/URL:", albumId);
             window.viewAlbum(albumId);
-            
-            // Try to clean the URL if possible (optional)
-            try {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            } catch (e) {}
         } else {
-            console.log("Deep link ID not found in database, defaulting to home.");
+            console.warn("Deep link ID not found in database:", albumId);
             window.viewHome();
         }
+    } else {
+        window.viewHome();
     }
 };
 
@@ -1689,6 +1689,19 @@ async function toggleDesktopPiP() {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+                        {
+            version: "v1.0.3.2",
+            date: "February 10, 2026",
+            // HYPERLINK SUPPORT: Just use <a> tags inside your strings now!
+            notes: [
+                "🛠️ Bug fixes, away! Hammered out a bug regarding copying album links. Test #2, away!",
+            ],
+            // SECOND BUTTON SUPPORT: Add this object
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
                 {
             version: "v1.0.3.1",
             date: "February 10, 2026",
@@ -1866,7 +1879,7 @@ window.addEventListener('load', () => {
         
         // Kick off the app logic
         initApp();
-        console.log("Loaded TRM MUSIC PLAYER v1.0.3.1")
+        console.log("Loaded TRM MUSIC PLAYER v1.0.3.2")
     } else {
         console.error("TRM Error: Supabase CDN blocked or failed to load.");
         const content = document.getElementById('content-view');
