@@ -1607,42 +1607,47 @@ window.initApp = async function() {
 window.handleDeepLinking = function() {
     let albumId = null;
 
-    // 1. Check the local frame's Hash (The most likely to succeed in an iframe)
-    const localHash = window.location.hash;
-    if (localHash) {
-        albumId = localHash.replace('#', '');
-    }
-
-    // 2. Try to peek at the Top window's Hash (If not blocked)
-    if (!albumId) {
-        try {
-            const topHash = window.top.location.hash;
-            if (topHash) albumId = topHash.replace('#', '');
-        } catch (e) {
-            console.warn("Top window access blocked.");
-        }
-    }
-
-    // 3. Last resort: Check Query Parameters
-    if (!albumId) {
-        const urlParams = new URLSearchParams(window.location.search);
-        albumId = urlParams.get('album');
-    }
+    // 1. Try Local First (Immediate)
+    const urlParams = new URLSearchParams(window.location.search);
+    albumId = urlParams.get('album') || window.location.hash.replace('#', '');
 
     if (albumId) {
-        console.log("Deep link target identified:", albumId);
-        const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === albumId);
-        
-        if (albumExists) {
-            window.viewAlbum(albumId);
-        } else {
-            console.error("Deep link ID not found in database:", albumId);
+        processDeepLink(albumId);
+        return; // Exit early if we found it locally
+    }
+
+    // 2. The Waiting Room
+    // If no local ID, we stay on a "Loading" state and wait for the postMessage
+    console.log("No local link found. Waiting for Parent Broadcast...");
+
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SET_ALBUM') {
+            console.log("Message received from Parent via Bridge:", event.data.id);
+            processDeepLink(event.data.id);
+        }
+    });
+
+    // 3. The Timeout (Safety Net)
+    // If 1.5 seconds pass and no message arrives, then we default to Home
+    setTimeout(() => {
+        const content = document.getElementById('content-view');
+        if (!content.innerHTML || content.innerHTML.trim() === "") {
+            console.log("No message received within 1.5s, loading Home View.");
             window.viewHome();
         }
+    }, 1500);
+};
+
+// Helper function to keep things clean
+function processDeepLink(id) {
+    const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === id);
+    if (albumExists) {
+        window.viewAlbum(id);
     } else {
+        console.warn("Broadcasted ID not in database:", id);
         window.viewHome();
     }
-};
+}
 
 async function toggleDesktopPiP() {
     const video = document.getElementById('pip-video');
