@@ -1604,47 +1604,54 @@ window.initApp = async function() {
     }
 }
 
-window.handleDeepLinking = function() {
+window.handleDeepLinking = async function() {
     let albumId = null;
 
-    // 1. Try Local First (Immediate)
+    // 1. Try Local URL (Immediate)
     const urlParams = new URLSearchParams(window.location.search);
     albumId = urlParams.get('album') || window.location.hash.replace('#', '');
 
     if (albumId) {
         processDeepLink(albumId);
-        return; // Exit early if we found it locally
+        return;
     }
 
-    // 2. The Waiting Room
-    // If no local ID, we stay on a "Loading" state and wait for the postMessage
-    console.log("No local link found. Waiting for Parent Broadcast...");
-
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'SET_ALBUM') {
-            console.log("Message received from Parent via Bridge:", event.data.id);
-            processDeepLink(event.data.id);
-        }
+    // 2. Create a "Waiting Room" Promise
+    console.log("Waiting for Parent Broadcast...");
+    
+    const waitForMessage = new Promise((resolve) => {
+        const listener = (event) => {
+            if (event.data && event.data.type === 'SET_ALBUM') {
+                window.removeEventListener('message', listener); // Clean up
+                resolve(event.data.id);
+            }
+        };
+        window.addEventListener('message', listener);
+        
+        // Safety timeout: If no message in 2 seconds, resolve as null
+        setTimeout(() => {
+            window.removeEventListener('message', listener);
+            resolve(null);
+        }, 2000);
     });
 
-    // 3. The Timeout (Safety Net)
-    // If 1.5 seconds pass and no message arrives, then we default to Home
-    setTimeout(() => {
-        const content = document.getElementById('content-view');
-        if (!content.innerHTML || content.innerHTML.trim() === "") {
-            console.log("No message received within 1.5s, loading Home View.");
-            window.viewHome();
-        }
-    }, 1500);
+    // 3. Wait for the promise to finish
+    const receivedId = await waitForMessage;
+
+    if (receivedId) {
+        console.log("Deep link received via Bridge:", receivedId);
+        processDeepLink(receivedId);
+    } else {
+        console.log("No deep link received, loading Home.");
+        window.viewHome();
+    }
 };
 
-// Helper function to keep things clean
 function processDeepLink(id) {
     const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === id);
     if (albumExists) {
         window.viewAlbum(id);
     } else {
-        console.warn("Broadcasted ID not in database:", id);
         window.viewHome();
     }
 }
@@ -1887,7 +1894,7 @@ window.addEventListener('load', () => {
         
         // Kick off the app logic
         initApp();
-        console.log("Loaded TRM MUSIC PLAYER v1.0.3.5")
+        console.log("Loaded TRM MUSIC PLAYER v1.0.3.6")
     } else {
         console.error("TRM Error: Supabase CDN blocked or failed to load.");
         const content = document.getElementById('content-view');
