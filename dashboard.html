@@ -1607,33 +1607,36 @@ window.initApp = async function() {
 window.handleDeepLinking = function() {
     let albumId = null;
 
-    // 1. Try the Hash method (#album-id) - Most reliable for iframes
-    const hash = window.top.location.hash || window.location.hash;
-    if (hash) {
-        albumId = hash.replace('#', '');
-        console.log("Deep link detected via Hash:", albumId);
+    // 1. Check the local frame's Hash (The most likely to succeed in an iframe)
+    const localHash = window.location.hash;
+    if (localHash) {
+        albumId = localHash.replace('#', '');
     }
 
-    // 2. Fallback: Try the Query method (?album=id)
+    // 2. Try to peek at the Top window's Hash (If not blocked)
     if (!albumId) {
         try {
-            const topParams = new URLSearchParams(window.top.location.search);
-            albumId = topParams.get('album');
+            const topHash = window.top.location.hash;
+            if (topHash) albumId = topHash.replace('#', '');
         } catch (e) {
-            const localParams = new URLSearchParams(window.location.search);
-            albumId = localParams.get('album');
+            console.warn("Top window access blocked.");
         }
-        if (albumId) console.log("Deep link detected via Query:", albumId);
     }
 
-    // 3. Final Validation & Render
+    // 3. Last resort: Check Query Parameters
+    if (!albumId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        albumId = urlParams.get('album');
+    }
+
     if (albumId) {
+        console.log("Deep link target identified:", albumId);
         const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === albumId);
         
         if (albumExists) {
             window.viewAlbum(albumId);
         } else {
-            console.warn("Deep link ID not found in database:", albumId);
+            console.error("Deep link ID not found in database:", albumId);
             window.viewHome();
         }
     } else {
