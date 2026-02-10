@@ -1423,7 +1423,7 @@ window.playAlbum = function(albumId) {
 };
     
 window.copyAlbumLink = function(albumId) {
-    const baseUrl = "https://trm-brand-shop.fourthwall.com/music-player"; 
+    const baseUrl = "https://trm-brand-shop.fourthwall.com/pages/music-player"; 
     // Switching to the Hash (#) for better iframe compatibility
     const shareUrl = `${baseUrl}#${albumId}`;
 
@@ -1882,7 +1882,7 @@ window.addEventListener('load', () => {
         
         // Kick off the app logic
         initApp();
-        console.log("Loaded TRM MUSIC PLAYER v1.0.3.2")
+        console.log("Loaded TRM MUSIC PLAYER v1.0.3.3")
     } else {
         console.error("TRM Error: Supabase CDN blocked or failed to load.");
         const content = document.getElementById('content-view');
