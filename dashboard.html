@@ -440,6 +440,16 @@ flex: 1;
             -webkit-overflow-scrolling: touch;
             position: relative;
         }
+
+        /* Styling for the PiP button to match your theme */
+#pip-btn:hover {
+    color: var(--accent-green) !important;
+    filter: var(--neon-glow);
+}
+
+#pip-btn.active {
+    color: var(--accent-green) !important;
+}
     </style>
 </head>
 <body>
@@ -490,6 +500,18 @@ flex: 1;
             <div id="player-like-btn" onclick="handleLikeClick()" style="cursor:pointer; color:#666; transition: 0.2s; padding-right: 10px;">
                 <span class="material-icons" id="main-heart-icon" style="font-size: 20px;">favorite_border</span>
             </div>
+
+            <video id="pip-video" playsinline muted style="display:none;"></video>
+
+<div style="width: 30%; display: flex; justify-content: flex-end; align-items: center; gap: 20px;">
+    <div class="control-toggle" id="pip-btn" onclick="toggleDesktopPiP()" title="Floating Player">
+        <span class="material-icons" style="font-size: 20px;">picture_in_picture_alt</span>
+    </div>
+
+    <div class="control-toggle" onclick="togglePanel()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </div>
+    </div>
         </div>
         
         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
@@ -738,6 +760,40 @@ window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
         audio.src = track.url; 
         audio.load();
     }
+
+    // --- MEDIA SESSION & PIP LOGIC ---
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title,
+            artist: artist.name,
+            album: album?.name || "therichmusic",
+            artwork: [
+                { src: album?.art_url || '', sizes: '512x512', type: 'image/png' }
+            ]
+        });
+
+        // Media Key Handlers
+        const actionHandlers = [
+            ['play', () => { audio.play(); window.isPlaying = true; updatePlayerUI(); }],
+            ['pause', () => { audio.pause(); window.isPlaying = false; updatePlayerUI(); }],
+            ['previoustrack', () => window.prevTrack?.()],
+            ['nexttrack', () => window.nextTrack?.()],
+            ['seekto', (details) => { if (details.seekTime) audio.currentTime = details.seekTime; }]
+        ];
+
+        for (const [action, handler] of actionHandlers) {
+            try { navigator.mediaSession.setActionHandler(action, handler); } catch (e) {}
+        }
+    }
+
+    // Trigger Desktop PiP (Optional: Add a button to call this)
+    // Most devs prefer a "Pop Out" button, but you can trigger a canvas stream here.
+
+    // If the user already has a PiP window open, update its content
+if (document.pictureInPictureElement) {
+    // Re-run the canvas draw logic to update the floating image
+    toggleDesktopPiP(); 
+}
 
     // Update Bottom Player UI
     const artImg = document.getElementById('player-art');
@@ -1235,6 +1291,59 @@ window.handleDeepLinking = function() {
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 };
+
+async function toggleDesktopPiP() {
+    const video = document.getElementById('pip-video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 512;
+    canvas.height = 512;
+
+    const albumArtUrl = document.getElementById('player-art').src;
+    const trackTitle = document.getElementById('player-title').innerText;
+    const artistName = document.getElementById('player-artist').innerText;
+
+    if (!albumArtUrl) return;
+
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; 
+    img.src = albumArtUrl;
+
+    img.onload = async () => {
+        // Draw Background
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Album Art
+        ctx.drawImage(img, 0, 0, 512, 512);
+
+        // Capture stream if not already active
+        if (!video.srcObject) {
+            video.srcObject = canvas.captureStream();
+            await video.play();
+        }
+
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+                document.getElementById('pip-btn').classList.remove('active');
+            } else {
+                await video.requestPictureInPicture();
+                document.getElementById('pip-btn').classList.add('active');
+            }
+        } catch (error) {
+            console.error("PiP failed:", error);
+        }
+    };
+}
+
+// Ensure the PiP window closes if the user exits the player
+window.addEventListener('pagehide', () => {
+    if (document.pictureInPictureElement) {
+        document.exitPictureInPicture();
+    }
+});
 
 // --- BOOTSTRAP LOGIC ---
     // This ensures supabase is defined before init() runs
