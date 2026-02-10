@@ -1606,31 +1606,38 @@ window.initApp = async function() {
 }
 
 window.handleDeepLinking = function() {
-    // 1. Try to get params from the current frame first
-    let urlParams = new URLSearchParams(window.location.search);
-    let albumId = urlParams.get('album');
-
-    // 2. If nothing found, try to look at the Parent window (Fourthwall's address bar)
-    if (!albumId) {
+    // 1. Try the standard way first (Current Frame)
+    let searchParams = new URLSearchParams(window.location.search);
+    
+    // 2. Fallback: Check the Referrer (The Fourthwall Parent Page)
+    if (!searchParams.has('album')) {
         try {
-            // window.parent is the Fourthwall page holding your script
-            const parentParams = new URLSearchParams(window.parent.location.search);
-            albumId = parentParams.get('album');
+            const referrerURL = new URL(document.referrer);
+            searchParams = referrerURL.searchParams;
+            console.log("Checking referrer for deep link:", document.referrer);
         } catch (e) {
-            // This might trigger a security error if cross-origin is strict, 
-            // but it's the standard way to check the parent URL.
-            console.warn("Could not access parent URL parameters.");
+            console.warn("Referrer check failed or empty.");
         }
     }
 
+    const albumId = searchParams.get('album');
+
     if (albumId) {
-        console.log("Deep link identified:", albumId);
-        window.viewAlbum(albumId);
+        // Check if the album exists in our global data
+        const albumExists = window.ALBUMS && window.ALBUMS.find(a => a.id === albumId);
         
-        // 3. Optional: Clean URL (usually only works on the same domain)
-        try {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (e) {}
+        if (albumExists) {
+            console.log("Deep link validated via Referrer/URL:", albumId);
+            window.viewAlbum(albumId);
+            
+            // Try to clean the URL if possible (optional)
+            try {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {}
+        } else {
+            console.log("Deep link ID not found in database, defaulting to home.");
+            window.viewHome();
+        }
     }
 };
 
