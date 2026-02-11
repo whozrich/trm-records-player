@@ -528,9 +528,12 @@ overflow: hidden; /* This is necessary for the squircle shape */
         <div class="nav-item" id="nav-lib" onclick="window.viewLibrary()">
             <span class="material-icons">library_music</span>Library
         </div>
+        <div class="nav-item" id="nav-lib" onclick="window.openPatchNotes()">
+            <span class="material-icons">new_releases</span>Patch Notes
+        </div>
     </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
         const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
@@ -539,6 +542,7 @@ overflow: hidden; /* This is necessary for the squircle shape */
         window.ALBUMS = [];
         window.TRACKS = {};
         window.ARTISTS = {};
+        window.SPOTLIGHTS = []; // Added this
         let currentTrackId = null;
         let currentArtistId = null;
         let isShuffle = false;
@@ -546,98 +550,263 @@ overflow: hidden; /* This is necessary for the squircle shape */
         const audio = new Audio();
         const contentView = document.getElementById('content-view');
 
+        // UPDATED STORAGE: Added try/catch for iPhone Private Mode safety
         const STORAGE = {
-            getLikes: () => JSON.parse(localStorage.getItem('trm_likes') || '[]'),
-            getRecent: () => JSON.parse(localStorage.getItem('trm_recent') || '[]'),
+            getLikes: () => {
+                try { return JSON.parse(localStorage.getItem('trm_likes') || '[]'); } 
+                catch(e) { return window._likesFallback || []; }
+            },
+            getRecent: () => {
+                try { return JSON.parse(localStorage.getItem('trm_recent') || '[]'); } 
+                catch(e) { return window._recentFallback || []; }
+            },
             toggleLike: (id) => {
                 let likes = STORAGE.getLikes();
                 likes = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id];
-                localStorage.setItem('trm_likes', JSON.stringify(likes));
+                try { localStorage.setItem('trm_likes', JSON.stringify(likes)); } 
+                catch(e) { window._likesFallback = likes; }
                 return likes.includes(id);
             },
             addRecent: (id) => {
                 let recent = STORAGE.getRecent().filter(x => x !== id);
                 recent.unshift(id);
-                localStorage.setItem('trm_recent', JSON.stringify(recent.slice(0, 20)));
+                const sliced = recent.slice(0, 20);
+                try { localStorage.setItem('trm_recent', JSON.stringify(sliced)); } 
+                catch(e) { window._recentFallback = sliced; }
             }
         };
 
-       async function init() {
-    try {
-        const { data: artists } = await supabaseClient.from('artists').select('*');
-        artists?.forEach(a => window.ARTISTS[a.id] = a);
+        async function init() {
+            try {
+                // 1. FETCH ALL DATA (Including Spotlight)
+                const [
+                    { data: artists },
+                    { data: albumsData },
+                    { data: tracksData },
+                    { data: spotlightRows } // Added fetch for Spotlight
+                ] = await Promise.all([
+                    supabaseClient.from('artists').select('*'),
+                    supabaseClient.from('albums').select('*'),
+                    supabaseClient.from('tracks').select('*'),
+                    supabaseClient.from('spotlight').select('*').eq('active', true).order('created_at', { ascending: false }).limit(5)
+                ]);
 
-        const { data: albumsData } = await supabaseClient.from('albums').select('*');
-        const { data: tracksData } = await supabaseClient.from('tracks').select('*');
+                // 2. PROCESS ARTISTS
+                artists?.forEach(a => window.ARTISTS[a.id] = a);
 
-        // Helper to sort albums by date
-        const parseDate = (str) => {
-            if (!str || str === 'RELEASED') return 0;
-            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
-            const timestamp = Date.parse(cleanDate);
-            return isNaN(timestamp) ? 0 : timestamp;
-        };
+                // 3. PROCESS SPOTLIGHTS (Mapping DB names to your logic names)
+                window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
+                    type: row.type,
+                    id: row.target_id,
+                    url: row.url,
+                    customTitle: row.custom_title,
+                    customSub: row.custom_sub
+                }));
 
-        window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+                // 4. PROCESS ALBUMS (Sorted by Date)
+                const parseDate = (str) => {
+                    if (!str || str === 'RELEASED') return 0;
+                    const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
+                    const timestamp = Date.parse(cleanDate);
+                    return isNaN(timestamp) ? 0 : timestamp;
+                };
 
-        // Create a quick lookup map for tracks
-        const trackLookup = {};
-        tracksData?.forEach(t => { trackLookup[t.id] = t; });
+                window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
 
-        // ARRAY IS LAW: Map tracks to albums based strictly on the JSONB array order
-        window.TRACKS = {};
-        window.ALBUMS.forEach(alb => {
-            const manualOrder = alb.track_ids || []; 
-            // Filter out any IDs that might not exist in the tracks table
-            window.TRACKS[alb.id] = manualOrder
-                .map(id => trackLookup[id])
-                .filter(Boolean); 
-        });
+                // 5. PROCESS TRACKS (Linked to Albums)
+                const trackLookup = {};
+                tracksData?.forEach(t => { trackLookup[t.id] = t; });
 
-        window.viewHome();
-        handleDeepLinking();
-    } catch (err) { 
-        console.error("Init Error:", err); 
-        contentView.innerHTML = `<div class="standard-padding">Error loading database.</div>`;
-    }
-}
+                window.TRACKS = {};
+                window.ALBUMS.forEach(alb => {
+                    const manualOrder = alb.track_ids || []; 
+                    window.TRACKS[alb.id] = manualOrder
+                        .map(id => trackLookup[id])
+                        .filter(Boolean); 
+                });
+
+                // 6. RENDER
+                window.viewHome();
+                if (typeof handleDeepLinking === 'function') handleDeepLinking();
+
+            } catch (err) { 
+                console.error("Init Error:", err); 
+                if (contentView) {
+                    contentView.innerHTML = `<div class="standard-padding" style="color:white;">Error connecting to Supabase.</div>`;
+                }
+            }
+        }
 
         function resetScroll() { contentView.scrollTo(0, 0); }
 
-        window.viewHome = () => {
-            window.currentViewId = 'home';
-            resetScroll();
-            setNav(0);
-            if (window.ALBUMS.length === 0) return;
-            const featured = window.ALBUMS.find(a => a.is_featured && !a.hidden) || window.ALBUMS[0];
-            const publicAlbs = window.ALBUMS.filter(a => !a.hidden);
+window.viewHome = function() {
+    window.currentViewId = 'home';
+    if (typeof resetScroll === 'function') resetScroll();
+    if (typeof setNav === 'function') setNav(0);
+
+    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
+    const spotlights = window.SPOTLIGHTS || [];
+    const target = document.getElementById('content-view') || document.getElementById('contentView');
+    if (!target) return;
+
+    // 1. DYNAMIC RENDERER
+    const renderMobileSlide = (index) => {
+        const s = spotlights[index];
+        if (!s) return '';
+
+        let displayImg = "";
+        let displayTitle = s.customTitle || "";
+        let tagText = "FEATURED";
+        let action = "";
+
+        if (s.type === "Release") {
+            const alb = publicCatalogue.find(a => a.id === s.id);
+            if (alb) {
+                displayImg = alb.art_url;
+                displayTitle = s.customTitle || alb.name;
+                tagText = alb.coming_soon ? "COMING SOON" : "RELEASE";
+                action = `viewAlbum('${alb.id}')`;
+            }
+        } else if (s.type === "Video") {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = s.url ? s.url.match(regExp) : null;
+            const vidId = (match && match[2].length == 11) ? match[2] : null;
+            displayImg = vidId ? `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg` : "";
+            tagText = "FEATURED VIDEO";
+            action = `window.open('${s.url}', '_blank')`;
+        } else if (s.type === "Sponsorship") {
+            displayImg = s.url; 
+            tagText = "SPONSORSHIP";
+            action = `window.open('${s.target_url || '#'}', '_blank')`;
+        }
+
+        if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
+
+        return `
+        <div class="mobile-spotlight-card spotlight-anim" onclick="${action}">
+            <div class="mobile-spotlight-bg" style="background-image: url('${displayImg}')"></div>
+            <div class="mobile-spotlight-content">
+                <span class="mobile-tag">${tagText}</span>
+                <h1 class="mobile-title">${displayTitle.toUpperCase()}</h1>
+                ${spotlights.length > 1 ? `
+                <div class="mobile-pill-container">
+                    ${spotlights.map((_, i) => `
+                        <div class="mobile-pill ${i === index ? 'active' : ''}"></div>
+                    `).join('')}
+                </div>` : ''}
+            </div>
+        </div>`;
+    };
+
+    // 2. NAVIGATION
+    window.moveSpotlight = (dir) => {
+        if (!spotlights.length) return;
+        window.currentSpotlightIndex = ((window.currentSpotlightIndex || 0) + dir + spotlights.length) % spotlights.length;
+        const slider = document.getElementById('spotlight-slider-inner');
+        if (slider) {
+            slider.innerHTML = renderMobileSlide(window.currentSpotlightIndex);
+        }
+    };
+
+    // 3. INJECTION
+    target.innerHTML = `
+    <style>
+        .spotlight-wrap { position: relative; margin: 15px; }
+        .mobile-spotlight-card {
+            position: relative; height: 260px; 
+            border-radius: 16px; overflow: hidden; background: #000;
+            display: flex; align-items: flex-end;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .mobile-spotlight-bg {
+            position: absolute; inset: 0; background-size: cover; background-position: center;
+            filter: brightness(0.6); z-index: 1; transform: scale(1.05);
+        }
+        .mobile-spotlight-content { position: relative; z-index: 2; padding: 20px; width: 100%; }
+        .mobile-tag { background: var(--accent-green); color: #000; font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; }
+        .mobile-title { font-size: 32px; color: #fff; margin: 8px 0; font-weight: 900; letter-spacing: -1.2px; line-height: 0.85; }
+        .mobile-pill-container { display: flex; gap: 5px; margin-top: 10px; }
+        .mobile-pill { height: 4px; width: 12px; background: rgba(255,255,255,0.2); border-radius: 2px; transition: 0.3s; }
+        .mobile-pill.active { width: 24px; background: var(--accent-green); }
+        
+        .m-nav {
+            position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
+            width: 32px; height: 32px; background: rgba(0,0,0,0.5); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: white;
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .m-nav-prev { left: 10px; }
+        .m-nav-next { right: 10px; }
+
+        .spotlight-anim { animation: mSlideIn 0.3s ease-out; }
+        @keyframes mSlideIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mobile-home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px 100px 15px; }
+    </style>
+
+    <div class="spotlight-wrap">
+        ${spotlights.length > 1 ? `
+            <div class="m-nav m-nav-prev" onclick="event.stopPropagation(); moveSpotlight(-1)"><span class="material-icons" style="font-size:18px;">chevron_left</span></div>
+            <div class="m-nav m-nav-next" onclick="event.stopPropagation(); moveSpotlight(1)"><span class="material-icons" style="font-size:18px;">chevron_right</span></div>
+        ` : ''}
+        <div id="spotlight-slider-inner">
+            ${renderMobileSlide(window.currentSpotlightIndex || 0)}
+        </div>
+    </div>
+
+    <div style="padding: 10px 20px;">
+        <h2 style="margin: 10px 0; font-weight: 900; font-size: 22px; letter-spacing: -0.5px; text-transform: uppercase;">Catalogue</h2>
+    </div>
+    
+    <div class="mobile-home-grid">
+        ${publicCatalogue.map(alb => {
+            // Logic for the dynamic label: "TYPE • YEAR" or "TYPE • COMING SOON"
+            const releaseYear = alb.full_release_date ? String(alb.full_release_date).split(' ').pop() : '';
+            const type = (alb.type || 'Release').toUpperCase();
             
-            let html = `
-                <div class="featured-banner view-animate" onclick="viewAlbum('${featured.id}')">
-                    <img src="${featured.art_url}">
-                    <div class="featured-content">
-                        <div style="background:var(--accent-green); color:black; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; display:inline-block; margin-bottom:5px;">FEATURED</div>
-                        <h1 style="margin:0;">${featured.name}</h1>
+            let statusHtml = "";
+            if (alb.coming_soon) {
+                statusHtml = `<span style="color:var(--accent-green);">COMING SOON</span>`;
+            } else {
+                statusHtml = releaseYear || 'RELEASE';
+            }
+
+            return `
+                <div class="track-tile view-animate" onclick="viewAlbum('${alb.id}')">
+                    <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); ${alb.coming_soon ? 'opacity:0.4; filter:grayscale(1)' : ''}">
+                    <div style="padding: 10px 2px;">
+                        <div style="font-weight:800; color:#fff; font-size:14px; line-height:1.2; margin-bottom:4px; text-transform:uppercase;">${alb.name}</div>
+                        <div style="color:#999; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
+                            ${type} • ${statusHtml}
+                        </div>
                     </div>
                 </div>
-                <div class="standard-padding">
-                    <h2 style="margin-top:0;">Catalogue</h2>
-                    <div class="mobile-home-grid">`;
-            
-            publicAlbs.forEach(a => {
-                html += `
-                    <div class="track-tile" onclick="viewAlbum('${a.id}')">
-                        <img src="${a.art_url}" style="${a.coming_soon ? 'opacity:0.5; filter:grayscale(1)' : ''}">
-                        <div class="tile-content">
-                            <span class="tile-title">${a.name}</span>
-                            <span class="tile-label" style="color:${a.coming_soon ? '#ff4444' : '#888'}">
-                                ${a.coming_soon ? 'COMING SOON' : (a.type || 'ALBUM')}
-                            </span>
-                        </div>
-                    </div>`;
-            });
-            contentView.innerHTML = html + `</div></div>`;
-        };
+            `;
+        }).join('')}
+    </div>`;
+
+    // 4. TOUCH SWIPE (Enhanced)
+    const wrap = document.querySelector('.spotlight-wrap');
+    if (wrap) {
+        let xDown = null;
+        wrap.addEventListener('touchstart', e => xDown = e.touches[0].clientX, {passive: true});
+        wrap.addEventListener('touchend', e => {
+            if (!xDown) return;
+            let xUp = e.changedTouches[0].clientX;
+            if (xDown - xUp > 60) window.moveSpotlight(1);
+            if (xDown - xUp < -60) window.moveSpotlight(-1);
+            xDown = null;
+        }, {passive: true});
+    }
+
+    if (window.spotlightInterval) clearInterval(window.spotlightInterval);
+    if (spotlights.length > 1) {
+        window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
+    }
+};
 
 window.toggleNavUI = (show) => {
     const navBar = document.querySelector('.bottom-nav');
@@ -655,101 +824,264 @@ window.toggleNavUI = (show) => {
 };
 
 
-        window.viewArtist = (id) => {
-            window.currentViewId = 'artist';
-            resetScroll();
-            const artist = window.ARTISTS[id];
-            const artistAlbs = window.ALBUMS.filter(a => a.artist_id == id && !a.hidden);
-
-            let html = `
-                <div class="view-animate">
-                    <div style="height:280px; position:relative; overflow:hidden;">
-                        <img src="${artist.banner_url || ''}" style="width:100%; height:100%; object-fit:cover; filter:brightness(0.6);">
-                        <span class="material-icons" onclick="viewHome()" style="position:absolute; top:40px; left:20px; z-index:10; background:rgba(0,0,0,0.5); border-radius:50%; padding:5px;">chevron_left</span>
-                        <div style="position:absolute; bottom:20px; left:20px; right:20px; z-index:2;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <h1 style="font-size:36px; margin:0;">${artist.name}</h1>
-                                ${artist.is_verified ? '<span class="material-icons" style="color:#3897f0; font-size:24px;">verified</span>' : ''}
-                            </div>
-                            <p style="color:var(--text-dim); margin:5px 0; font-size:14px; line-height:1.4;">${artist.bio || 'Official TRM Artist'}</p>
-                        </div>
-                    </div>
-                    <div class="standard-padding">
-                        <h2 style="margin-top:0;">Discography</h2>
-                        <div class="mobile-home-grid">
-                            ${artistAlbs.map(a => `
-                                <div class="track-tile" onclick="viewAlbum('${a.id}')">
-                                    <img src="${a.art_url}">
-                                    <div class="tile-content">
-                                        <span class="tile-title">${a.name}</span>
-                                        <span class="tile-label">${a.type || 'ALBUM'}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>`;
-            contentView.innerHTML = html;
-        };
-
-window.viewAlbum = (id) => {
-    window.currentViewId = 'album';
+window.viewArtist = (id) => {
+    window.currentViewId = 'artist';
+    if (typeof toggleNavUI === 'function') toggleNavUI(false); 
     contentView.scrollTo(0, 0);
-    toggleNavUI(false); 
 
-    const alb = window.ALBUMS.find(a => a.id === id);
-    if (!alb) return;
+    const artist = window.ARTISTS[id] || { 
+        name: "therichmusic", 
+        bio: "", 
+        is_verified: false,
+        banner_url: "",
+        featured_video_url: "",
+        socials: [] 
+    };
 
-    const tks = window.TRACKS[id] || [];
-    const artist = window.ARTISTS[alb.artist_id] || { name: "TRM Records" };
+    const artistAlbs = window.ALBUMS.filter(a => a.artist_id == id && !a.hidden);
 
+    // --- 1. DESKTOP FEATURE: SOCIALS & VIDEO LOGIC ---
+    const socialConfig = [
+        { name: 'YouTube',   match: 'youtube.com',   icon: 'play_circle', color: '#FF0000' },
+        { name: 'Instagram', match: 'instagram.com', icon: 'camera_alt',  color: '#E1306C' },
+        { name: 'Twitter',   match: 'twitter.com',   icon: 'x',           color: '#ffffff' },
+        { name: 'Twitter',   match: 'x.com',         icon: 'x',           color: '#ffffff' },
+        { name: 'TikTok',    match: 'tiktok.com',    icon: 'music_note',  color: '#00f2ea' }
+    ];
+
+    const renderSocials = () => {
+        if (!Array.isArray(artist.socials)) return '';
+        let count = 0;
+        return artist.socials.map(url => {
+            if (count >= 4) return '';
+            const platform = socialConfig.find(c => url.toLowerCase().includes(c.match));
+            if (platform) {
+                count++;
+                return `
+                    <a href="${url}" target="_blank" style="text-decoration:none; color:${platform.color}; background:rgba(255,255,255,0.08); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                        <span class="material-icons" style="font-size:20px;">${platform.icon}</span>
+                    </a>`;
+            }
+            return '';
+        }).join('');
+    };
+
+    const getEmbedUrl = (url) => {
+        if(!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? `https://www.youtube-nocookie.com/embed/${match[2]}?rel=0` : null;
+    };
+    const embedUrl = getEmbedUrl(artist.featured_video_url);
+
+    // --- 2. CATEGORIZATION LOGIC ---
+    const albums = artistAlbs.filter(a => ['ALBUM', 'MIXTAPE'].includes((a.type || '').toUpperCase()));
+    const singles = artistAlbs.filter(a => ['SINGLE', 'EP'].includes((a.type || '').toUpperCase()));
+    const compilations = artistAlbs.filter(a => (a.type || '').toUpperCase() === 'COMPILATION');
+
+    const renderGrid = (list) => {
+        if (list.length === 0) return '';
+        return `
+            <div class="mobile-home-grid" style="margin-bottom: 30px;">
+                ${list.map(a => `
+                    <div class="track-tile" onclick="viewAlbum('${a.id}')" style="background: rgba(255,255,255,0.03); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="position: relative; line-height:0;">
+                            <img src="${a.art_url}" style="width:100%; aspect-ratio:1; border-radius: 12px; object-fit:cover;">
+                            ${a.coming_soon ? `<div style="position:absolute; top:12px; right:12px; background:var(--accent-green); color:black; font-size:12px; font-weight:900; padding:8px 10px; border-radius:12px;">SOON</div>` : ''}
+                        </div>
+                        <div class="tile-content" style="padding: 10px;">
+                            <span class="tile-title" style="font-weight:800; font-size:13px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.name.toUpperCase()}</span>
+                            <span class="tile-label" style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">${a.full_release_date ? a.full_release_date.split(' ').pop() : (a.type || 'RELEASE')}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    };
+
+    // --- 3. FINAL UI RENDER ---
     let html = `
-    <div class="view-animate">
-        <div style="padding: 40px var(--safe-pad) 20px; text-align:center; position: relative;">
-            <span class="material-icons" onclick="viewHome(); toggleNavUI(true);" 
-                  style="position: absolute; left: var(--safe-pad); top: 40px; background: rgba(255,255,255,0.1); border-radius: 50%; padding: 6px; font-size: 20px; cursor: pointer;">chevron_left</span>
-            <img src="${alb.art_url}" style="width:240px; aspect-ratio:1; border-radius: var(--squircle); box-shadow: 0 20px 50px rgba(0,0,0,0.8); object-fit: cover;">
-            <h1 style="margin:25px 0 5px 0; font-size: 30px; font-weight: 900; letter-spacing: -1px;">${alb.name}</h1>
-            <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
-                <p style="color:var(--accent-green); font-weight: bold; margin:0; font-size: 17px; cursor: pointer;" onclick="viewArtist('${alb.artist_id}')">${artist.name}</p>
-                <button onclick="copyAlbumLink('${alb.id}')" style="background:rgba(255,255,255,0.1); border:none; color:white; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                     <span class="material-icons" style="font-size:16px;">share</span>
-                </button>
+    <div class="view-animate" style="padding-bottom: 120px;">
+        <div style="height:420px; position:relative; overflow:hidden; display: flex; align-items: flex-end;">
+            <img src="${artist.banner_url || ''}" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
+            <div style="position:absolute; inset:0; background: linear-gradient(to top, var(--bg-black) 5%, rgba(0,0,0,0.4) 60%, transparent 100%);"></div>
+            
+            <div onclick="viewHome(); toggleNavUI(true);" 
+                 style="position: fixed; left: 20px; top: 40px; width: 40px; height: 40px; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 100; border: 1px solid rgba(255,255,255,0.1);">
+                <span class="material-icons" style="color: white;">chevron_left</span>
+            </div>
+
+            <div style="position:relative; padding: 30px 20px; width: 100%;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom: 10px;">
+                    ${artist.is_verified ? '<span style="background:#3897f0; color:white; font-size:10px; font-weight:900; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:12px;">verified</span> VERIFIED</span>' : ''}
+                </div>
+                <h1 style="font-size:48px; margin:0; font-weight:900; letter-spacing:-2px; line-height:0.9; text-transform:uppercase; color:white;">${artist.name}</h1>
+                <p style="color:rgba(255,255,255,0.7); margin:15px 0 20px; font-size:14px; line-height:1.5; font-weight:500; max-width:90%;">
+                    ${artist.bio || 'Official TRM Records Artist.'}
+                </p>
+                
+                <div style="display: flex; gap: 10px;">
+                    ${renderSocials()}
+                </div>
             </div>
         </div>
-        <div class="standard-padding">
-            ${tks.map((t, i) => {
-                // RESTORED PARITY RULE
-                const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
-                const isPlayable = parentIds.some(aid => {
-                    const other = window.ALBUMS.find(a => a.id == aid);
-                    return other && !other.coming_soon;
-                });
 
-                // RESTORED HIDDEN LOGIC
-                if (t.hidden_name === true) return ''; 
+        <div class="standard-padding" style="margin-top: 30px;">
+            
+            ${albums.length > 0 ? `
+                <h3 style="text-transform:uppercase; letter-spacing:1px; font-size:12px; margin-bottom:15px; color:var(--accent-green); font-weight:900;">Albums & Mixtapes</h3>
+                ${renderGrid(albums)}
+            ` : ''}
+
+            ${singles.length > 0 ? `
+                <h3 style="text-transform:uppercase; letter-spacing:1px; font-size:12px; margin-bottom:15px; color:var(--accent-green); font-weight:900;">Singles & EPs</h3>
+                ${renderGrid(singles)}
+            ` : ''}
+
+            ${embedUrl ? `
+                <div style="margin: 40px 0;">
+                    <h3 style="text-transform:uppercase; letter-spacing:1px; font-size:12px; margin-bottom:15px; color:rgba(255,255,255,0.4); font-weight:900;">Featured Video</h3>
+                    <div style="position: relative; width: 100%; padding-top: 56.25%; border-radius: 12px; overflow: hidden; background:#000; border: 1px solid rgba(255,255,255,0.1);">
+                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${compilations.length > 0 ? `
+                <h3 style="text-transform:uppercase; letter-spacing:1px; font-size:12px; margin-bottom:15px; color:var(--accent-green); font-weight:900;">Compilations</h3>
+                ${renderGrid(compilations)}
+            ` : ''}
+
+        </div>
+    </div>`;
+
+    contentView.innerHTML = html;
+};
+
+window.viewAlbum = (id, scrollToTop = true) => {
+    window.currentViewId = 'album';
+    if (typeof toggleNavUI === 'function') toggleNavUI(false); 
+
+    const alb = window.ALBUMS.find(a => a.id == id);
+    if (!alb) return window.viewHome();
+
+    const artist = window.ARTISTS[alb.artist_id] || { name: "therichmusic", id: "" };
+    const tks = window.TRACKS[id] || [];
+
+    // --- 1. DATA VALIDATION FOR IDs ---
+    const isComingSoon = alb.coming_soon === true || alb.coming_soon === "true";
+    const trailerUrl = alb.trailer_url || null;
+    const releaseDateRaw = alb.full_release_date || null;
+
+    // --- 2. RELEASE DATE FORMATTING ---
+    const dateLabel = isComingSoon ? "RELEASING" : "RELEASED";
+    let finalDateDisplay = "";
+    
+    if (releaseDateRaw) {
+        const rawDate = String(releaseDateRaw).trim();
+        if (/^\d{4}$/.test(rawDate)) {
+            finalDateDisplay = rawDate;
+        } else {
+            const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
+            const dateObj = new Date(cleanedDate);
+            if (!isNaN(dateObj)) {
+                finalDateDisplay = dateObj.toLocaleDateString(undefined, {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            } else {
+                finalDateDisplay = rawDate; // Fallback to raw string if parsing fails
+            }
+        }
+    }
+
+    const isThisAlbumActive = (window.currentAlbumId === id);
+    const isCurrentlyPlaying = isThisAlbumActive && window.isPlaying;
+    const playIcon = isCurrentlyPlaying ? 'pause' : 'play_arrow';
+
+    let html = `
+    <div class="${scrollToTop ? 'view-animate' : ''}" style="padding-bottom: 140px; color: white;">
+        
+        <div style="padding: 60px 20px 30px; text-align:center; position: relative;">
+            
+            <div onclick="viewHome(); toggleNavUI(true);" 
+                 style="position: absolute; left: 20px; top: 40px; width: 42px; height: 42px; background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); z-index: 10;">
+                <span class="material-icons" style="font-size: 24px;">chevron_left</span>
+            </div>
+
+            <div style="position:relative; display: inline-block;">
+                <img src="${alb.art_url}" style="width:240px; aspect-ratio:1; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); object-fit: cover;">
+                
+                ${trailerUrl ? `
+                    <div onclick="window.open('${trailerUrl}', '_blank')" 
+                         style="position:absolute; bottom: -10px; right: -10px; background:#ff0000; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 6px 20px rgba(255,0,0,0.5); border: 4px solid #000; cursor: pointer; z-index: 5;">
+                        <span class="material-icons" style="color:white; font-size:28px;">smart_display</span>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <h1 style="margin: 35px 0 12px; font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 0.85; text-transform: uppercase;">${alb.name}</h1>
+            
+            <div style="display:flex; flex-direction: column; align-items:center; gap:14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <p style="color:var(--accent-green); font-weight: 900; margin:0; font-size: 19px; letter-spacing: 1px; text-transform: uppercase;" onclick="viewArtist('${alb.artist_id}')">
+                        ${artist.name}
+                    </p>
+                    <div onclick="copyAlbumLink('${alb.id}')" style="background:rgba(255,255,255,0.1); width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor: pointer;">
+                         <span class="material-icons" style="font-size:18px;">ios_share</span>
+                    </div>
+                </div>
+
+                <button onclick="playAlbum('${alb.id}')" style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <span class="material-icons" style="font-size:44px; color:black;">${playIcon}</span>
+                </button>
+
+                ${finalDateDisplay ? `
+                <div style="font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; text-transform: uppercase;">
+                    ${tks.length} SONGS • ${dateLabel} ${finalDateDisplay}
+                </div>
+                ` : ''}
+            </div>
+        </div>
+
+        <div style="padding: 0 20px;">
+            ${tks.map((t, i) => {
+                if (t.hidden_name) return ''; 
+                
+                // coming_soon ID check for playability
+                const isPlayable = !isComingSoon || (t.album_id && t.album_id.split(',').some(aid => {
+                    const other = window.ALBUMS.find(a => a.id == aid.trim());
+                    return other && !other.coming_soon;
+                }));
 
                 const trackNumber = i + 1;
-                const displayTitle = isPlayable ? t.title : `Track ${trackNumber}`;
-                const isActive = currentTrackId === t.id;
+                const displayTitle = isPlayable ? t.title : `TRACK ${trackNumber}`;
+                const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
 
                 return `
-                <div class="track-row ${!isPlayable ? 'disabled' : ''} ${isActive ? 'active-track' : ''}" 
-                     style="display:flex; align-items: center; padding:16px 0; border-bottom:1px solid rgba(255,255,255,0.05); ${!isPlayable ? 'opacity:0.3; pointer-events:none;' : ''}" 
+                <div class="track-row" 
+                     style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${!isPlayable ? 'opacity:0.3;' : ''}" 
                      ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
-                    <span style="width:30px; font-size: 14px; font-weight: bold; color:${isActive ? 'var(--accent-green)' : 'rgba(255,255,255,0.2)'};">
-                        ${isActive ? '▶' : trackNumber}
-                    </span>
-                    <div style="flex:1;">
-                        <div style="font-weight:700; font-size: 16px; color:${isActive ? 'var(--accent-green)' : 'white'}">${displayTitle}</div>
-                        <div style="font-size:13px; opacity:0.5;">${artist.name}</div>
+                    
+                    <div style="width: 38px; font-size: 14px; font-weight: 900; color: ${isActive ? 'var(--accent-green)' : 'rgba(255,255,255,0.2)'};">
+                        ${isActive ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : trackNumber}
                     </div>
-                    <div style="font-size: 13px; opacity:0.4;">${isPlayable ? (t.duration || '0:00') : '??:??'}</div>
+                    
+                    <div style="flex:1; overflow: hidden;">
+                        <div style="font-weight:800; font-size: 17px; color:${isActive ? 'var(--accent-green)' : 'white'}; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${displayTitle}</div>
+                        <div style="font-size:12px; font-weight: 800; color: ${isPlayable ? 'rgba(255,255,255,0.4)' : 'var(--accent-green)'}; text-transform: uppercase;">
+                            ${isPlayable ? artist.name : 'COMING SOON'}
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 12px; font-weight: 800; var(--accent-green); font-family: monospace;">
+                        ${isPlayable ? (t.duration || '0:00') : '--:--'}
+                    </div>
                 </div>`;
             }).join('')}
         </div>
     </div>`;
+
     contentView.innerHTML = html;
+    if (scrollToTop) contentView.scrollTop = 0;
 };
 
 window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
@@ -962,30 +1294,46 @@ window.runSearch = (q) => {
     res.innerHTML = html || `<div style="text-align:center; margin-top:50px; color:var(--text-dim);">No results for "${q}"</div>`;
 };
 
-window.handleDeepLinking = () => { 
-    const params = new URLSearchParams(window.location.search); 
-    const albId = params.get('album'); 
+window.handleDeepLinking = () => {
+    const params = new URLSearchParams(window.location.search);
+    const albId = params.get('album');
+    
     if (albId) {
-        // Adding a small delay ensures data is loaded before navigating
-        setTimeout(() => viewAlbum(albId), 100);
+        // If data isn't ready yet, wait, otherwise fire immediately
+        if (window.ALBUMS.length === 0) {
+            setTimeout(window.handleDeepLinking, 50);
+            return;
+        }
+
+        const albumExists = window.ALBUMS.find(a => a.id == albId);
+        if (albumExists) {
+            window.viewAlbum(albId);
+            // Optional: Clean URL so a refresh returns to home
+            // window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }
 };
 
 window.copyAlbumLink = (albumId) => {
-    // Construct the URL (e.g., mysite.com/?album=123)
+    const alb = window.ALBUMS.find(a => a.id === albumId);
+    const artist = window.ARTISTS[alb?.artist_id] || { name: "TRM Records" };
     const url = `${window.location.origin}${window.location.pathname}?album=${albumId}`;
 
     if (navigator.share) {
-        // Use native mobile share sheet
         navigator.share({
-            title: 'Check out this album',
+            title: alb ? alb.name : 'TRM Music',
+            text: `Check out ${alb?.name} by ${artist.name} on TRM`,
             url: url
-        }).catch(err => console.log('Error sharing', err));
+        }).catch(err => {
+            // Silently fail if user cancels share
+            if (err.name !== "AbortError") console.error('Share failed:', err);
+        });
     } else {
-        // Fallback: Copy to clipboard
+        // Desktop / Non-supported Fallback
         navigator.clipboard.writeText(url).then(() => {
-            // Optional: Replace with a pretty toast notification later
-            alert("Link copied to clipboard!");
+            // Check if you have a toast function, else alert
+            if (window.showToast) window.showToast("Link copied!");
+            else alert("Link copied to clipboard!");
         });
     }
 };
@@ -1163,42 +1511,81 @@ window.prevTrack = () => {
 
 audio.onended = () => { if (!isRepeat) nextTrack(); };
 
+window.STORAGE = {
+    // Helper to safely get data
+    get: (key) => {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error("Storage Read Error:", e);
+            return [];
+        }
+    },
+    // Helper to safely set data
+    set: (key, value) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.error("Storage Write Error (Quota exceeded?):", e);
+        }
+    },
+    getLikes: function() { return this.get('trm_likes'); },
+    getRecent: function() { return this.get('trm_recent'); },
+    
+    toggleLike: function(id) {
+        let likes = this.getLikes();
+        if (likes.includes(id)) {
+            likes = likes.filter(itemId => itemId !== id);
+        } else {
+            likes.unshift(id);
+        }
+        this.set('trm_likes', likes);
+        return likes.includes(id);
+    },
+    
+    addRecent: function(id) {
+        let recent = this.getRecent();
+        recent = [id, ...recent.filter(itemId => itemId !== id)].slice(0, 50);
+        this.set('trm_recent', recent);
+    }
+};
+
 window.viewLibrary = (activeTab = 'liked') => {
     window.currentViewId = 'library';
     window.lastActiveTab = activeTab; 
-    contentView.scrollTo(0, 0);
-    setNav(2); 
+    if (typeof resetScroll === 'function') resetScroll();
+    if (typeof setNav === 'function') setNav(2); 
 
-    if (!window.TRACKS || Object.keys(window.TRACKS).length === 0) {
-        contentView.innerHTML = `<div style="text-align:center; padding-top:100px; opacity:0.5;">Loading Data...</div>`;
-        setTimeout(() => viewLibrary(activeTab), 200);
+    // Guard against missing data
+    if (!window.TRACKS || !window.ALBUMS) {
+        contentView.innerHTML = `<div style="text-align:center; padding-top:100px; opacity:0.5;">Syncing Library...</div>`;
+        setTimeout(() => viewLibrary(activeTab), 300);
         return;
     }
 
+    // Safely get IDs from our new STORAGE helper
     const ids = (activeTab === 'liked') ? STORAGE.getLikes() : STORAGE.getRecent();
-    const allTracks = Object.values(window.TRACKS).flat();
-    const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
     
-    // Filter logic: Only show songs if the album is NOT "Coming Soon"
-    const displayTracks = (activeTab === 'liked')
-        ? uniqueTracks.filter(t => {
-            const isLiked = ids.includes(t.id);
-            const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
-            const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
-            return isLiked && (alb && !alb.coming_soon);
-        })
-        : ids.map(id => uniqueTracks.find(t => t.id === id)).filter(t => {
+    // Flatten all tracks into one searchable list
+    const allTracks = Object.values(window.TRACKS).flat();
+
+    // Filter logic
+    const displayTracks = ids.map(id => allTracks.find(t => t.id === id))
+        .filter(t => {
             if (!t) return false;
+            // Check parent album status
             const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
             const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
+            // Only show if the album exists and is NOT coming soon
             return alb && !alb.coming_soon;
         });
 
     let html = `
-    <div class="standard-padding view-animate" style="padding-bottom: 120px;">
-        <h1 style="font-size: 34px; font-weight: 900; margin-bottom: 5px;">Library</h1>
+    <div class="standard-padding view-animate" style="padding-bottom: 150px;">
+        <h1 style="font-size: 34px; font-weight: 900; margin-bottom: 5px; color: #fff;">Library</h1>
         
-        <div class="library-tabs ${activeTab === 'recent' ? 'tab-2-active' : ''}">
+        <div class="library-tabs ${activeTab === 'recent' ? 'tab-2-active' : ''}" style="margin-bottom: 25px;">
             <div class="tab-indicator"></div>
             <div class="lib-tab ${activeTab === 'liked' ? 'active' : ''}" onclick="viewLibrary('liked')">
                 <span class="material-icons">favorite</span> Liked
@@ -1218,33 +1605,115 @@ window.viewLibrary = (activeTab = 'liked') => {
                 return `
                 <div class="result-item" 
                      onclick="playTrack('${t.id}')"
-                     onmousedown="handleLongPressStart('${t.id}', 'track')" 
-                     onmouseup="handleLongPressEnd()"
-                     ontouchstart="handleLongPressStart('${t.id}', 'track')" 
-                     ontouchend="handleLongPressEnd()"
-                     style="display: flex; align-items: center; cursor: pointer; padding: 12px; border-radius: 16px; background: rgba(255,255,255,0.03); margin-bottom: 10px;">
+                     style="display: flex; align-items: center; cursor: pointer; padding: 12px; border-radius: 18px; background: rgba(255,255,255,0.04); margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.02);">
                     
-                    <img src="${art}" style="width: 55px; height: 55px; border-radius: 12px; margin-right: 15px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                    <img src="${art}" style="width: 55px; height: 55px; border-radius: 12px; margin-right: 15px; object-fit: cover;">
                     
-                    <div style="flex: 1;">
-                        <div style="font-weight: 800; font-size: 17px;">${t.title}</div>
-                        <div style="font-size: 13px; color: var(--text-dim);">${window.ARTISTS[alb?.artist_id]?.name || 'Artist'}</div>
+                    <div style="flex: 1; overflow: hidden;">
+                        <div style="font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">${t.title}</div>
+                        <div style="font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 600;">${window.ARTISTS[alb?.artist_id]?.name || 'Artist'}</div>
                     </div>
                     
-                    <span class="material-icons" style="color: ${isLiked ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; font-size: 22px;">
-                        ${isLiked ? 'check_circle' : 'radio_button_unchecked'}
-                    </span>
+                    <div style="padding-left: 10px;" onclick="event.stopPropagation(); handleLikeToggle('${t.id}')">
+                        <span class="material-icons" style="color: ${isLiked ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; font-size: 24px;">
+                            ${isLiked ? 'favorite' : 'favorite_border'}
+                        </span>
+                    </div>
                 </div>`;
             }).join('') : `
                 <div style="text-align:center; margin-top:100px; opacity: 0.3;">
-                    <span class="material-icons" style="font-size: 60px;">library_music</span>
-                    <p style="margin-top: 15px; font-weight: 600;">${activeTab === 'liked' ? 'No liked songs yet.' : 'Your history is empty.'}</p>
+                    <span class="material-icons" style="font-size: 80px; color: #fff;">inventory_2</span>
+                    <p style="margin-top: 20px; font-weight: 700; font-size: 18px;">Empty Library</p>
+                    <p style="font-size: 14px;">Songs you like will appear here.</p>
                 </div>
             `}
         </div>
     </div>`;
     
     contentView.innerHTML = html;
+};
+
+// Add this helper to refresh the view immediately when liking/unliking inside the library
+window.handleLikeToggle = (id) => {
+    STORAGE.toggleLike(id);
+    viewLibrary(window.lastActiveTab);
+};
+
+window.openPatchNotes = function() {
+    const versionHistory = [
+        {
+            version: "v1.3.0",
+            date: "February 10, 2026",
+            notes: [
+                "📱 Mobile Optimization",
+                "🔗 Copying links should work like never before! (Finally... psst, unlike Desktop you can send them to your friends right from the app!)",
+                "🎞️ Albums can now have featured videos, and so can your favorite artists!",
+                "📷 Wanna follow your favorite artists everywhere? (Creep), well now you can with social links!",
+                "🖌️ We got a bit artistic and made some improvements to UI in general!",
+                "🔄️ I heard someone wanted to rotate their spotlight?",
+                "🔦 Oh, and from a friend... I heard Light Mode is coming next update... 👀",
+            ],
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
+    ];
+
+    if (document.getElementById('patch-modal-root')) return;
+
+    const root = document.createElement('div');
+    root.id = 'patch-modal-root';
+    Object.assign(root.style, {
+        position: 'fixed',
+        inset: '0',
+        zIndex: '999999',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+    });
+
+    const current = versionHistory[0];
+
+    root.innerHTML = `
+        <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);"></div>
+        <div class="view-animate" style="position: relative; background: #0d0d0d; border: 1px solid #222; width: 100%; max-width: 400px; max-height: 85vh; border-radius: 28px; display: flex; flex-direction: column; color: white; box-shadow: 0 30px 60px rgba(0,0,0,0.5); overflow: hidden;">
+            
+            <div style="padding: 30px 30px 10px 30px;">
+                <h2 style="font-size: 28px; font-weight: 900; margin: 0; letter-spacing: -1px; text-transform: uppercase;">Patch Notes</h2>
+                <p style="color: var(--accent-green); font-weight: 800; font-size: 10px; margin: 5px 0 0 0; letter-spacing: 2px; text-transform: uppercase;">CURRENT VERSION ${current.version}</p>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 20px 30px; mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);">
+                ${versionHistory.map(release => `
+                    <div style="margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+                            <span style="font-weight: 900; font-size: 14px; color: white; opacity: 0.9;">${release.version}</span>
+                            <span style="color: #444; font-size: 10px; font-weight: 700;">${release.date}</span>
+                        </div>
+                        <ul style="margin: 0; padding-left: 15px; color: #bbb; line-height: 1.5; font-size: 13px; font-weight: 500; list-style: disc;">
+                            ${release.notes.map(note => `<li style="margin-bottom: 8px;">${note}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="padding: 20px 30px 30px 30px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(to top, #0d0d0d 80%, transparent);">
+                <button onclick="document.getElementById('patch-modal-root').remove()" style="width: 100%; background: #fff; color: #000; border: none; padding: 16px; border-radius: 14px; font-weight: 900; font-size: 13px; text-transform: uppercase; cursor: pointer;">
+                    GOT IT
+                </button>
+
+                ${current.actionButton ? `
+                    <a href="${current.actionButton.url}" target="_blank" style="width: 100%; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 14px; font-weight: 900; font-size: 12px; text-align: center; text-decoration: none; box-sizing: border-box;">
+                        ${current.actionButton.text}
+                    </a>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(root);
 };
 
 // Variable to hold the timer state

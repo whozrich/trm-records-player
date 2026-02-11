@@ -185,6 +185,28 @@
     position: relative;
 }
 
+#spotlight-carousel {
+    position: relative;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+/* The animation for the new slide coming in */
+.slide-in {
+    animation: slideRight 0.5s ease-out forwards;
+}
+
+@keyframes slideRight {
+    from { 
+        opacity: 0; 
+        transform: translateX(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
+}
+
 #progress-bar {
     pointer-events: none; /* This ensures the click passes THROUGH the green bar to the container */
     transition: width 0.1s linear; /* Makes the movement smooth */
@@ -1073,8 +1095,9 @@ function updateVolumeIcon(vol) {
 }
 
 window.viewHome = function() {
-    // 1. HELPERS (Defined first so they are ready)
+    // 1. HELPERS
     const getYTThumb = (url) => {
+        if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         const videoId = (match && match[2].length == 11) ? match[2] : null;
@@ -1087,106 +1110,151 @@ window.viewHome = function() {
         return days > 0 ? days : 0;
     };
 
-    // 2. SPOTLIGHT CONFIGURATION
-    const SPOTLIGHT = {
-        type: "Video", // "Release", "Artist", "Video", or "Sponsorship"
-        id: "therichmusic", 
-        url: "https://www.youtube.com/watch?v=o4LZOCwzFIU", // Paste your test link here
-        customTitle: "SPOTLIGHT", 
-        customSub: "The official visuallizer of 'chill out' by therichmusic is out now!"
+    // 2. DATA PREP
+    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
+    const spotlights = window.SPOTLIGHTS || [];
+
+    // 3. RENDERER (Dynamic Tags & Pill Indicators)
+    const renderSlide = (index) => {
+        const s = spotlights[index];
+        if (!s) return '';
+
+        let displayImg = "";
+        let displayTitle = s.customTitle || "Featured";
+        let tagText = "FEATURED";
+        let subText = s.customSub || "";
+        let actionTarget = "";
+        let btnText = "View More";
+
+        if (s.type === "Release") {
+            const alb = publicCatalogue.find(a => a.id === s.id);
+            if (alb) {
+                displayImg = alb.art_url;
+                displayTitle = s.customTitle || alb.name;
+                actionTarget = `viewAlbum('${alb.id}')`;
+                btnText = "View Release";
+                
+                if (alb.coming_soon) {
+                    tagText = "COMING SOON";
+                    subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
+                } else {
+                    tagText = "RELEASE SPOTLIGHT";
+                }
+            }
+        } else if (s.type === "Artist") {
+            const art = window.ARTISTS ? window.ARTISTS[s.id] : null;
+            displayImg = art ? (art.banner_url || art.img_url) : "";
+            displayTitle = s.customTitle || (art ? art.name : "Artist");
+            tagText = "ARTIST SPOTLIGHT";
+            actionTarget = `viewArtist('${s.id}')`;
+            btnText = "View Profile";
+        } else if (s.type === "Video") {
+            displayImg = getYTThumb(s.url);
+            displayTitle = s.customTitle || "New Video";
+            tagText = "FEATURED VIDEO";
+            actionTarget = `window.open('${s.url}', '_blank')`;
+            btnText = "Watch Now";
+        }
+
+        if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
+
+        return `
+        <div class="slide-content slide-anim" onclick="${actionTarget}" style="position:relative; height:100%; width:100%; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
+            <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
+            <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center; width:100%;">
+                <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; object-fit:cover; box-shadow:0 20px 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);">
+                <div>
+                    <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; text-transform:uppercase; letter-spacing:1px;">${tagText}</span>
+                    <h1 style="font-size:72px; margin:15px 0; font-weight:900; color:white; line-height:1; letter-spacing:-3px;">${displayTitle}</h1>
+                    ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
+                    
+                    <div style="display:flex; align-items:center; gap:20px;">
+                        <button class="signup-btn">${btnText}</button>
+                        
+                        ${spotlights.length > 1 ? `
+                        <div style="display:flex; gap:8px;">
+                            ${spotlights.map((_, i) => `
+                                <div style="width:${i === index ? '24px' : '8px'}; height:8px; background:${i === index ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'}; border-radius:4px; transition: all 0.3s ease;"></div>
+                            `).join('')}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>`;
     };
 
-    // 3. DATA PREP
-    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
-    
-    // 4. FEATURED LOGIC
-    let featured = null;
-    let tagText = "FEATURED RELEASE";
-    let subText = "";
-    let actionTarget = "";
-    let displayImg = ""; 
+    // 4. MOVE LOGIC (With Animation trigger)
+    window.moveSpotlight = (dir) => {
+        if (!spotlights.length) return;
+        const slider = document.getElementById('spotlight-slider-content');
+        if (!slider) return;
 
-    if (SPOTLIGHT.type === "Release") {
-        featured = publicCatalogue.find(a => a.id === SPOTLIGHT.id);
-        if (featured) {
-            tagText = featured.coming_soon ? "COMING SOON" : "RELEASE SPOTLIGHT";
-            subText = SPOTLIGHT.customSub || (featured.coming_soon ? `Drops in ${getDaysUntil(featured.full_release_date)} days.` : "");
-            actionTarget = `viewAlbum('${featured.id}')`;
-            displayImg = featured.art_url;
-        }
-    } else if (SPOTLIGHT.type === "Artist") {
-        featured = window.ARTISTS ? window.ARTISTS[SPOTLIGHT.id] : null;
-        if (featured) {
-            displayImg = featured.banner_url || featured.img_url || featured.art_url;
-        } else {
-            const artistAlbum = publicCatalogue.find(a => a.artist_id === SPOTLIGHT.id || a.artist === SPOTLIGHT.id);
-            if (artistAlbum) {
-                featured = { name: artistAlbum.artist || SPOTLIGHT.id };
-                displayImg = artistAlbum.art_url;
-            }
-        }
-        tagText = "ARTIST SPOTLIGHT";
-        subText = SPOTLIGHT.customSub || "Discover the creator.";
-        actionTarget = `viewArtist('${SPOTLIGHT.id}')`;
-    } else if (SPOTLIGHT.type === "Video") {
-        tagText = "FEATURED VIDEO";
-        subText = SPOTLIGHT.customSub;
-        actionTarget = `window.open('${SPOTLIGHT.url}', '_blank')`;
-        displayImg = getYTThumb(SPOTLIGHT.url) || "https://via.placeholder.com/600x600/111/00ff88?text=TRM+VIDEO";
-        featured = { name: SPOTLIGHT.customTitle || "New Video" };
-    } else if (SPOTLIGHT.type === "Sponsorship") {
-        tagText = "SPONSORED";
-        subText = SPOTLIGHT.customSub;
-        actionTarget = `window.open('${SPOTLIGHT.url}', '_blank')`;
-        displayImg = "https://via.placeholder.com/600x600/111/00ff88?text=SPONSOR";
-        featured = { name: SPOTLIGHT.customTitle || "Partner Content" };
-    }
+        window.currentSpotlightIndex = ((window.currentSpotlightIndex || 0) + dir + spotlights.length) % spotlights.length;
+        
+        // Instant update
+        slider.innerHTML = renderSlide(window.currentSpotlightIndex);
+        
+        // Reset timer
+        if (window.spotlightInterval) clearInterval(window.spotlightInterval);
+        window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
+    };
 
-    // FINAL FALLBACK
-    if (!featured || !displayImg) {
-        const fallback = publicCatalogue.find(a => !a.coming_soon) || publicCatalogue[0];
-        if (fallback) {
-            featured = fallback;
-            displayImg = fallback.art_url;
-            tagText = "FEATURED RELEASE";
-            actionTarget = `viewAlbum('${fallback.id}')`;
-        }
-    }
-
-    // 5. RENDER
+    // 5. MAIN RENDER
     const content = document.getElementById('content-view');
     if (!content) return;
 
     content.innerHTML = `
-    <div class="view-animate" style="padding: 40px;">
-        ${featured ? `
-        <div onclick="${actionTarget}" style="position:relative; height:320px; border-radius:15px; overflow:hidden; margin-bottom:40px; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
-            <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
-            <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center;">
-                <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.8); object-fit:cover; border: 1px solid rgba(255,255,255,0.1);">
-                <div>
-                    <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; letter-spacing:1px; text-transform:uppercase;">${tagText}</span>
-                    <h1 style="font-size:72px; margin:15px 0; font-weight:900; letter-spacing:-3px; color:white; line-height:1;">${SPOTLIGHT.customTitle || featured.name}</h1>
-                    ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
-                    <button class="signup-btn">
-                        ${SPOTLIGHT.type === "Video" ? "Watch Now" : (SPOTLIGHT.type === "Artist" ? "View Profile" : "View Release")}
-                    </button>
-                </div>
-            </div>
-        </div>` : ''}
+    <style>
+        .spot-container { position:relative; height:320px; border-radius:15px; overflow:hidden; background:#000; margin-bottom:40px; }
+        .nav-arrow { 
+            position:absolute; top:0; bottom:0; width:80px; z-index:10; 
+            display:flex; align-items:center; justify-content:center; 
+            cursor:pointer; opacity:0; transition:0.3s; color:white;
+        }
+        .spot-container:hover .nav-arrow { opacity:1; }
+        .prev-arrow { left:0; background: linear-gradient(to right, rgba(0,0,0,0.7), transparent); }
+        .next-arrow { right:0; background: linear-gradient(to left, rgba(0,0,0,0.7), transparent); }
+        
+        /* The Sliding Animation */
+        .slide-anim { animation: slideIn 0.4s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
 
-        <h2 style="margin-bottom:24px; font-size: 24px; font-weight: 900;">Catalogue</h2>
+    <div class="view-animate" style="padding:40px;">
+        <div class="spot-container">
+            <div class="nav-arrow prev-arrow" onclick="event.stopPropagation(); window.moveSpotlight(-1)">
+                <span class="material-icons" style="font-size:40px;">chevron_left</span>
+            </div>
+            <div class="nav-arrow next-arrow" onclick="event.stopPropagation(); window.moveSpotlight(1)">
+                <span class="material-icons" style="font-size:40px;">chevron_right</span>
+            </div>
+            <div id="spotlight-slider-content" style="height:100%;">
+                ${renderSlide(window.currentSpotlightIndex || 0)}
+            </div>
+        </div>
+
+        <h2 style="margin-bottom:24px; font-weight:900; font-size:24px;">Catalogue</h2>
         <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:30px;">
             ${publicCatalogue.map(alb => `
                 <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer; background:#0a0a0a; padding:20px; border-radius:12px;">
-                    <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:16px; ${alb.coming_soon ? 'filter:grayscale(1); opacity:0.5;' : ''}">
+                    <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px; ${alb.coming_soon ? 'filter:grayscale(1); opacity:0.5;' : ''}">
                     <div style="font-weight:700; color:white;">${alb.name}</div>
                     <div style="color:${alb.coming_soon ? '#ff4444' : '#666'}; font-size:12px; margin-top:5px; font-weight: 700;">
                         ${alb.coming_soon ? 'COMING SOON' : (alb.full_release_date || 'RELEASED')}
                     </div>
-                </div>`).join('')}
+                </div>
+            `).join('')}
         </div>
     </div>`;
+
+    if (window.spotlightInterval) clearInterval(window.spotlightInterval);
+    if (spotlights.length > 1) {
+        window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
+    }
 };
 
 
@@ -1522,75 +1590,85 @@ function updatePlayerUI() {
 
 window.initApp = async function() {
     try {
-        console.log("TRM MUSIC PLAYER: Initializing v1.0.3.7...");
+        console.log("TRM MUSIC PLAYER: Initializing v1.0.3.9 (Instant Load)...");
 
-        // 1. FETCH DATA FROM SUPABASE
-        const { data: artists } = await supabaseClient.from('artists').select('*');
-        const { data: albums } = await supabaseClient.from('albums').select('*');
-        const { data: tracks } = await supabaseClient.from('tracks').select('*');
+        // 1. FETCH ALL DATA IN PARALLEL (FAST)
+        const [
+            { data: artists },
+            { data: albums },
+            { data: tracks },
+            { data: spotlightRows }
+        ] = await Promise.all([
+            supabaseClient.from('artists').select('*'),
+            supabaseClient.from('albums').select('*'),
+            supabaseClient.from('tracks').select('*'),
+            supabaseClient.from('spotlight').select('*').eq('active', true).order('created_at', { ascending: false }).limit(4)
+        ]);
 
-        // 2. INITIALIZE ARTISTS OBJECT
+        // 2. PROCESS DATA (Standard logic)
+        window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
+            type: row.type,
+            id: row.target_id,
+            url: row.url,
+            customTitle: row.custom_title,
+            customSub: row.custom_sub
+        }));
+        
         window.ARTISTS = {};
-        if (artists) {
-            artists.forEach(a => { 
-                window.ARTISTS[a.id] = a; 
-            });
-        }
+        if (artists) artists.forEach(a => { window.ARTISTS[a.id] = a; });
 
-        // Date Parser for Sorting
         const parseDate = (str) => {
             if (!str || str === 'RELEASED') return 0;
             const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
-            const timestamp = Date.parse(cleanDate);
-            return isNaN(timestamp) ? 0 : timestamp;
+            return Date.parse(cleanDate) || 0;
         };
 
-        // 3. INITIALIZE ALBUMS (Sorted by Date)
-        window.ALBUMS = (albums || []).sort((a, b) => 
-            parseDate(b.full_release_date) - parseDate(a.full_release_date)
-        );
+        window.ALBUMS = (albums || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
 
-        // 4. MAP TRACKS BY ID
         const trackLookup = {};
-        if (tracks) {
-            tracks.forEach(t => { 
-                trackLookup[t.id] = t; 
-            });
-        }
+        if (tracks) tracks.forEach(t => { trackLookup[t.id] = t; });
         
         window.TRACKS = {};
-
-        // 5. BUILD TRACK LISTS FOR EACH ALBUM
         window.ALBUMS.forEach(alb => {
             const manualOrder = alb.track_ids || []; 
-            alb.track_list = manualOrder
-                .map(id => trackLookup[id])
-                .filter(Boolean); 
-
+            alb.track_list = manualOrder.map(id => trackLookup[id]).filter(Boolean); 
             window.TRACKS[alb.id] = alb.track_list;
         });
 
-        // 6. UPDATE SIDEBAR UI
-        const sb = document.getElementById('sidebar-releases');
-        if (sb) {
-            sb.innerHTML = window.ALBUMS.filter(alb => !alb.hidden).map(alb => `
-                <div class="sidebar-item" onclick="viewAlbum('${alb.id}')">
-                    <img src="${alb.art_url}" style="width:24px; height:24px; border-radius:2px; margin-right:10px;">
-                    <span>${alb.name}</span>
-                </div>`).join('');
+        // 3. RENDER SIDEBAR IMMEDIATELY
+        renderSidebar();
+
+        // 4. THE SPEED SECRET: 
+        // Check if there is a HARD link in the URL first. 
+        // If not, load Home immediately and listen for the bridge in the background.
+        const urlParams = new URLSearchParams(window.location.search);
+        const directAlbumId = urlParams.get('album') || window.location.hash.replace('#', '');
+
+        if (directAlbumId) {
+            window.viewAlbum(directAlbumId);
+        } else {
+            // LOAD HOME IMMEDIATELY
+            window.viewHome();
+            
+            // SPAM IN THE BACKGROUND
+            // We don't 'await' this, so it doesn't block the UI.
+            console.log("Listening for Bridge handshake in background...");
+            window.handleDeepLinking(); 
         }
-
-        // 7. THE DEEP LINK BRIDGE HANDSHAKE
-        // We removed the old if/else logic here.
-        // We now 'await' handleDeepLinking, which handles both local URL checks 
-        // AND the 2-second waiting room for the Fourthwall broadcast.
-        console.log("Checking for deep links via Bridge...");
-        await window.handleDeepLinking();
-
-        console.log("Initialization Complete.");
 
     } catch (e) { 
         console.error("Initialization failed:", e); 
+    }
+}
+
+function renderSidebar() {
+    const sb = document.getElementById('sidebar-releases');
+    if (sb) {
+        sb.innerHTML = window.ALBUMS.filter(alb => !alb.hidden).map(alb => `
+            <div class="sidebar-item" onclick="viewAlbum('${alb.id}')">
+                <img src="${alb.art_url}" style="width:24px; height:24px; border-radius:2px; margin-right:10px;">
+                <span>${alb.name}</span>
+            </div>`).join('');
     }
 }
 
@@ -1633,7 +1711,7 @@ window.handleDeepLinking = async function() {
         processDeepLink(receivedId);
     } else {
         console.log("No deep link received, loading Home.");
-        window.viewHome();
+        // window.viewHome();
     }
 };
 
@@ -1694,6 +1772,20 @@ async function toggleDesktopPiP() {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+        {
+            version: "v1.0.3.8",
+            date: "February 10, 2026",
+            // HYPERLINK SUPPORT: Just use <a> tags inside your strings now!
+            notes: [
+                "🔗 Fixed up Release Sharing",
+                "📹 Spotlight now rotates!",
+            ],
+            // SECOND BUTTON SUPPORT: Add this object
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
                         {
             version: "v1.0.3.2",
             date: "February 10, 2026",
@@ -1884,7 +1976,7 @@ window.addEventListener('load', () => {
         
         // Kick off the app logic
         initApp();
-        console.log("Loaded TRM MUSIC PLAYER v1.0.3.7")
+        console.log("Loaded TRM MUSIC PLAYER v1.0.3.8")
     } else {
         console.error("TRM Error: Supabase CDN blocked or failed to load.");
         const content = document.getElementById('content-view');
