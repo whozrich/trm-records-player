@@ -122,7 +122,7 @@ body, html {
 .nav-item.active { color: white; transform: translateY(-2px); }
 .nav-item .material-icons { display: block; font-size: 24px; margin-bottom: 2px; }
 
-.accent-glow, #fp-artist, .active-track, .play-indicator {
+.accent-glow, #fp-artist, .play-indicator {
     color: var(--accent-green) !important;
     text-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
 }
@@ -341,6 +341,27 @@ overflow: hidden; /* This is necessary for the squircle shape */
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
 }
 
+/* --- Default State (Not Playing) --- */
+.track-row .track-title { color: white; }
+.track-row .track-number { color: rgba(255,255,255,0.2); }
+.track-row .track-artist { color: rgba(255,255,255,0.4); }
+.track-row .track-duration { color: rgba(255,255,255,0.4); }
+
+/* --- Active State (Now Playing) --- */
+
+/* 1. Title, Number, and Duration go Full Accent Green */
+.active-track .track-title,
+.active-track .track-number,
+.active-track .track-duration {
+    color: var(--accent-green) !important;
+}
+
+/* 2. Artist gets the Tinted Green (Opacity 0.6) */
+.active-track .track-artist {
+    color: var(--accent-green) !important;
+    opacity: 0.6 !important;
+}
+
 #fp-bg-visual {
     position: absolute;
     inset: 0;
@@ -389,8 +410,12 @@ overflow: hidden; /* This is necessary for the squircle shape */
     transition: all 0.3s ease;
 }
         .track-row.disabled { opacity: 0.3; pointer-events: none; }
-        .track-row.active-track { color: var(--accent-green); }
         .view-animate { animation: fadeIn 0.3s ease-out; }
+
+        /* The TRM Green Color Variable */
+:root {
+    --trm-green: #1DB954;
+}
 
         /* Library Tab Container */
 .library-tabs {
@@ -525,9 +550,9 @@ overflow: hidden; /* This is necessary for the squircle shape */
         <div class="nav-item" id="nav-search" onclick="window.viewSearch()">
             <span class="material-icons">search</span>Search
         </div>
-        <div class="nav-item" id="nav-lib" onclick="window.viewLibrary()">
+        <!-- <div class="nav-item" id="nav-lib" onclick="window.viewLibrary()">
             <span class="material-icons">library_music</span>Library
-        </div>
+        </div> -->
         <div class="nav-item" id="nav-lib" onclick="window.openPatchNotes()">
             <span class="material-icons">new_releases</span>Patch Notes
         </div>
@@ -551,30 +576,48 @@ overflow: hidden; /* This is necessary for the squircle shape */
         const contentView = document.getElementById('content-view');
 
         // UPDATED STORAGE: Added try/catch for iPhone Private Mode safety
-        const STORAGE = {
-            getLikes: () => {
-                try { return JSON.parse(localStorage.getItem('trm_likes') || '[]'); } 
-                catch(e) { return window._likesFallback || []; }
-            },
-            getRecent: () => {
-                try { return JSON.parse(localStorage.getItem('trm_recent') || '[]'); } 
-                catch(e) { return window._recentFallback || []; }
-            },
-            toggleLike: (id) => {
-                let likes = STORAGE.getLikes();
-                likes = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id];
-                try { localStorage.setItem('trm_likes', JSON.stringify(likes)); } 
-                catch(e) { window._likesFallback = likes; }
-                return likes.includes(id);
-            },
-            addRecent: (id) => {
-                let recent = STORAGE.getRecent().filter(x => x !== id);
-                recent.unshift(id);
-                const sliced = recent.slice(0, 20);
-                try { localStorage.setItem('trm_recent', JSON.stringify(sliced)); } 
-                catch(e) { window._recentFallback = sliced; }
-            }
-        };
+        window.STORAGE = {
+    getLikes: () => {
+        try {
+            const data = localStorage.getItem('trm_likes');
+            return (data && data !== "undefined") ? JSON.parse(data) : [];
+        } catch(e) { 
+            console.error("Storage Get Error", e);
+            return window._likesFallback || []; 
+        }
+    },
+    getRecent: () => {
+        try {
+            const data = localStorage.getItem('trm_recent');
+            return (data && data !== "undefined") ? JSON.parse(data) : [];
+        } catch(e) { 
+            return window._recentFallback || []; 
+        }
+    },
+    toggleLike: (id) => {
+        let likes = window.STORAGE.getLikes();
+        likes = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id];
+        try { 
+            localStorage.setItem('trm_likes', JSON.stringify(likes)); 
+            window._likesFallback = likes; // Always sync fallback
+        } catch(e) { 
+            window._likesFallback = likes; 
+            console.warn("Local Storage Full or Restricted");
+        }
+        return likes.includes(id);
+    },
+    addRecent: (id) => {
+        let recent = window.STORAGE.getRecent().filter(x => x !== id);
+        recent.unshift(id);
+        const sliced = recent.slice(0, 20);
+        try { 
+            localStorage.setItem('trm_recent', JSON.stringify(sliced)); 
+            window._recentFallback = sliced;
+        } catch(e) { 
+            window._recentFallback = sliced; 
+        }
+    }
+};
 
         async function init() {
             try {
@@ -957,6 +1000,43 @@ window.viewArtist = (id) => {
     contentView.innerHTML = html;
 };
 
+// Listen for when a song finishes naturally
+audio.onended = () => {
+    // 1. Try to play the next track
+    const hasNext = window.nextTrack();
+    
+    // 2. If nextTrack returns false, the album is over
+    if (!hasNext) {
+        console.log("Album finished. Resetting state...");
+        
+        // Reset Logic
+        audio.currentTime = 0;
+        window.isPlaying = false;
+        
+        // UI Reset: Mini Player & Full Player buttons
+        ['m-play-btn', 'fp-play-btn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = 'play_arrow';
+        });
+
+        // UI Reset: Mini Player "paused" state
+        const miniPlayer = document.getElementById('mini-player');
+        if (miniPlayer) miniPlayer.classList.add('paused');
+
+        // UI Reset: Clear the active green highlight in the list
+        if (window.currentViewId === 'album') {
+            document.querySelectorAll('.track-row').forEach(row => {
+                row.classList.remove('active-track');
+                const icon = row.querySelector('.track-play-icon');
+                if (icon) icon.innerText = 'play_arrow';
+            });
+        }
+        
+        // Optional: Close full player on finish
+        // if (window.isFullPlayerOpen) window.toggleFullPlayer(false);
+    }
+};
+
 window.viewAlbum = (id, scrollToTop = true) => {
     window.currentViewId = 'album';
     if (typeof toggleNavUI === 'function') toggleNavUI(false); 
@@ -1043,40 +1123,43 @@ window.viewAlbum = (id, scrollToTop = true) => {
         </div>
 
         <div style="padding: 0 20px;">
-            ${tks.map((t, i) => {
-                if (t.hidden_name) return ''; 
-                
-                // coming_soon ID check for playability
-                const isPlayable = !isComingSoon || (t.album_id && t.album_id.split(',').some(aid => {
-                    const other = window.ALBUMS.find(a => a.id == aid.trim());
-                    return other && !other.coming_soon;
-                }));
+           ${tks.map((t, i) => {
+    if (t.hidden_name) return ''; 
+    
+    const isPlayable = !isComingSoon || (t.album_id && t.album_id.split(',').some(aid => {
+        const other = window.ALBUMS.find(a => a.id == aid.trim());
+        return other && !other.coming_soon;
+    }));
 
-                const trackNumber = i + 1;
-                const displayTitle = isPlayable ? t.title : `TRACK ${trackNumber}`;
-                const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
+    const trackNumber = i + 1;
+    const displayTitle = isPlayable ? t.title : `TRACK ${trackNumber}`;
+    // Add the active-track class right here during render if it's already playing
+    const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
 
-                return `
-                <div class="track-row" 
-                     style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${!isPlayable ? 'opacity:0.3;' : ''}" 
-                     ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
-                    
-                    <div style="width: 38px; font-size: 14px; font-weight: 900; color: ${isActive ? 'var(--accent-green)' : 'rgba(255,255,255,0.2)'};">
-                        ${isActive ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : trackNumber}
-                    </div>
-                    
-                    <div style="flex:1; overflow: hidden;">
-                        <div style="font-weight:800; font-size: 17px; color:${isActive ? 'var(--accent-green)' : 'white'}; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">${displayTitle}</div>
-                        <div style="font-size:12px; font-weight: 800; color: ${isPlayable ? 'rgba(255,255,255,0.4)' : 'var(--accent-green)'}; text-transform: uppercase;">
-                            ${isPlayable ? artist.name : 'COMING SOON'}
-                        </div>
-                    </div>
-                    
-                    <div style="font-size: 12px; font-weight: 800; var(--accent-green); font-family: monospace;">
-                        ${isPlayable ? (t.duration || '0:00') : '--:--'}
-                    </div>
-                </div>`;
-            }).join('')}
+    return `
+    <div class="track-row ${isActive ? 'active-track' : ''}" 
+         data-id="${t.id}"
+         style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${!isPlayable ? 'opacity:0.3;' : 'cursor:pointer;'}" 
+         ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
+        
+        <div class="track-number" style="width: 38px; font-size: 14px; font-weight: 900;">
+            ${isActive ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : trackNumber}
+        </div>
+        
+        <div style="flex:1; overflow: hidden;">
+            <div class="track-title" style="font-weight:800; font-size: 17px; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                ${displayTitle}
+            </div>
+            <div class="track-artist" style="font-size:12px; font-weight: 800; text-transform: uppercase;">
+                ${isPlayable ? artist.name : 'COMING SOON'}
+            </div>
+        </div>
+        
+        <div class="track-duration" style="font-size: 12px; font-weight: 800; font-family: monospace;">
+            ${isPlayable ? (t.duration || '0:00') : '--:--'}
+        </div>
+    </div>`;
+}).join('')}
         </div>
     </div>`;
 
@@ -1089,94 +1172,129 @@ window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
     const track = allTracks.find(t => t.id === trackId);
     if (!track) return;
 
+    // 1. SILENT SECURITY CHECK
     const parentIds = track.album_id.split(',').map(s => s.trim());
-    const playableAlbum = window.ALBUMS.find(a => parentIds.includes(a.id) && !a.coming_soon);
-    if (!playableAlbum) return;
-
-    const targetAlbum = explicitAlbumId ? window.ALBUMS.find(a => a.id == explicitAlbumId) : playableAlbum;
-
-    currentTrackId = trackId;
-    currentArtistId = targetAlbum.artist_id;
-    audio.src = track.url;
-
-const miniPlayer = document.getElementById('mini-player');
-    const navBar = document.querySelector('.bottom-nav');
-
-    miniPlayer.style.display = 'flex';
+    const isReleasedSomewhere = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
     
-    // Sync the player position with the current Nav visibility
-    if (navBar.classList.contains('nav-hidden')) {
-        miniPlayer.classList.add('nav-is-hidden');
-    } else {
-        miniPlayer.classList.remove('nav-is-hidden');
+    if (!isReleasedSomewhere) {
+        if (window.showTRMToast) window.showTRMToast("Coming Soon", "#ffcc00");
+        return; 
     }
 
-    miniPlayer.classList.remove('mini-hidden', 'paused');
-    miniPlayer.classList.add('mini-active');
+    // 2. RESOLVE IDENTITY
+    const albId = explicitAlbumId || window.currentAlbumId || parentIds[0];
+    const targetAlbum = window.ALBUMS.find(a => a.id == albId);
+    if (!targetAlbum) return;
 
-    void miniPlayer.offsetWidth;
-    miniPlayer.classList.remove('no-transition');
-
-    // Update Text and Images
-    document.getElementById('m-title').innerText = track.title;
-    document.getElementById('m-art').src = targetAlbum.art_url;
-    document.getElementById('fp-title').innerText = track.title;
-    document.getElementById('fp-art').src = targetAlbum.art_url;
-    
     const artistName = window.ARTISTS[targetAlbum.artist_id]?.name || "TRM";
-    document.getElementById('m-artist').innerText = artistName;
-    document.getElementById('fp-artist').innerText = artistName;
 
-    // Handle Play/Pause Icons
-    document.getElementById('m-play-btn').innerText = 'pause';
-    document.getElementById('fp-play-btn').innerText = 'pause';
+    // 3. GLOBAL STATE SYNC
+    window.currentTrackId = trackId;
+    window.currentAlbumId = albId;
+    window.currentArtistId = targetAlbum.artist_id;
+    window.isPlaying = autoPlay;
 
-    if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.title,
-        artist: artistName,
-        album: targetAlbum.name,
-        artwork: [
-            { src: targetAlbum.art_url, sizes: '512x512', type: 'image/png' }
-        ]
-    });
-
-    // Handle Lock Screen Controls (Play/Pause/Next/Prev)
-    navigator.mediaSession.setActionHandler('play', () => {
-        window.togglePlay();
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-        window.togglePlay();
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-        window.prevTrack();
-    });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-        window.nextTrack();
-    });
-}
-
-    // SAFE UPDATE: DYNAMIC BACKGROUND
-    const bgVisual = document.getElementById('fp-bg-visual');
-    if (bgVisual) {
-        bgVisual.style.backgroundImage = `url('${targetAlbum.art_url}')`;
-        bgVisual.style.opacity = "0.7";
+    // 4. AUDIO SOURCE
+    if (audio.src !== track.url) {
+        audio.src = track.url;
+        audio.load();
     }
 
-    // SAFE UPDATE: GLOW
-    const fpArtist = document.getElementById('fp-artist');
-    if (fpArtist) {
-        fpArtist.classList.add('accent-glow');
+    // 5. PLAYER UI UPDATES
+    const uiUpdates = {
+        'm-title': track.title, 'fp-title': track.title,
+        'm-artist': artistName, 'fp-artist': artistName
+    };
+
+    for (const [id, val] of Object.entries(uiUpdates)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    }
+
+    ['m-art', 'fp-art'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = targetAlbum.art_url;
+    });
+
+    ['m-play-btn', 'fp-play-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = autoPlay ? 'pause' : 'play_arrow';
+    });
+
+    // Update Full Player Heart Icon state immediately on play
+    const isLiked = window.STORAGE ? window.STORAGE.getLikes().includes(trackId) : false;
+    const fpHeart = document.getElementById('fp-heart-icon');
+    if (fpHeart) {
+        fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
+        fpHeart.style.color = isLiked ? 'var(--accent-green)' : 'white';
+    }
+
+    const bgVisual = document.getElementById('fp-bg-visual');
+    if (bgVisual) bgVisual.style.backgroundImage = `url('${targetAlbum.art_url}')`;
+
+    const miniPlayer = document.getElementById('mini-player');
+    if (miniPlayer) {
+        miniPlayer.style.display = 'flex';
+        miniPlayer.classList.toggle('paused', !autoPlay);
+        miniPlayer.classList.add('mini-active');
+    }
+
+    // 6. MEDIA SESSION
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track.title, artist: artistName, album: targetAlbum.name,
+            artwork: [{ src: targetAlbum.art_url, sizes: '512x512', type: 'image/png' }]
+        });
+    }
+
+    // 7. PERSISTENCE (Hardened for iOS)
+const saveToRecent = (id) => {
+        try {
+            // Priority 1: Use the official helper if available
+            if (window.STORAGE && typeof window.STORAGE.addRecent === 'function') {
+                window.STORAGE.addRecent(id);
+            } else {
+                // Priority 2: Direct Manual Write (Safety Net)
+                let recent = JSON.parse(localStorage.getItem('trm_recent') || '[]');
+                // Remove existing instance to move it to the top
+                recent = recent.filter(x => x !== id);
+                recent.unshift(id);
+                // Keep only the last 20 tracks
+                localStorage.setItem('trm_recent', JSON.stringify(recent.slice(0, 20)));
+            }
+        } catch (e) {
+            console.error("Tracking failed:", e);
+        }
+    };
+
+    saveToRecent(trackId);
+    localStorage.setItem('trm_last_track', trackId);
+
+    // 8. EXECUTION
+    if (autoPlay) {
+        audio.play().catch(e => console.log("Playback interaction required"));
+    }
+
+    // 9. THE UI FIX: HIGHLIGHTS
+    if (window.currentViewId === 'album') {
+        const trackRows = document.querySelectorAll('.track-row');
+        trackRows.forEach(row => {
+            const rowTrackId = row.getAttribute('data-id') || row.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+            if (rowTrackId === trackId) {
+                row.classList.add('active-track');
+                const icon = row.querySelector('.track-play-icon');
+                if (icon) icon.innerText = autoPlay ? 'pause' : 'play_arrow';
+            } else {
+                row.classList.remove('active-track');
+                const icon = row.querySelector('.track-play-icon');
+                if (icon) icon.innerText = 'play_arrow';
+            }
+        });
     }
     
-    if (autoPlay) {
-        audio.play().catch(e => console.log("Playback error"));
-    }
-
-    if(window.currentViewId === 'album') viewAlbum(targetAlbum.id);
-    if(window.currentViewId === 'library') viewLibrary(window.lastActiveTab || 'liked');
+    // Auto-refresh Library if playing from there
+    if (window.currentViewId === 'library' && window.lastActiveTab === 'recent') viewLibrary('recent');
 };
-
         window.goToCurrentArtist = () => {
             if (currentArtistId) {
                 closeFullPlayer();
@@ -1296,53 +1414,76 @@ window.runSearch = (q) => {
 
 window.deepLinkCheckCount = 0;
 window.handleDeepLinking = () => {
-    const params = new URLSearchParams(window.location.search);
-    const albId = params.get('album');
-    
-    if (albId) {
-        // Wait for data, but stop after 100 tries (5 seconds)
-        if (!window.ALBUMS || window.ALBUMS.length === 0) {
-            if (window.deepLinkCheckCount < 100) {
-                window.deepLinkCheckCount++;
-                setTimeout(window.handleDeepLinking, 50);
-            }
+    let startTime = Date.now();
+    const duration = 2000; // Spam for 2 seconds
+
+    console.log("Deep Link: Background spam started...");
+
+    const spamCheck = setInterval(() => {
+        // 1. Check URL (Hash or Param)
+        const urlParams = new URLSearchParams(window.location.search);
+        let albId = urlParams.get('album') || window.location.hash.replace('#', '');
+
+        // 2. Check if we've run out of time
+        if (Date.now() - startTime > duration) {
+            clearInterval(spamCheck);
+            console.log("Deep Link: No ID found, stalling out.");
             return;
         }
 
-        const albumExists = window.ALBUMS.find(a => String(a.id) === String(albId));
-        if (albumExists) {
-            // Small delay ensures the DOM is ready for the view to inject
-            setTimeout(() => {
-                window.viewAlbum(albId);
-            }, 100);
+        // 3. If we find an ID, try to process it
+        if (albId) {
+            // Ensure data is ready before proceeding
+            if (window.ALBUMS && window.ALBUMS.length > 0) {
+                const albumExists = window.ALBUMS.find(a => String(a.id) === String(albId));
+                
+                if (albumExists) {
+                    clearInterval(spamCheck); // STOP SPAMMING
+                    console.log("Deep Link: Found ID!", albId);
+                    window.viewAlbum(albId);
+                    
+                    // Cleanup URL so refresh doesn't trigger it again
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
         }
-    }
+    }, 100); // Check every 100ms
+
+    // Bridge Listener (Keep this as a backup for the Fourthwall iframe message)
+    const bridgeListener = (event) => {
+        if (event.data && event.data.type === 'SET_ALBUM') {
+            window.removeEventListener('message', bridgeListener);
+            clearInterval(spamCheck); // Stop the spammer if the bridge wins
+            window.viewAlbum(event.data.id);
+        }
+    };
+    window.addEventListener('message', bridgeListener);
+    
+    // Cleanup bridge listener after 2 seconds too
+    setTimeout(() => window.removeEventListener('message', bridgeListener), duration);
 };
 
 window.copyAlbumLink = (albumId) => {
     const alb = window.ALBUMS.find(a => a.id === albumId);
     const artist = window.ARTISTS[alb?.artist_id] || { name: "TRM Records" };
     
-    // Construct the URL
-    const url = window.location.protocol + '//' + window.location.host + window.location.pathname + '?album=' + albumId;
+    // Aligned with Desktop baseUrl
+    const baseUrl = "https://trm-brand-shop.fourthwall.com/pages/music-player"; 
+    const shareUrl = `${baseUrl}#${albumId}`;
 
     const shareData = {
         title: alb ? alb.name.toUpperCase() : 'TRM Music',
         text: `Check out ${alb?.name} by ${artist.name} on TRM`,
-        url: url
+        url: shareUrl
     };
 
-    // iOS/Mobile Native Share logic
+    // Use Native Share if possible, fallback to Toast + Clipboard
     if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        navigator.share(shareData)
-            .catch(err => {
-                // If it's not a user-cancel, and not working, fallback
-                if (err.name !== "AbortError") {
-                    copyToClipboardFallback(url);
-                }
-            });
+        navigator.share(shareData).catch(err => {
+            if (err.name !== "AbortError") copyToClipboardFallback(shareUrl);
+        });
     } else {
-        copyToClipboardFallback(url);
+        copyToClipboardFallback(shareUrl);
     }
 };
 
@@ -1523,15 +1664,17 @@ function openFullPlayer() {
     const fp = document.getElementById('full-player');
     const mini = document.getElementById('mini-player');
     
-    // 1. Show the player
+    // SYNC HEART ICON
+    const isLiked = window.STORAGE.getLikes().includes(window.currentTrackId);
+    const fpHeart = document.getElementById('fp-heart-icon');
+    if (fpHeart) {
+        fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
+        fpHeart.style.color = isLiked ? 'var(--accent-green)' : 'white';
+    }
+
     fp.style.display = 'flex';
-    
-    // 2. Small delay for the CSS transition to trigger
     requestAnimationFrame(() => {
         fp.classList.add('active');
-        
-        // 3. Performance Trick: Hide the mini-player once the full player covers it
-        // This stops the iPhone from rendering the blurs underneath
         setTimeout(() => {
             if(fp.classList.contains('active')) {
                 mini.style.opacity = '0';
@@ -1555,35 +1698,49 @@ function closeFullPlayer() {
     }, 500);
 }
 
-// --- TRACK NAVIGATION ---
 window.nextTrack = () => {
-    const allTracks = Object.values(window.TRACKS).flat().filter(t => {
-        const aids = t.album_id.split(',').map(s => s.trim());
-        return window.ALBUMS.some(a => aids.includes(a.id) && !a.coming_soon);
-    });
-    if (allTracks.length === 0) return;
-    let nextIdx;
-    if (isShuffle) {
-        nextIdx = Math.floor(Math.random() * allTracks.length);
-    } else {
-        const currentIdx = allTracks.findIndex(t => t.id === currentTrackId);
-        nextIdx = (currentIdx + 1) % allTracks.length;
+    const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
+    if (!album || !window.TRACKS[album.id]) return false;
+
+    const trackList = window.TRACKS[album.id];
+    let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
+
+    // Look for the next playable track (skipping 'Coming Soon' ones)
+    for (let i = currentIndex + 1; i < trackList.length; i++) {
+        const t = trackList[i];
+        
+        // Parity Security Check
+        const parentIds = t.album_id.split(',').map(s => s.trim());
+        const isReleased = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
+
+        if (isReleased) {
+            window.playTrack(t.id, true, album.id);
+            return true; // Found a song!
+        }
     }
-    playTrack(allTracks[nextIdx].id);
+
+    return false; // Reached the end of the line
 };
 
 window.prevTrack = () => {
-    if (audio.currentTime > 3) { audio.currentTime = 0; return; }
-    const allTracks = Object.values(window.TRACKS).flat().filter(t => {
-        const aids = t.album_id.split(',').map(s => s.trim());
-        return window.ALBUMS.some(a => aids.includes(a.id) && !a.coming_soon);
-    });
-    const currentIdx = allTracks.findIndex(t => t.id === currentTrackId);
-    let prevIdx = (currentIdx - 1 + allTracks.length) % allTracks.length;
-    playTrack(allTracks[prevIdx].id);
-};
+    if (audio.currentTime > 3) {
+        audio.currentTime = 0;
+        return;
+    }
 
-audio.onended = () => { if (!isRepeat) nextTrack(); };
+    const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
+    if (!album || !window.TRACKS[album.id]) return;
+
+    const trackList = window.TRACKS[album.id];
+    let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
+
+    if (currentIndex > 0) {
+        const prevTrack = trackList[currentIndex - 1];
+        window.playTrack(prevTrack.id, true, album.id);
+    } else {
+        audio.currentTime = 0; // First track in album, just restart
+    }
+};
 
 window.STORAGE = {
     // Helper to safely get data
@@ -1709,14 +1866,44 @@ window.viewLibrary = (activeTab = 'liked') => {
 
 // Add this helper to refresh the view immediately when liking/unliking inside the library
 window.handleLikeToggle = (id) => {
-    STORAGE.toggleLike(id);
-    viewLibrary(window.lastActiveTab);
+    // 1. Update Data
+    const isNowLiked = window.STORAGE.toggleLike(id);
+    
+    // 2. Update Full Player UI (if open)
+    const fpHeart = document.getElementById('fp-heart-icon');
+    if (fpHeart) {
+        fpHeart.innerText = isNowLiked ? 'favorite' : 'favorite_border';
+        fpHeart.style.color = isNowLiked ? 'var(--accent-green)' : 'white';
+    }
+
+    // 3. Update Library UI (if currently viewing library)
+    if (window.currentViewId === 'library') {
+        viewLibrary(window.lastActiveTab);
+    }
+
+    // 4. Haptic Feedback / Toast (Optional but good for iOS)
+    if (window.showTRMToast) {
+        window.showTRMToast(isNowLiked ? "Added to Library" : "Removed from Library");
+    }
 };
 
 window.openPatchNotes = function() {
     const versionHistory = [
         {
-            version: "v1.3.0",
+            version: "v1.0.3.1",
+            date: "February 10, 2026",
+            notes: [
+                "🛠️ Hammered out some bugs.",
+                "🔗 Copying links work now.",
+                "⚠️ Due to a bug we've temporarliy disabled the Library.",
+            ],
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
+    {
+            version: "v1.0.3",
             date: "February 10, 2026",
             notes: [
                 "📱 Mobile Optimization",
