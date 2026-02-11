@@ -495,53 +495,74 @@ overflow: hidden; /* This is necessary for the squircle shape */
             </div>
             <span class="material-icons" id="m-play-btn" onclick="event.stopPropagation(); togglePlay();" style="font-size:35px; padding:5px;">play_arrow</span>
         </div>
-<div class="progress-container" onclick="event.stopPropagation(); seek(event, this)">
-    <div id="mini-progress" class="progress-fill"></div>
-</div>
-    </div>
-
-<div id="full-player">
-    <div id="fp-bg-visual"></div>
-    
-    <div class="bg-glow" id="fp-glow"></div>
-
-    <div class="fp-header">
-        <div class="back-btn" onclick="closeFullPlayer()">
-            <span class="material-icons" style="font-size:28px; color: white;">expand_more</span>
-        </div>
-        <span style="font-size:10px; font-weight:800; letter-spacing:2px; opacity: 0.5;">NOW PLAYING</span>
-        <span class="material-icons" id="m-fav-btn" onclick="handleLikeClick()" style="font-size:26px;">favorite_border</span>
-    </div>
-
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-        <img id="fp-art" class="fp-art" src="" style="width: 82%; border-radius: var(--squircle); box-shadow: 0 30px 60px rgba(0,0,0,0.7);">
-    </div>
-
-    <div class="fp-meta" style="padding: 0 40px;">
-        <h1 id="fp-title" style="margin:0; font-size:28px; font-weight: 800; letter-spacing: -0.5px;"></h1>
-        <p id="fp-artist" onclick="goToCurrentArtist()" style="margin: 5px 0 30px 0; font-size: 19px; font-weight: 500;"></p>
-    </div>
-
-    <div style="padding: 0 40px;">
-        <div class="progress-container" onclick="seek(event, this)" style="height: 4px; background: rgba(255,255,255,0.2);">
-            <div id="fp-progress" class="progress-fill" style="background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.6);"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); margin-top: 12px;">
-            <span id="time-cur">0:00</span>
-            <span id="time-dur">0:00</span>
+        <div class="progress-container" onclick="event.stopPropagation(); seek(event, this)">
+            <div id="mini-progress" class="progress-fill"></div>
         </div>
     </div>
 
-    <div class="fp-controls" style="padding: 40px; margin-bottom: 20px;">
-        <span class="material-icons" id="ctrl-shuffle" style="font-size:24px; opacity:0.6;" onclick="toggleShuffle()">shuffle</span>
-        <span class="material-icons" style="font-size:48px;" onclick="prevTrack()">skip_previous</span>
-        <div class="play-btn-lg" onclick="togglePlay()" style="background: white; color: black; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(255,255,255,0.2);">
-            <span class="material-icons" id="fp-play-btn" style="font-size:45px;">play_arrow</span>
+    <div id="full-player" style="display:none; flex-direction:column; background:#000; height:100vh; width:100vw; position:fixed; top:0; left:0; z-index:9999; overflow:hidden;">
+        <div id="fp-bg-visual"></div>
+        <div class="bg-glow" id="fp-glow"></div>
+
+        <div class="fp-header" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 100;">
+            <div class="back-btn" onclick="closeFullPlayer()">
+                <span class="material-icons" style="font-size:32px; color: white;">expand_more</span>
+            </div>
+            <span style="font-size:10px; font-weight:800; letter-spacing:2px; opacity: 0.5; color: white;">NOW PLAYING</span>
+            <span class="material-icons" id="fp-heart-icon" onclick="handleLikeClick()" style="font-size:26px; color: white;">favorite_border</span>
         </div>
-        <span class="material-icons" style="font-size:48px;" onclick="nextTrack()">skip_next</span>
-        <span class="material-icons" id="ctrl-repeat" style="font-size:24px; opacity:0.6;" onclick="toggleLoop()">repeat</span>
+
+<div id="fp-scroll-container" style="flex: 1; overflow-y: auto; padding: 0 30px; scrollbar-width: none;">
+    <div style="padding: 5px 0; display: flex; justify-content: center;">
+        <img id="fp-art" src="" style="width: 100%; aspect-ratio:1; object-fit: cover; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+    </div>
+
+    <div class="fp-meta" style="margin-bottom: 20px;">
+        <h1 id="fp-title" style="margin:0; font-size:28px; font-weight: 800; color: white; line-height: 1;"></h1>
+        <p id="fp-artist" style="margin: 5px 0 0 0; font-size: 18px; font-weight: 500; color: var(--accent-green);"></p>
+    </div>
+
+    <div id="fp-lyrics-wrapper" onclick="openLyricsTab()" style="padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 100px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">
+        LYRICS
+    </div>
+    <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">
+        TAP TO EXPAND
     </div>
 </div>
+        <div id="fp-lyrics-text" style="font-size: 22px; font-weight: 700; color: white; white-space: pre-wrap;"></div>
+    </div>
+</div>
+
+        <div id="lyrics-tab" style="display:none; position:absolute; inset:0; z-index:200; background: rgba(0,0,0,0.9); backdrop-filter: blur(40px); flex-direction: column; padding: 60px 40px;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: white; margin:0; font-weight: 900;">Lyrics</h2>
+                <span class="material-icons" onclick="closeLyricsTab()" style="font-size: 32px; color: white; cursor: pointer;">close</span>
+            </div>
+            <div id="fp-lyrics-full" style="flex: 1; overflow-y: auto; font-size: 28px; font-weight: 900; line-height: 1.5; color: white; white-space: pre-wrap; padding-bottom: 100px;"></div>
+        </div>
+
+        <div id="fp-bottom-controls" style="padding: 20px 40px 60px 40px; background: linear-gradient(to top, #000 90%, transparent); z-index: 150;">
+            <div class="progress-container" onclick="seek(event, this)" style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;">
+                <div id="fp-progress" class="progress-fill" style="background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.6);"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); margin-top: 12px;">
+                <span id="time-cur">0:00</span>
+                <span id="time-dur">0:00</span>
+            </div>
+
+            <div class="fp-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+                <span class="material-icons" id="ctrl-shuffle" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleShuffle()">shuffle</span>
+                <span class="material-icons" style="font-size:48px; color: white;" onclick="prevTrack()">skip_previous</span>
+                <div class="play-btn-lg" onclick="togglePlay()" style="background: white; color: black; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(255,255,255,0.2);">
+                    <span class="material-icons" id="fp-play-btn" style="font-size:45px;">play_arrow</span>
+                </div>
+                <span class="material-icons" style="font-size:48px; color: white;" onclick="nextTrack()">skip_next</span>
+                <span class="material-icons" id="ctrl-repeat" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleLoop()">repeat</span>
+            </div>
+        </div>
+    </div>
 
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-home" onclick="window.viewHome()">
@@ -550,9 +571,6 @@ overflow: hidden; /* This is necessary for the squircle shape */
         <div class="nav-item" id="nav-search" onclick="window.viewSearch()">
             <span class="material-icons">search</span>Search
         </div>
-        <!-- <div class="nav-item" id="nav-lib" onclick="window.viewLibrary()">
-            <span class="material-icons">library_music</span>Library
-        </div> -->
         <div class="nav-item" id="nav-lib" onclick="window.openPatchNotes()">
             <span class="material-icons">new_releases</span>Patch Notes
         </div>
@@ -620,66 +638,58 @@ overflow: hidden; /* This is necessary for the squircle shape */
 };
 
         async function init() {
-            try {
-                // 1. FETCH ALL DATA (Including Spotlight)
-                const [
-                    { data: artists },
-                    { data: albumsData },
-                    { data: tracksData },
-                    { data: spotlightRows } // Added fetch for Spotlight
-                ] = await Promise.all([
-                    supabaseClient.from('artists').select('*'),
-                    supabaseClient.from('albums').select('*'),
-                    supabaseClient.from('tracks').select('*'),
-                    supabaseClient.from('spotlight').select('*').eq('active', true).order('created_at', { ascending: false }).limit(5)
-                ]);
+    try {
+        const [
+            { data: artists },
+            { data: albumsData },
+            { data: tracksData },
+            { data: spotlightRows }
+        ] = await Promise.all([
+            supabaseClient.from('artists').select('*'),
+            supabaseClient.from('albums').select('*'),
+            supabaseClient.from('tracks').select('*'),
+            // We fetch them, but we will handle the final sorting in JavaScript
+            supabaseClient.from('spotlight').select('*').eq('active', true).limit(5)
+        ]);
 
-                // 2. PROCESS ARTISTS
-                artists?.forEach(a => window.ARTISTS[a.id] = a);
+        // 2. PROCESS ARTISTS
+        artists?.forEach(a => window.ARTISTS[a.id] = a);
 
-                // 3. PROCESS SPOTLIGHTS (Mapping DB names to your logic names)
-                window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
-                    type: row.type,
-                    id: row.target_id,
-                    url: row.url,
-                    customTitle: row.custom_title,
-                    customSub: row.custom_sub
-                }));
+        // 3. PROCESS SPOTLIGHTS (FIXED MAPPING)
+        window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
+            type: row.type,
+            orderId: row.id,         // The PK (1, 2, 3) for sorting
+            targetId: row.target_id, // The slug (lc-xavier) for links
+            url: row.url,
+            customTitle: row.custom_title,
+            customSub: row.custom_sub
+        }));
 
-                // 4. PROCESS ALBUMS (Sorted by Date)
-                const parseDate = (str) => {
-                    if (!str || str === 'RELEASED') return 0;
-                    const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
-                    const timestamp = Date.parse(cleanDate);
-                    return isNaN(timestamp) ? 0 : timestamp;
-                };
+        // 4. PROCESS ALBUMS
+        const parseDate = (str) => {
+            if (!str || str === 'RELEASED') return 0;
+            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
+            const timestamp = Date.parse(cleanDate);
+            return isNaN(timestamp) ? 0 : timestamp;
+        };
+        window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
 
-                window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+        // 5. PROCESS TRACKS
+        const trackLookup = {};
+        tracksData?.forEach(t => { trackLookup[t.id] = t; });
+        window.TRACKS = {};
+        window.ALBUMS.forEach(alb => {
+            const manualOrder = alb.track_ids || []; 
+            window.TRACKS[alb.id] = manualOrder.map(id => trackLookup[id]).filter(Boolean); 
+        });
 
-                // 5. PROCESS TRACKS (Linked to Albums)
-                const trackLookup = {};
-                tracksData?.forEach(t => { trackLookup[t.id] = t; });
+        window.viewHome();
+        if (typeof handleDeepLinking === 'function') handleDeepLinking();
 
-                window.TRACKS = {};
-                window.ALBUMS.forEach(alb => {
-                    const manualOrder = alb.track_ids || []; 
-                    window.TRACKS[alb.id] = manualOrder
-                        .map(id => trackLookup[id])
-                        .filter(Boolean); 
-                });
-
-                // 6. RENDER
-                window.viewHome();
-                if (typeof handleDeepLinking === 'function') handleDeepLinking();
-
-            } catch (err) { 
-                console.error("Init Error:", err); 
-                if (contentView) {
-                    contentView.innerHTML = `<div class="standard-padding" style="color:white;">Error connecting to Supabase.</div>`;
-                }
-            }
-        }
-
+    } catch (err) { 
+        console.error("Init Error:", err); 
+    }
+}
         function resetScroll() { contentView.scrollTo(0, 0); }
 
 window.viewHome = function() {
@@ -687,29 +697,63 @@ window.viewHome = function() {
     if (typeof resetScroll === 'function') resetScroll();
     if (typeof setNav === 'function') setNav(0);
 
-    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
-    const spotlights = window.SPOTLIGHTS || [];
+// 1. DATA PREP
+// Inside window.viewHome...
+const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
+
+// Numerical Sort: 1 is first, 2 is second.
+const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => Number(a.orderId) - Number(b.orderId));
     const target = document.getElementById('content-view') || document.getElementById('contentView');
     if (!target) return;
 
     // 1. DYNAMIC RENDERER
-    const renderMobileSlide = (index) => {
-        const s = spotlights[index];
-        if (!s) return '';
+const renderMobileSlide = (index) => {
+    const s = spotlights[index];
+    if (!s) return '';
 
-        let displayImg = "";
-        let displayTitle = s.customTitle || "";
-        let tagText = "FEATURED";
-        let action = "";
+    let displayImg = "";
+    let displayTitle = s.customTitle || "";
+    let tagText = "FEATURED";
+    let action = "";
 
-        if (s.type === "Release") {
-            const alb = publicCatalogue.find(a => a.id === s.id);
-            if (alb) {
-                displayImg = alb.art_url;
-                displayTitle = s.customTitle || alb.name;
-                tagText = alb.coming_soon ? "COMING SOON" : "RELEASE";
-                action = `viewAlbum('${alb.id}')`;
-            }
+    if (s.type === "Release") {
+        const alb = publicCatalogue.find(a => a.id === s.targetId);
+        if (alb) {
+            displayImg = alb.art_url;
+            displayTitle = s.customTitle || alb.name;
+            tagText = alb.coming_soon ? "COMING SOON" : "RELEASE"; // Fixed Tag
+            action = `viewAlbum('${s.targetId}')`;
+        }
+    } 
+    else if (s.type === "Artist") {
+        const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
+        // Fix: Use banner_url for the spotlight
+        displayImg = art ? (art.banner_url || art.img_url) : ""; 
+        displayTitle = s.customTitle || (art ? art.name : "Artist");
+        tagText = "ARTIST SPOTLIGHT"; // Fixed Tag
+        action = `viewArtist('${s.targetId}')`;
+    } 
+    else if (s.type === "Track") {
+        const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
+        const publicOnly = parentAlbums.filter(a => !a.coming_soon);
+        
+        // Priority: Newest Public -> Newest Overall
+        const latestAlb = (publicOnly.length > 0) 
+            ? publicOnly.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0]
+            : parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
+
+        let trackData = null;
+        if (latestAlb && window.TRACKS[latestAlb.id]) {
+            const bucket = window.TRACKS[latestAlb.id];
+            trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
+        }
+
+        if (trackData && latestAlb) {
+            displayImg = trackData.art_url || latestAlb.art_url;
+            displayTitle = s.customTitle || trackData.title;
+            tagText = "TRACK HIGHLIGHT"; // Fixed Tag
+            action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
+        }
         } else if (s.type === "Video") {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = s.url ? s.url.match(regExp) : null;
@@ -717,10 +761,6 @@ window.viewHome = function() {
             displayImg = vidId ? `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg` : "";
             tagText = "FEATURED VIDEO";
             action = `window.open('${s.url}', '_blank')`;
-        } else if (s.type === "Sponsorship") {
-            displayImg = s.url; 
-            tagText = "SPONSORSHIP";
-            action = `window.open('${s.target_url || '#'}', '_blank')`;
         }
 
         if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
@@ -849,6 +889,17 @@ window.viewHome = function() {
     if (spotlights.length > 1) {
         window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
     }
+};
+
+// Update this within your existing player update loop or openFullPlayer
+window.updateFullPlayerUI = function(track) {
+    document.getElementById('fp-art').src = track.art_url;
+    document.getElementById('fp-title').innerText = track.title;
+    document.getElementById('fp-artist').innerText = track.artist;
+    
+    const lyrics = track.lyrics || "No lyrics available.";
+    document.getElementById('fp-lyrics-snippet').innerText = lyrics;
+    document.getElementById('fp-lyrics-full').innerText = lyrics;
 };
 
 window.toggleNavUI = (show) => {
@@ -1660,18 +1711,72 @@ function setNav(idx) {
     }); 
 }
 
-function openFullPlayer() {
+window.openFullPlayer = function() {
     const fp = document.getElementById('full-player');
     const mini = document.getElementById('mini-player');
+    const scrollCont = document.getElementById('fp-scroll-container');
     
-    // SYNC HEART ICON
-    const isLiked = window.STORAGE.getLikes().includes(window.currentTrackId);
+    let targetTrack = null;
+    let albumArtFallback = "";
+
+   let albumArtistId = ""; // Initialize this at the top
+    
+    if (window.ALBUMS) {
+        for (const album of window.ALBUMS) {
+            if (album.track_ids && album.track_ids.includes(window.currentTrackId)) {
+                albumArtFallback = album.art_url;
+                albumArtistId = album.artist_id; // Store this here!
+                
+                // Navigate the nested structure: window.TRACKS[album_id]
+                const albumBucket = window.TRACKS ? window.TRACKS[album.id] : null; 
+                
+                if (albumBucket) {
+                    if (Array.isArray(albumBucket)) {
+                        targetTrack = albumBucket.find(t => t.id === window.currentTrackId);
+                    } else {
+                        targetTrack = albumBucket[window.currentTrackId];
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+// 2. UI INJECTION
+    if (targetTrack) {
+        document.getElementById('fp-title').innerText = targetTrack.title || "Unknown Track";
+        
+        const artistEl = document.getElementById('fp-artist');
+        artistEl.innerText = targetTrack.artist || "therichmusic";
+        
+        // Restore Artist View functionality
+        // We pull the artist_id from the targetTrack or the album we found
+        const artistId = targetTrack.artist_id || albumArtistId; // Ensure you capture album.artist_id in step 1
+        
+        artistEl.onclick = () => {
+            if (typeof window.viewArtist === 'function' && artistId) {
+                closeFullPlayer();
+                window.viewArtist(artistId);
+            }
+        };
+
+        document.getElementById('fp-art').src = targetTrack.art_url || albumArtFallback || document.getElementById('m-art').src;
+
+        const lyrics = targetTrack.lyrics || "Instrumental\n(No lyrics available)";
+document.getElementById('fp-lyrics-text').innerHTML = lyrics;
+document.getElementById('fp-lyrics-full').innerHTML = lyrics;
+    }
+
+    // 3. HEART SYNC
+    const isLiked = window.STORAGE?.getLikes().includes(window.currentTrackId);
     const fpHeart = document.getElementById('fp-heart-icon');
     if (fpHeart) {
         fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
         fpHeart.style.color = isLiked ? 'var(--accent-green)' : 'white';
     }
 
+    // 4. SHOW & ANIMATE
+    if (scrollCont) scrollCont.scrollTop = 0;
     fp.style.display = 'flex';
     requestAnimationFrame(() => {
         fp.classList.add('active');
@@ -1682,7 +1787,24 @@ function openFullPlayer() {
             }
         }, 500);
     });
-}
+};
+
+// Lyrics Focus Tab Toggle
+window.openLyricsTab = () => { 
+    const tab = document.getElementById('lyrics-tab');
+    if (tab) {
+        tab.style.display = 'flex';
+        document.getElementById('fp-lyrics-full').scrollTop = 0;
+    }
+};
+
+window.closeLyricsTab = () => { 
+    const tab = document.getElementById('lyrics-tab');
+    if (tab) tab.style.display = 'none'; 
+};
+
+window.openLyricsTab = () => { document.getElementById('lyrics-tab').style.display = 'flex'; };
+window.closeLyricsTab = () => { document.getElementById('lyrics-tab').style.display = 'none'; };
 
 function closeFullPlayer() {
     const fp = document.getElementById('full-player');
@@ -1889,12 +2011,24 @@ window.handleLikeToggle = (id) => {
 
 window.openPatchNotes = function() {
     const versionHistory = [
-        {
+                {
+            version: "v1.0.3.2",
+            date: "February 11, 2026",
+            notes: [
+                "⬆️ Deployed a patch to fix the Spotlight!",
+            ],
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
+    {
             version: "v1.0.3.1",
             date: "February 10, 2026",
             notes: [
                 "🛠️ Hammered out some bugs.",
                 "🔗 Copying links work now.",
+                "⚙️ Regarding v1.0.4: We'll be introducing a bunch of new features, such as a settings menu, light mode, and more.",
                 "⚠️ Due to a bug we've temporarliy disabled the Library.",
             ],
             actionButton: {

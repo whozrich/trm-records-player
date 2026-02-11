@@ -530,20 +530,8 @@ flex: 1;
                 <div id="player-title" style="font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Select a track</div>
                 <div id="player-artist" style="font-size: 12px; color: #b3b3b3; cursor: pointer;"></div>
             </div>
-            <div id="player-like-btn" onclick="handleLikeClick()" style="cursor:pointer; color:#666; transition: 0.2s; padding-right: 10px;">
-                <span class="material-icons" id="main-heart-icon" style="font-size: 20px;">favorite_border</span>
-            </div>
-
-            <video id="pip-video" playsinline muted style="display:none;"></video>
 
 <div style="width: 30%; display: flex; justify-content: flex-end; align-items: center; gap: 20px;">
-    <div class="control-toggle" id="pip-btn" onclick="toggleDesktopPiP()" title="Floating Player">
-        <span class="material-icons" style="font-size: 20px;">picture_in_picture_alt</span>
-    </div>
-
-    <div class="control-toggle" onclick="togglePanel()">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-    </div>
     </div>
         </div>
         
@@ -575,6 +563,9 @@ flex: 1;
         </div>
 
         <div style="width: 30%; display: flex; justify-content: flex-end; align-items: center; gap: 20px;">
+                                                                   <div id="player-like-btn" onclick="handleLikeClick()" style="cursor:pointer; color:#666; transition: 0.2s; padding-right: 10px;">
+                <span class="material-icons" id="main-heart-icon" style="font-size: 20px;">favorite_border</span>
+            </div>
             <div class="control-toggle" onclick="togglePanel()">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             </div>
@@ -1110,79 +1101,133 @@ window.viewHome = function() {
         return days > 0 ? days : 0;
     };
 
-    // 2. DATA PREP
-    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
-    const spotlights = window.SPOTLIGHTS || [];
+// 2. DATA PREP
+const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
+
+// SORT: Now using orderId (the Primary Key from Supabase)
+const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => {
+    return Number(a.orderId) - Number(b.orderId);
+});
+
+console.log("Spotlight Order sequence (Numerical):", spotlights.map(s => s.orderId));
 
     // 3. RENDERER (Dynamic Tags & Pill Indicators)
-    const renderSlide = (index) => {
-        const s = spotlights[index];
-        if (!s) return '';
+const renderSlide = (index) => {
+    const s = spotlights[index];
+    if (!s) return '';
 
-        let displayImg = "";
-        let displayTitle = s.customTitle || "Featured";
-        let tagText = "FEATURED";
-        let subText = s.customSub || "";
-        let actionTarget = "";
-        let btnText = "View More";
+    let displayImg = "";
+    let displayTitle = s.customTitle || "Featured";
+    let tagText = "FEATURED";
+    let subText = s.customSub || "";
+    let actionTarget = "";
+    let btnText = "View More";
 
-        if (s.type === "Release") {
-            const alb = publicCatalogue.find(a => a.id === s.id);
-            if (alb) {
-                displayImg = alb.art_url;
-                displayTitle = s.customTitle || alb.name;
-                actionTarget = `viewAlbum('${alb.id}')`;
-                btnText = "View Release";
-                
-                if (alb.coming_soon) {
-                    tagText = "COMING SOON";
-                    subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
-                } else {
-                    tagText = "RELEASE SPOTLIGHT";
-                }
+    // 1. RELEASE (ALBUM) LOGIC
+    if (s.type === "Release") {
+        const alb = publicCatalogue.find(a => a.id === s.targetId);
+        if (alb) {
+            displayImg = alb.art_url;
+            displayTitle = s.customTitle || alb.name;
+            actionTarget = `viewAlbum('${s.targetId}')`;
+            btnText = "View Release";
+            
+            if (alb.coming_soon) {
+                tagText = "COMING SOON";
+                subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
+            } else {
+                tagText = "RELEASE SPOTLIGHT";
             }
-        } else if (s.type === "Artist") {
-            const art = window.ARTISTS ? window.ARTISTS[s.id] : null;
-            displayImg = art ? (art.banner_url || art.img_url) : "";
-            displayTitle = s.customTitle || (art ? art.name : "Artist");
-            tagText = "ARTIST SPOTLIGHT";
-            actionTarget = `viewArtist('${s.id}')`;
-            btnText = "View Profile";
-        } else if (s.type === "Video") {
-            displayImg = getYTThumb(s.url);
-            displayTitle = s.customTitle || "New Video";
-            tagText = "FEATURED VIDEO";
-            actionTarget = `window.open('${s.url}', '_blank')`;
-            btnText = "Watch Now";
+        }
+    } 
+    
+    // 2. ARTIST LOGIC
+    else if (s.type === "Artist") {
+        const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
+        displayImg = art ? (art.banner_url || art.img_url) : "";
+        displayTitle = s.customTitle || (art ? art.name : "Artist");
+        tagText = "ARTIST SPOTLIGHT";
+        actionTarget = `viewArtist('${s.targetId}')`;
+        btnText = "View Profile";
+    } 
+    
+    // 3. TRACK HIGHLIGHT LOGIC
+else if (s.type === "Track") {
+        // 1. Get all albums that contain this track
+        const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
+        
+        // 2. Filter for strictly NON-coming-soon albums
+        const publicReleases = parentAlbums.filter(a => !a.coming_soon);
+        
+        let latestAlb = null;
+        if (publicReleases.length > 0) {
+            // Grab the newest PUBLIC release
+            latestAlb = publicReleases.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
+        } else {
+            // Fallback to newest regardless if nothing is public yet
+            latestAlb = parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
         }
 
-        if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
+        let trackData = null;
+        if (latestAlb && window.TRACKS && window.TRACKS[latestAlb.id]) {
+            const bucket = window.TRACKS[latestAlb.id];
+            // Match against s.targetId (the string ID from Supabase)
+            trackData = Array.isArray(bucket) 
+                ? bucket.find(t => t.id === s.targetId) 
+                : bucket[s.targetId];
+        }
 
-        return `
-        <div class="slide-content slide-anim" onclick="${actionTarget}" style="position:relative; height:100%; width:100%; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
-            <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
-            <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center; width:100%;">
-                <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; object-fit:cover; box-shadow:0 20px 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);">
-                <div>
-                    <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; text-transform:uppercase; letter-spacing:1px;">${tagText}</span>
-                    <h1 style="font-size:72px; margin:15px 0; font-weight:900; color:white; line-height:1; letter-spacing:-3px;">${displayTitle}</h1>
-                    ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
-                    
-                    <div style="display:flex; align-items:center; gap:20px;">
-                        <button class="signup-btn">${btnText}</button>
-                        
-                        ${spotlights.length > 1 ? `
-                        <div style="display:flex; gap:8px;">
-                            ${spotlights.map((_, i) => `
-                                <div style="width:${i === index ? '24px' : '8px'}; height:8px; background:${i === index ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'}; border-radius:4px; transition: all 0.3s ease;"></div>
-                            `).join('')}
-                        </div>
-                        ` : ''}
+        if (trackData && latestAlb) {
+            displayImg = trackData.art_url || latestAlb.art_url;
+            displayTitle = s.customTitle || trackData.title;
+            
+            const albumType = latestAlb.track_ids.length === 1 ? 'Single' : 'Album';
+            subText = s.customSub || `Featured ${albumType}`;
+            
+            tagText = "TRACK HIGHLIGHT";
+            btnText = "Play Now";
+            
+            // ACTION FIX: Use s.targetId for the play function
+            actionTarget = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
+        }
+    }
+
+    // 4. VIDEO LOGIC
+    else if (s.type === "Video") {
+        displayImg = getYTThumb(s.url);
+        displayTitle = s.customTitle || "New Video";
+        tagText = "FEATURED VIDEO";
+        actionTarget = `window.open('${s.url}', '_blank')`;
+        btnText = "Watch Now";
+    }
+
+    // FALLBACK IMAGE
+    if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
+
+    return `
+    <div class="slide-content slide-anim" onclick="${actionTarget}" style="position:relative; height:100%; width:100%; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
+        <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
+        <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center; width:100%;">
+            <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; object-fit:cover; box-shadow:0 20px 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);">
+            <div>
+                <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; text-transform:uppercase; letter-spacing:1px;">${tagText}</span>
+                <h1 style="font-size:72px; margin:15px 0; font-weight:900; color:white; line-height:1; letter-spacing:-3px;">${displayTitle}</h1>
+                ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
+                
+                <div style="display:flex; align-items:center; gap:20px;">
+                    <button class="signup-btn">${btnText}</button>
+                    ${spotlights.length > 1 ? `
+                    <div style="display:flex; gap:8px;">
+                        ${spotlights.map((_, i) => `
+                            <div style="width:${i === index ? '24px' : '8px'}; height:8px; background:${i === index ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'}; border-radius:4px; transition: all 0.3s ease;"></div>
+                        `).join('')}
                     </div>
+                    ` : ''}
                 </div>
             </div>
-        </div>`;
-    };
+        </div>
+    </div>`;
+};
 
     // 4. MOVE LOGIC (With Animation trigger)
     window.moveSpotlight = (dir) => {
@@ -1605,14 +1650,15 @@ window.initApp = async function() {
             supabaseClient.from('spotlight').select('*').eq('active', true).order('created_at', { ascending: false }).limit(4)
         ]);
 
-        // 2. PROCESS DATA (Standard logic)
-        window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
-            type: row.type,
-            id: row.target_id,
-            url: row.url,
-            customTitle: row.custom_title,
-            customSub: row.custom_sub
-        }));
+// 2. PROCESS DATA (Standard logic)
+window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
+    type: row.type,
+    orderId: row.id,     // Store the actual DB ID here for sorting
+    targetId: row.target_id, // Store the slug/ID for navigation
+    url: row.url,
+    customTitle: row.custom_title,
+    customSub: row.custom_sub
+}));
         
         window.ARTISTS = {};
         if (artists) artists.forEach(a => { window.ARTISTS[a.id] = a; });
@@ -1772,7 +1818,20 @@ async function toggleDesktopPiP() {
 
 window.openPatchNotes = function() {
     const versionHistory = [
-        {
+                {
+            version: "v1.0.3.8",
+            date: "February 10, 2026",
+            // HYPERLINK SUPPORT: Just use <a> tags inside your strings now!
+            notes: [
+                "⬆️ Deployed a patch to fix up Spotlight!",
+            ],
+            // SECOND BUTTON SUPPORT: Add this object
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
+    {
             version: "v1.0.3.8",
             date: "February 10, 2026",
             // HYPERLINK SUPPORT: Just use <a> tags inside your strings now!
