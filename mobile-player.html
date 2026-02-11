@@ -1294,22 +1294,27 @@ window.runSearch = (q) => {
     res.innerHTML = html || `<div style="text-align:center; margin-top:50px; color:var(--text-dim);">No results for "${q}"</div>`;
 };
 
+window.deepLinkCheckCount = 0;
 window.handleDeepLinking = () => {
     const params = new URLSearchParams(window.location.search);
     const albId = params.get('album');
     
     if (albId) {
-        // If data isn't ready yet, wait, otherwise fire immediately
-        if (window.ALBUMS.length === 0) {
-            setTimeout(window.handleDeepLinking, 50);
+        // Wait for data, but stop after 100 tries (5 seconds)
+        if (!window.ALBUMS || window.ALBUMS.length === 0) {
+            if (window.deepLinkCheckCount < 100) {
+                window.deepLinkCheckCount++;
+                setTimeout(window.handleDeepLinking, 50);
+            }
             return;
         }
 
-        const albumExists = window.ALBUMS.find(a => a.id == albId);
+        const albumExists = window.ALBUMS.find(a => String(a.id) === String(albId));
         if (albumExists) {
-            window.viewAlbum(albId);
-            // Optional: Clean URL so a refresh returns to home
-            // window.history.replaceState({}, document.title, window.location.pathname);
+            // Small delay ensures the DOM is ready for the view to inject
+            setTimeout(() => {
+                window.viewAlbum(albId);
+            }, 100);
         }
     }
 };
@@ -1317,26 +1322,95 @@ window.handleDeepLinking = () => {
 window.copyAlbumLink = (albumId) => {
     const alb = window.ALBUMS.find(a => a.id === albumId);
     const artist = window.ARTISTS[alb?.artist_id] || { name: "TRM Records" };
-    const url = `${window.location.origin}${window.location.pathname}?album=${albumId}`;
+    
+    // Construct the URL
+    const url = window.location.protocol + '//' + window.location.host + window.location.pathname + '?album=' + albumId;
 
-    if (navigator.share) {
-        navigator.share({
-            title: alb ? alb.name : 'TRM Music',
-            text: `Check out ${alb?.name} by ${artist.name} on TRM`,
-            url: url
-        }).catch(err => {
-            // Silently fail if user cancels share
-            if (err.name !== "AbortError") console.error('Share failed:', err);
-        });
+    const shareData = {
+        title: alb ? alb.name.toUpperCase() : 'TRM Music',
+        text: `Check out ${alb?.name} by ${artist.name} on TRM`,
+        url: url
+    };
+
+    // iOS/Mobile Native Share logic
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        navigator.share(shareData)
+            .catch(err => {
+                // If it's not a user-cancel, and not working, fallback
+                if (err.name !== "AbortError") {
+                    copyToClipboardFallback(url);
+                }
+            });
     } else {
-        // Desktop / Non-supported Fallback
-        navigator.clipboard.writeText(url).then(() => {
-            // Check if you have a toast function, else alert
-            if (window.showToast) window.showToast("Link copied!");
-            else alert("Link copied to clipboard!");
-        });
+        copyToClipboardFallback(url);
     }
 };
+
+// The Fallback function with a built-in "TRM Toast"
+function copyToClipboardFallback(text) {
+    const performCopy = () => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            // Older iOS fix
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return successful ? Promise.resolve() : Promise.reject();
+        }
+    };
+
+    performCopy().then(() => {
+        showTRMToast("Link copied to clipboard");
+    }).catch(() => {
+        showTRMToast("Failed to copy link", "#ff4444");
+    });
+}
+
+// Lightweight TRM-styled notification
+function showTRMToast(msg, color = "var(--accent-green)") {
+    // Remove existing toast if user spams the button
+    const oldToast = document.getElementById('trm-toast');
+    if (oldToast) oldToast.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'trm-toast';
+    // Styling to match your RICH aesthetic
+    Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '100px', // Sits above the mobile nav
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.8)',
+        backdropFilter: 'blur(10px)',
+        webkitBackdropFilter: 'blur(10px)',
+        color: 'white',
+        padding: '12px 24px',
+        borderRadius: '12px',
+        fontSize: '13px',
+        fontWeight: '800',
+        zIndex: '1000000',
+        border: `1px solid ${color}`,
+        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        pointerEvents: 'none',
+        transition: 'all 0.3s ease'
+    });
+
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+
+    // Fade out and remove
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.bottom = '90px';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
 
 window.togglePlay = () => {
     // 1. If no song is loaded, do nothing
