@@ -640,29 +640,30 @@ overflow: hidden; /* This is necessary for the squircle shape */
     }
 };
 
-        async function init() {
+async function init() {
     try {
         const [
             { data: artists },
             { data: albumsData },
             { data: tracksData },
-            { data: spotlightRows }
+            { data: spotlightRows },
+            { data: videosData } // Fetching the new videos table
         ] = await Promise.all([
             supabaseClient.from('artists').select('*'),
             supabaseClient.from('albums').select('*'),
             supabaseClient.from('tracks').select('*'),
-            // We fetch them, but we will handle the final sorting in JavaScript
-            supabaseClient.from('spotlight').select('*').eq('active', true).limit(5)
+            supabaseClient.from('spotlight').select('*').eq('active', true).limit(5),
+            supabaseClient.from('videos').select('*') 
         ]);
 
         // 2. PROCESS ARTISTS
         artists?.forEach(a => window.ARTISTS[a.id] = a);
 
-        // 3. PROCESS SPOTLIGHTS (FIXED MAPPING)
+        // 3. PROCESS SPOTLIGHTS
         window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
             type: row.type,
-            orderId: row.id,         // The PK (1, 2, 3) for sorting
-            targetId: row.target_id, // The slug (lc-xavier) for links
+            orderId: row.id,
+            targetId: row.target_id,
             url: row.url,
             customTitle: row.custom_title,
             customSub: row.custom_sub
@@ -677,31 +678,41 @@ overflow: hidden; /* This is necessary for the squircle shape */
         };
         window.ALBUMS = (albumsData || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
 
-        // 5. PROCESS TRACKS
+        // 5. PROCESS TRACKS & VIDEOS
         const trackLookup = {};
+        // Add standard tracks
         tracksData?.forEach(t => { trackLookup[t.id] = t; });
+        
+        // Add video entries and map 'url' to 'videoUrl'
+        videosData?.forEach(v => { 
+            trackLookup[v.id] = {
+                ...v,
+                isVideo: true,
+                videoUrl: v.url 
+            }; 
+        });
+
         window.TRACKS = {};
         window.ALBUMS.forEach(alb => {
             const manualOrder = alb.track_ids || []; 
-            window.TRACKS[alb.id] = manualOrder.map(id => trackLookup[id]).filter(Boolean); 
+            window.TRACKS[alb.id] = manualOrder.map(item => {
+                // Keep Disc Marker strings
+                if (typeof item === 'string' && item.startsWith('DISC_')) return item;
+                // Return matched track or video object
+                return trackLookup[item];
+            }).filter(Boolean); 
         });
 
-// Small delay to ensure DOM is ready for mobile rendering
         setTimeout(() => {
             window.viewHome();
-            console.log("Loaded TRM Music Player Mobile v1.3.2"); // Update your version!
-            
+            console.log("Loaded TRM MUSIC PLAYER (Mobile) v1.4.0");
             if (typeof handleDeepLinking === 'function') handleDeepLinking();
-            
-            // If you have a loading overlay, hide it here
             const loader = document.getElementById('loading-screen');
             if (loader) loader.style.display = 'none';
         }, 100);
 
     } catch (err) { 
         console.error("Init Error:", err);
-        // Alerting on mobile helps debug when you don't have a console open
-        // alert("Init Failed: " + err.message); 
     }
 }
         function resetScroll() { contentView.scrollTo(0, 0); }
@@ -1104,6 +1115,43 @@ audio.onended = () => {
     }
 };
 
+window.openVideoPlayer = function(input) {
+    if (!input) return;
+    
+    // Extract YouTube ID from URL
+    let videoId = '';
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = String(input).match(regExp);
+    videoId = (match && match[2].length === 11) ? match[2] : input;
+
+    const modalId = 'mobile-video-modal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = modalId;
+    Object.assign(modal.style, {
+        position: 'fixed', inset: '0', backgroundColor: 'black',
+        zIndex: '10000', display: 'flex', alignItems: 'center', justifyContent: 'center'
+    });
+
+    modal.innerHTML = `
+        <div style="position: absolute; top: 40px; right: 20px; z-index: 10001;">
+            <button onclick="document.getElementById('${modalId}').remove()" 
+                    style="background:var(--accent-green); color:black; border:none; padding:10px 20px; border-radius:30px; font-weight:900; text-transform:uppercase; font-size:12px;">
+                Close Video
+            </button>
+        </div>
+        <div style="width: 100%; aspect-ratio: 16/9;">
+            <iframe width="100%" height="100%" 
+                src="https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0" 
+                frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
+            </iframe>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
 window.viewAlbum = (id, scrollToTop = true) => {
     window.currentViewId = 'album';
     if (typeof toggleNavUI === 'function') toggleNavUI(false); 
@@ -1112,15 +1160,16 @@ window.viewAlbum = (id, scrollToTop = true) => {
     if (!alb) return window.viewHome();
 
     const artist = window.ARTISTS[alb.artist_id] || { name: "therichmusic", id: "" };
-    const tks = window.TRACKS[id] || [];
+    const tks = alb.track_list || window.TRACKS[id] || [];
 
-    // --- 1. DATA VALIDATION FOR IDs ---
-    const isComingSoon = alb.coming_soon === true || alb.coming_soon === "true";
+    // --- 1. DATA VALIDATION ---
+    const isActuallyComingSoon = window.isAlbumComingSoon(alb);
+    const isReleased = !isActuallyComingSoon;
     const trailerUrl = alb.trailer_url || null;
     const releaseDateRaw = alb.full_release_date || null;
 
     // --- 2. RELEASE DATE FORMATTING ---
-    const dateLabel = isComingSoon ? "RELEASING" : "RELEASED";
+    const dateLabel = !isReleased ? "RELEASING" : "RELEASED";
     let finalDateDisplay = "";
     
     if (releaseDateRaw) {
@@ -1135,20 +1184,54 @@ window.viewAlbum = (id, scrollToTop = true) => {
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
             } else {
-                finalDateDisplay = rawDate; // Fallback to raw string if parsing fails
+                finalDateDisplay = rawDate;
             }
         }
     }
+
+    // --- 3. SMART RUNTIME CALCULATION (v1.4.0) ---
+    // Only includes tracks that are playable or videos
+    const totalSeconds = tks.reduce((acc, t) => {
+        if (typeof t === 'string' || !t.duration) return acc;
+        
+        // Determine if track is released here or elsewhere
+        const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+        const isReleasedElsewhere = parentIds.some(aid => {
+            const other = window.ALBUMS.find(a => a.id == aid);
+            return other && !window.isAlbumComingSoon(other);
+        });
+        const isPlayable = isReleasedElsewhere || isReleased;
+
+        // Skip calculation if track is "Coming Soon"
+        if (!isPlayable && !t.isVideo) return acc;
+
+        const parts = t.duration.split(':').map(Number);
+        if (parts.length === 2) return acc + (parts[0] * 60) + parts[1];
+        if (parts.length === 3) return acc + (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+        return acc;
+    }, 0);
+
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const runtimeDisplay = hrs > 0 ? `${hrs} HR ${mins} MIN` : `${mins} MIN ${totalSeconds % 60} SEC`;
+
+    // --- 4. TEXT FORMATTING SUPPORT ---
+    const formatMetadataText = (text) => {
+        if (!text) return "";
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')       // Bold
+            .replace(/\*(.*?)\*/g, '<i>$1</i>')           // Italic
+            .replace(/~~(.*?)~~/g, '<strike>$1</strike>'); // Strikethrough
+    };
 
     const isThisAlbumActive = (window.currentAlbumId === id);
     const isCurrentlyPlaying = isThisAlbumActive && window.isPlaying;
     const playIcon = isCurrentlyPlaying ? 'pause' : 'play_arrow';
 
+    // --- 5. HEADER HTML ---
     let html = `
     <div class="${scrollToTop ? 'view-animate' : ''}" style="padding-bottom: 140px; color: white;">
-        
         <div style="padding: 60px 20px 30px; text-align:center; position: relative;">
-            
             <div onclick="viewHome(); toggleNavUI(true);" 
                  style="position: absolute; left: 20px; top: 40px; width: 42px; height: 42px; background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); z-index: 10;">
                 <span class="material-icons" style="font-size: 24px;">chevron_left</span>
@@ -1156,9 +1239,8 @@ window.viewAlbum = (id, scrollToTop = true) => {
 
             <div style="position:relative; display: inline-block;">
                 <img src="${alb.art_url}" style="width:240px; aspect-ratio:1; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); object-fit: cover;">
-                
                 ${trailerUrl ? `
-                    <div onclick="window.open('${trailerUrl}', '_blank')" 
+                    <div onclick="window.openVideoPlayer('${trailerUrl}')" 
                          style="position:absolute; bottom: -10px; right: -10px; background:#ff0000; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 6px 20px rgba(255,0,0,0.5); border: 4px solid #000; cursor: pointer; z-index: 5;">
                         <span class="material-icons" style="color:white; font-size:28px;">smart_display</span>
                     </div>
@@ -1177,64 +1259,122 @@ window.viewAlbum = (id, scrollToTop = true) => {
                     </div>
                 </div>
 
-<button onclick="window.playAlbum('${alb.id}')" 
-        style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor:pointer;">
-    <span class="material-icons" id="main-album-icon" style="font-size:44px; color:black;">
-        ${playIcon}
-    </span>
-</button>
+                <button onclick="window.playAlbum('${alb.id}')" 
+                        style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor:pointer;">
+                    <span class="material-icons" id="main-album-icon" style="font-size:44px; color:black;">${playIcon}</span>
+                </button>
 
-                ${finalDateDisplay ? `
-                <div style="font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; text-transform: uppercase;">
-                    ${tks.length} SONGS • ${dateLabel} ${finalDateDisplay}
+                <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                    ${alb.genre ? `
+                        <div style="font-size: 10px; font-weight: 900; color: var(--accent-green); letter-spacing: 2px; text-transform: uppercase;">
+                            ${alb.genre} • ${runtimeDisplay}
+                        </div>
+                    ` : ''}
+
+                    ${finalDateDisplay ? `
+                    <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; text-transform: uppercase;">
+                        ${tks.filter(t => typeof t !== 'string').length} SONGS • ${dateLabel} ${finalDateDisplay}
+                    </div>
+                    ` : ''}
                 </div>
+
+                ${alb.description ? `
+                    <p style="margin: 10px 20px 0; font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; font-weight: 600; text-align: center; max-width: 400px;">
+                        ${formatMetadataText(alb.description)}
+                    </p>
                 ` : ''}
             </div>
         </div>
 
-        <div style="padding: 0 20px;">
-           ${tks.map((t, i) => {
-    if (t.hidden_name) return ''; 
-    
-    const isPlayable = !isComingSoon || (t.album_id && t.album_id.split(',').some(aid => {
-        const other = window.ALBUMS.find(a => a.id == aid.trim());
-        return other && !other.coming_soon;
-    }));
+        <div style="padding: 0 20px;">`;
 
-    const trackNumber = i + 1;
-    const displayTitle = isPlayable ? t.title : `TRACK ${trackNumber}`;
-    // Add the active-track class right here during render if it's already playing
-    const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
+    // --- 6. TRACK LIST LOOP ---
+    let discTrackCounter = 0;
+    const hasMultipleDiscs = tks.some(item => typeof item === 'string' && item.startsWith('DISC_'));
 
-    return `
-    <div class="track-row ${isActive ? 'active-track' : ''}" 
-         data-id="${t.id}"
-         style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${!isPlayable ? 'opacity:0.3;' : 'cursor:pointer;'}" 
-         ${isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : ''}>
-        
-        <div class="track-number" style="width: 38px; font-size: 14px; font-weight: 900;">
-            ${isActive ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : trackNumber}
-        </div>
-        
-        <div style="flex:1; overflow: hidden;">
-            <div class="track-title" style="font-weight:800; font-size: 17px; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                ${displayTitle}
+    html += tks.map((t, i) => {
+        if (typeof t === 'string' && t.startsWith('DISC_')) {
+            discTrackCounter = 0;
+            const discNum = t.split('_')[1] || "";
+            return hasMultipleDiscs ? `
+                <div style="padding: 30px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+                    <h3 style="font-size: 12px; color: var(--accent-green); letter-spacing: 2px; font-weight: 900; text-transform: uppercase; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-icons" style="font-size: 16px;">album</span> Disc ${discNum}
+                    </h3>
+                </div>` : '';
+        }
+
+        if (t.hidden_name) return ''; 
+
+        const isVideo = t.isVideo || (t.id && t.id.startsWith('video_'));
+        if (!isVideo) discTrackCounter++;
+
+        const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+        const isReleasedElsewhere = parentIds.some(aid => {
+            const other = window.ALBUMS.find(a => a.id == aid);
+            return other && !window.isAlbumComingSoon(other);
+        });
+        const isPlayable = isReleasedElsewhere || isReleased;
+
+        const displayTitle = (isPlayable || isVideo) ? t.title : `TRACK ${discTrackCounter}`;
+        const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
+        const isBonus = t.bonus_track === true;
+
+        const clickAction = isVideo 
+            ? `onclick="window.openVideoPlayer('${t.videoUrl}')"`
+            : isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : '';
+
+        return `
+        <div class="track-row ${isActive ? 'active-track' : ''}" 
+             style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${(!isPlayable && !isVideo) ? 'opacity:0.3;' : 'cursor:pointer;'}" 
+             ${clickAction}>
+            
+            <div class="track-number" style="width: 38px; font-size: 14px; font-weight: 900; color: ${isActive ? 'var(--accent-green)' : 'inherit'}">
+                ${isActive && window.isPlaying ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : (isVideo ? '<span class="material-icons" style="font-size:18px;">play_circle</span>' : discTrackCounter)}
             </div>
-            <div class="track-artist" style="font-size:12px; font-weight: 800; text-transform: uppercase;">
-                ${isPlayable ? artist.name : 'COMING SOON'}
+            
+            <div style="flex:1; overflow: hidden; display: flex; flex-direction: column; gap: 2px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="track-title" style="font-weight:800; font-size: 16px; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; color: ${isActive ? 'var(--accent-green)' : 'white'}">
+                        ${displayTitle}
+                    </div>
+                    ${isBonus ? `<span style="background: rgba(0, 255, 135, 0.15); color: var(--accent-green); font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0, 255, 135, 0.3); white-space: nowrap;">BONUS</span>` : ''}
+                </div>
+                <div class="track-artist" style="font-size:11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5);">
+                    ${(isPlayable || isVideo) ? artist.name : 'COMING SOON'}
+                </div>
             </div>
-        </div>
-        
-        <div class="track-duration" style="font-size: 12px; font-weight: 800; font-family: monospace;">
-            ${isPlayable ? (t.duration || '0:00') : '--:--'}
-        </div>
-    </div>`;
-}).join('')}
-        </div>
-    </div>`;
+            
+            <div class="track-duration" style="font-size: 12px; font-weight: 800; font-family: monospace; color: rgba(255,255,255,0.4);">
+                ${isVideo ? '<span class="material-icons" style="font-size: 18px; color: var(--accent-green);">videocam</span>' : (isPlayable ? (t.duration || '0:00') : '--:--')}
+            </div>
+        </div>`;
+    }).join('');
 
+    html += `</div></div>`;
     contentView.innerHTML = html;
     if (scrollToTop) contentView.scrollTop = 0;
+};
+
+window.isAlbumComingSoon = function(alb) {
+    if (!alb.coming_soon) return false;
+    if (!alb.full_release_date) return true;
+
+    const rawDate = alb.full_release_date.trim();
+    
+    // Check if it's just a year (e.g., "2027")
+    if (/^\d{4}$/.test(rawDate)) {
+        return new Date().getFullYear() <= parseInt(rawDate);
+    } 
+    
+    // Check full date
+    const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
+    const dateObj = new Date(cleanedDate);
+    if (!isNaN(dateObj)) {
+        return new Date() < dateObj;
+    }
+
+    return true; // Fallback to coming soon if date is unparseable
 };
 
 window.updatePlayIcons = (playing) => {
@@ -2204,6 +2344,20 @@ window.handleLikeToggle = (id) => {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+        {
+            version: "v1.0.3.4",
+            date: "February 12, 2026",
+            notes: [
+                "📸 Videos can now appear inside of releases!",
+                "💿 A fan of multi-disc projects? Well they're here!",
+                "🎸 Want a specific genre of music? You can now see them before listening to the release! (On the release page)",
+                "And a whole other slew of small additions to make YOUR experience better here at the TRM MUSIC PLAYER.",
+            ],
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
         {
             version: "v1.0.3.3",
             date: "February 11, 2026",
