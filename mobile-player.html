@@ -722,66 +722,70 @@ window.viewHome = function() {
     if (typeof resetScroll === 'function') resetScroll();
     if (typeof setNav === 'function') setNav(0);
 
-// 1. DATA PREP
-// Inside window.viewHome...
-const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden);
+    // 1. DATA PREP with Auto-Release Patch
+    const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden).map(alb => {
+        // Force coming_soon to false if the release date has passed
+        const isActuallyComingSoon = window.isAlbumComingSoon ? window.isAlbumComingSoon(alb) : alb.coming_soon;
+        return {
+            ...alb,
+            coming_soon: isActuallyComingSoon
+        };
+    });
 
-// Numerical Sort: 1 is first, 2 is second.
-const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => Number(a.orderId) - Number(b.orderId));
+    // Numerical Sort: 1 is first, 2 is second.
+    const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => Number(a.orderId) - Number(b.orderId));
+    
     const target = document.getElementById('content-view') || document.getElementById('contentView');
     if (!target) return;
 
-    // 1. DYNAMIC RENDERER
-const renderMobileSlide = (index) => {
-    const s = spotlights[index];
-    if (!s) return '';
+    // 2. DYNAMIC RENDERER
+    const renderMobileSlide = (index) => {
+        const s = spotlights[index];
+        if (!s) return '';
 
-    let displayImg = "";
-    let displayTitle = s.customTitle || "";
-    let tagText = "FEATURED";
-    let action = "";
+        let displayImg = "";
+        let displayTitle = s.customTitle || "";
+        let tagText = "FEATURED";
+        let action = "";
 
-    if (s.type === "Release") {
-        const alb = publicCatalogue.find(a => a.id === s.targetId);
-        if (alb) {
-            displayImg = alb.art_url;
-            displayTitle = s.customTitle || alb.name;
-            tagText = alb.coming_soon ? "COMING SOON" : "RELEASE"; // Fixed Tag
-            action = `viewAlbum('${s.targetId}')`;
-        }
-    } 
-    else if (s.type === "Artist") {
-        const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
-        // Fix: Use banner_url for the spotlight
-        displayImg = art ? (art.banner_url || art.img_url) : ""; 
-        displayTitle = s.customTitle || (art ? art.name : "Artist");
-        tagText = "ARTIST SPOTLIGHT"; // Fixed Tag
-        action = `viewArtist('${s.targetId}')`;
-    } 
-    else if (s.type === "Track") {
-        const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
-        const publicOnly = parentAlbums.filter(a => !a.coming_soon);
-        
-        // Priority: Newest Public -> Newest Overall
-        const latestAlb = (publicOnly.length > 0) 
-            ? publicOnly.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0]
-            : parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
-
-        let trackData = null;
-        if (latestAlb && window.TRACKS[latestAlb.id]) {
-            const bucket = window.TRACKS[latestAlb.id];
-            trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
-        }
-
-if (trackData && latestAlb) {
-            displayImg = trackData.art_url || latestAlb.art_url;
-            displayTitle = s.customTitle || trackData.title;
-            tagText = "TRACK HIGHLIGHT"; 
+        if (s.type === "Release") {
+            const alb = publicCatalogue.find(a => a.id === s.targetId);
+            if (alb) {
+                displayImg = alb.art_url;
+                displayTitle = s.customTitle || alb.name;
+                tagText = alb.coming_soon ? "COMING SOON" : "RELEASE";
+                action = `viewAlbum('${s.targetId}')`;
+            }
+        } 
+        else if (s.type === "Artist") {
+            const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
+            displayImg = art ? (art.banner_url || art.img_url) : ""; 
+            displayTitle = s.customTitle || (art ? art.name : "Artist");
+            tagText = "ARTIST SPOTLIGHT";
+            action = `viewArtist('${s.targetId}')`;
+        } 
+        else if (s.type === "Track") {
+            const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
+            const publicOnly = parentAlbums.filter(a => !a.coming_soon);
             
-            // FIX: Pass latestAlb.id as the third argument to playTrack
-            action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}', true, '${latestAlb.id}'); }, 500);`;
-        }
-        } else if (s.type === "Video") {
+            const latestAlb = (publicOnly.length > 0) 
+                ? publicOnly.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0]
+                : parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
+
+            let trackData = null;
+            if (latestAlb && window.TRACKS && window.TRACKS[latestAlb.id]) {
+                const bucket = window.TRACKS[latestAlb.id];
+                trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
+            }
+
+            if (trackData && latestAlb) {
+                displayImg = trackData.art_url || latestAlb.art_url;
+                displayTitle = s.customTitle || trackData.title;
+                tagText = "TRACK HIGHLIGHT"; 
+                action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}', true, '${latestAlb.id}'); }, 500);`;
+            }
+        } 
+        else if (s.type === "Video") {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = s.url ? s.url.match(regExp) : null;
             const vidId = (match && match[2].length == 11) ? match[2] : null;
@@ -873,7 +877,6 @@ if (trackData && latestAlb) {
     
     <div class="mobile-home-grid">
         ${publicCatalogue.map(alb => {
-            // Logic for the dynamic label: "TYPE • YEAR" or "TYPE • COMING SOON"
             const releaseYear = alb.full_release_date ? String(alb.full_release_date).split(' ').pop() : '';
             const type = (alb.type || 'Release').toUpperCase();
             
@@ -1356,25 +1359,17 @@ window.viewAlbum = (id, scrollToTop = true) => {
     if (scrollToTop) contentView.scrollTop = 0;
 };
 
-window.isAlbumComingSoon = function(alb) {
-    if (!alb.coming_soon) return false;
-    if (!alb.full_release_date) return true;
-
-    const rawDate = alb.full_release_date.trim();
+window.isAlbumComingSoon = (alb) => {
+    if (!alb || !alb.full_release_date) return false;
     
-    // Check if it's just a year (e.g., "2027")
-    if (/^\d{4}$/.test(rawDate)) {
-        return new Date().getFullYear() <= parseInt(rawDate);
-    } 
-    
-    // Check full date
-    const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
-    const dateObj = new Date(cleanedDate);
-    if (!isNaN(dateObj)) {
-        return new Date() < dateObj;
-    }
+    // If database explicitly says it's not coming soon, trust it
+    if (alb.coming_soon === false || alb.coming_soon === "false") return false;
 
-    return true; // Fallback to coming soon if date is unparseable
+    const releaseDate = new Date(alb.full_release_date.replace(/(\d+)(st|nd|rd|th)/, "$1"));
+    const now = new Date();
+    
+    // If now is greater than release date, it is NOT coming soon
+    return now < releaseDate;
 };
 
 window.updatePlayIcons = (playing) => {
