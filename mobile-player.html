@@ -686,12 +686,22 @@ overflow: hidden; /* This is necessary for the squircle shape */
             window.TRACKS[alb.id] = manualOrder.map(id => trackLookup[id]).filter(Boolean); 
         });
 
-        window.viewHome();
-        console.log("Loaded TRM Music Player Mobile v1.3.2")
-        if (typeof handleDeepLinking === 'function') handleDeepLinking();
+// Small delay to ensure DOM is ready for mobile rendering
+        setTimeout(() => {
+            window.viewHome();
+            console.log("Loaded TRM Music Player Mobile v1.3.2"); // Update your version!
+            
+            if (typeof handleDeepLinking === 'function') handleDeepLinking();
+            
+            // If you have a loading overlay, hide it here
+            const loader = document.getElementById('loading-screen');
+            if (loader) loader.style.display = 'none';
+        }, 100);
 
     } catch (err) { 
-        console.error("Init Error:", err); 
+        console.error("Init Error:", err);
+        // Alerting on mobile helps debug when you don't have a console open
+        // alert("Init Failed: " + err.message); 
     }
 }
         function resetScroll() { contentView.scrollTo(0, 0); }
