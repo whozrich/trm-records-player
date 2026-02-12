@@ -1414,70 +1414,46 @@ fp.addEventListener('touchend', (e) => {
     }
 });
 
-// Example logic for the seek bar container
-const seekBar = document.getElementById('fp-seek-container');
-
-seekBar.addEventListener('touchstart', (e) => {
-    window.isDraggingSeek = true;
-});
-
-seekBar.addEventListener('touchmove', (e) => {
-    const rect = seekBar.getBoundingClientRect();
-    const touchX = e.touches[0].clientX - rect.left;
-    let pct = Math.min(Math.max(touchX / rect.width, 0), 1);
+// --- v1.4.0 DRAGGING SEEK (PROTECTED) ---
+const initSeekListeners = () => {
+    const seekBar = document.getElementById('fp-seek-container');
     
-    // Update UI only (Instant feedback)
-    document.getElementById('fp-progress').style.width = (pct * 100) + '%';
-    document.getElementById('time-cur').innerText = formatTime(pct * audio.duration);
-});
+    // If the element isn't found, exit quietly instead of crashing
+    if (!seekBar) return;
 
-seekBar.addEventListener('touchend', (e) => {
-    window.isDraggingSeek = false;
-    // Now actually jump the audio
-    const pct = parseFloat(document.getElementById('fp-progress').style.width) / 100;
-    audio.currentTime = pct * audio.duration;
-});
+    seekBar.addEventListener('touchstart', (e) => {
+        window.isDraggingSeek = true;
+        // Disable transitions so the bar follows the finger instantly
+        const progress = document.getElementById('fp-progress');
+        if (progress) progress.style.transition = 'none';
+    }, { passive: true });
 
-// --- v1.4.0 SWIPE BACK LOGIC ---
-let touchStartX = 0;
-let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
-
-const contentEl = document.getElementById('contentView');
-
-contentEl.addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-contentEl.addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-    handleGesture();
-}, { passive: true });
-
-function handleGesture() {
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-
-    // 1. Ensure it's a horizontal swipe (Width > Height of movement)
-    // 2. Ensure it's a left-to-right swipe (positive deltaX)
-    // 3. Set a threshold (e.g., 120px) so accidental bumps don't trigger it
-    if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 120) {
+    seekBar.addEventListener('touchmove', (e) => {
+        const rect = seekBar.getBoundingClientRect();
+        const touchX = e.touches[0].clientX - rect.left;
+        let pct = Math.min(Math.max(touchX / rect.width, 0), 1);
         
-        // Only go back if we aren't already on the Home screen
-        if (window.currentViewId !== 'home') {
-            console.log("v1.4.0: Swipe Back Triggered");
-            
-            // Trigger your existing navigation logic
-            if (typeof viewHome === 'function') {
-                viewHome();
-                if (typeof toggleNavUI === 'function') toggleNavUI(true);
-            }
+        const progress = document.getElementById('fp-progress');
+        const timeCur = document.getElementById('time-cur');
+
+        if (progress) progress.style.width = (pct * 100) + '%';
+        if (timeCur && !isNaN(audio.duration)) {
+            timeCur.innerText = formatTime(pct * audio.duration);
         }
-    }
-}
+    }, { passive: true });
+
+    seekBar.addEventListener('touchend', (e) => {
+        window.isDraggingSeek = false;
+        const progress = document.getElementById('fp-progress');
+        
+        if (progress && !isNaN(audio.duration)) {
+            const pct = parseFloat(progress.style.width) / 100;
+            audio.currentTime = pct * audio.duration;
+            // Restore transition for smooth auto-progress
+            progress.style.transition = 'width 0.1s linear';
+        }
+    }, { passive: true });
+};
 
     // Add this inside window.playTrack
 window.updatePlayerUI = () => {
@@ -2229,10 +2205,13 @@ window.handleLikeToggle = (id) => {
 window.openPatchNotes = function() {
     const versionHistory = [
         {
-            version: "v1.0.3.2",
+            version: "v1.0.3.3",
             date: "February 11, 2026",
             notes: [
-                "⬆️ Deployed a patch to fix the Spotlight!",
+                "🌑 Woah, sorry for the blackout! A small error with a new feature we wanted to ship caused the error... sorry...",
+                "▶️ In other news, we've finally fixed the function to play releases.",
+                "🔗 Fixed social links, now they represent the actual brands",
+                "🏷️ Don't worry, there's more coming...",
             ],
             actionButton: {
                 text: "VISIT THE BRAND SHOP",
