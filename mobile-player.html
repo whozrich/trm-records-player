@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TRM Records</title>
+    <title>TRM MUSIC PLAYER - MOBILE</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
 :root {
     --bg-black: #000000;
@@ -32,6 +33,8 @@ body, html {
     padding-bottom: 220px;
     -webkit-overflow-scrolling: touch; 
     scroll-behavior: smooth;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
 }
 
 #content-view::-webkit-scrollbar {
@@ -684,6 +687,7 @@ overflow: hidden; /* This is necessary for the squircle shape */
         });
 
         window.viewHome();
+        console.log("Loaded TRM Music Player Mobile v1.3.2")
         if (typeof handleDeepLinking === 'function') handleDeepLinking();
 
     } catch (err) { 
@@ -748,11 +752,13 @@ const renderMobileSlide = (index) => {
             trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
         }
 
-        if (trackData && latestAlb) {
+if (trackData && latestAlb) {
             displayImg = trackData.art_url || latestAlb.art_url;
             displayTitle = s.customTitle || trackData.title;
-            tagText = "TRACK HIGHLIGHT"; // Fixed Tag
-            action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
+            tagText = "TRACK HIGHLIGHT"; 
+            
+            // FIX: Pass latestAlb.id as the third argument to playTrack
+            action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}', true, '${latestAlb.id}'); }, 500);`;
         }
         } else if (s.type === "Video") {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -935,30 +941,30 @@ window.viewArtist = (id) => {
     const artistAlbs = window.ALBUMS.filter(a => a.artist_id == id && !a.hidden);
 
     // --- 1. DESKTOP FEATURE: SOCIALS & VIDEO LOGIC ---
-    const socialConfig = [
-        { name: 'YouTube',   match: 'youtube.com',   icon: 'play_circle', color: '#FF0000' },
-        { name: 'Instagram', match: 'instagram.com', icon: 'camera_alt',  color: '#E1306C' },
-        { name: 'Twitter',   match: 'twitter.com',   icon: 'x',           color: '#ffffff' },
-        { name: 'Twitter',   match: 'x.com',         icon: 'x',           color: '#ffffff' },
-        { name: 'TikTok',    match: 'tiktok.com',    icon: 'music_note',  color: '#00f2ea' }
-    ];
+const socialConfig = [
+    { name: 'YouTube',   match: 'youtube.com',   icon: 'fab fa-youtube',   color: '#FF0000' },
+    { name: 'Instagram', match: 'instagram.com', icon: 'fab fa-instagram', color: '#E1306C' },
+    { name: 'Twitter',   match: 'twitter.com',   icon: 'fab fa-x-twitter', color: '#ffffff' },
+    { name: 'Twitter',   match: 'x.com',         icon: 'fab fa-x-twitter', color: '#ffffff' },
+    { name: 'TikTok',    match: 'tiktok.com',    icon: 'fab fa-tiktok',    color: '#ffffff' } // TikTok usually looks best in white on dark themes
+];
 
-    const renderSocials = () => {
-        if (!Array.isArray(artist.socials)) return '';
-        let count = 0;
-        return artist.socials.map(url => {
-            if (count >= 4) return '';
-            const platform = socialConfig.find(c => url.toLowerCase().includes(c.match));
-            if (platform) {
-                count++;
-                return `
-                    <a href="${url}" target="_blank" style="text-decoration:none; color:${platform.color}; background:rgba(255,255,255,0.08); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
-                        <span class="material-icons" style="font-size:20px;">${platform.icon}</span>
-                    </a>`;
-            }
-            return '';
-        }).join('');
-    };
+const renderSocials = () => {
+    if (!Array.isArray(artist.socials)) return '';
+    let count = 0;
+    return artist.socials.map(url => {
+        if (count >= 4) return '';
+        const platform = socialConfig.find(c => url.toLowerCase().includes(c.match));
+        if (platform) {
+            count++;
+            return `
+                <a href="${url}" target="_blank" style="text-decoration:none; color:${platform.color}; background:rgba(255,255,255,0.08); width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+                    <i class="${platform.icon}" style="font-size:20px;"></i>
+                </a>`;
+        }
+        return '';
+    }).join('');
+};
 
     const getEmbedUrl = (url) => {
         if(!url) return null;
@@ -1161,9 +1167,12 @@ window.viewAlbum = (id, scrollToTop = true) => {
                     </div>
                 </div>
 
-                <button onclick="playAlbum('${alb.id}')" style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                    <span class="material-icons" style="font-size:44px; color:black;">${playIcon}</span>
-                </button>
+<button onclick="window.playAlbum('${alb.id}')" 
+        style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor:pointer;">
+    <span class="material-icons" id="main-album-icon" style="font-size:44px; color:black;">
+        ${playIcon}
+    </span>
+</button>
 
                 ${finalDateDisplay ? `
                 <div style="font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; text-transform: uppercase;">
@@ -1218,45 +1227,117 @@ window.viewAlbum = (id, scrollToTop = true) => {
     if (scrollToTop) contentView.scrollTop = 0;
 };
 
+window.updatePlayIcons = (playing) => {
+    // 1. Mini & Full Player buttons
+    ['m-play-btn', 'fp-play-btn'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = playing ? 'pause' : 'play_arrow';
+    });
+
+    // 2. The Big Album Circle (using your specific viewAlbum icon ID)
+    const mainIcon = document.getElementById('main-album-icon');
+    if (mainIcon) {
+        mainIcon.innerText = playing ? 'pause' : 'play_arrow';
+    }
+
+    // 3. Force Mini-Player Visibility immediately
+    const miniPlayer = document.getElementById('mini-player');
+    if (miniPlayer && playing) {
+        miniPlayer.style.display = 'flex';
+        miniPlayer.classList.remove('paused');
+        miniPlayer.classList.add('mini-active');
+    }
+};
+
 window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
     const allTracks = Object.values(window.TRACKS).flat();
     const track = allTracks.find(t => t.id === trackId);
     if (!track) return;
 
-    // 1. SILENT SECURITY CHECK
+    // --- 1. GLOBAL UI HELPERS (Defined here so they are ready) ---
+    window.updatePlayIcons = (playing) => {
+        // Mini & Full Player
+        ['m-play-btn', 'fp-play-btn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = playing ? 'pause' : 'play_arrow';
+        });
+
+        // The Big Album Circle Icon
+        const mainIcon = document.getElementById('main-album-icon');
+        if (mainIcon) mainIcon.innerText = playing ? 'pause' : 'play_arrow';
+
+        // Track Row Highlighting
+        const trackRows = document.querySelectorAll('.track-row, .mobile-track-row');
+        trackRows.forEach(row => {
+            const rowTrackId = row.getAttribute('data-id') || row.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+            if (rowTrackId === window.currentTrackId) {
+                row.classList.add('active-track');
+                const icon = row.querySelector('.track-play-icon, .m-track-icon');
+                if (icon) icon.innerText = playing ? 'pause' : 'play_arrow';
+            } else {
+                row.classList.remove('active-track');
+                const icon = row.querySelector('.track-play-icon, .m-track-icon');
+                if (icon) icon.innerText = 'play_arrow';
+            }
+        });
+    };
+
+    // --- 2. SECURITY & IDENTITY ---
     const parentIds = track.album_id.split(',').map(s => s.trim());
     const isReleasedSomewhere = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
-    
     if (!isReleasedSomewhere) {
         if (window.showTRMToast) window.showTRMToast("Coming Soon", "#ffcc00");
         return; 
     }
 
-    // 2. RESOLVE IDENTITY
     const albId = explicitAlbumId || window.currentAlbumId || parentIds[0];
     const targetAlbum = window.ALBUMS.find(a => a.id == albId);
     if (!targetAlbum) return;
-
     const artistName = window.ARTISTS[targetAlbum.artist_id]?.name || "TRM";
 
-    // 3. GLOBAL STATE SYNC
+    // --- 3. STATE SYNC ---
     window.currentTrackId = trackId;
     window.currentAlbumId = albId;
     window.currentArtistId = targetAlbum.artist_id;
     window.isPlaying = autoPlay;
 
-    // 4. AUDIO SOURCE
+    // --- 4. AUDIO SOURCE ---
     if (audio.src !== track.url) {
         audio.src = track.url;
         audio.load();
     }
 
-    // 5. PLAYER UI UPDATES
+    // --- 5. EXECUTION & MEDIA SESSION ---
+    if (autoPlay) {
+        // Resume context for mobile
+        if (window.AudioContext || window.webkitAudioContext) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            if (ctx.state === 'suspended') ctx.resume();
+        }
+
+        audio.play().then(() => {
+            window.updatePlayIcons(true);
+            if (window.updatePlayerUI) window.updatePlayerUI(); // START PROGRESS BAR
+            
+            // Sync Lockscreen Position
+            if ('mediaSession' in navigator && !isNaN(audio.duration)) {
+                navigator.mediaSession.setPositionState({
+                    duration: audio.duration,
+                    playbackRate: audio.playbackRate,
+                    position: audio.currentTime
+                });
+            }
+        }).catch(e => {
+            console.error("Playback Blocked:", e);
+            window.updatePlayIcons(false);
+        });
+    }
+
+    // --- 6. UI CONTENT UPDATES ---
     const uiUpdates = {
         'm-title': track.title, 'fp-title': track.title,
         'm-artist': artistName, 'fp-artist': artistName
     };
-
     for (const [id, val] of Object.entries(uiUpdates)) {
         const el = document.getElementById(id);
         if (el) el.innerText = val;
@@ -1267,22 +1348,6 @@ window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
         if (el) el.src = targetAlbum.art_url;
     });
 
-    ['m-play-btn', 'fp-play-btn'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = autoPlay ? 'pause' : 'play_arrow';
-    });
-
-    // Update Full Player Heart Icon state immediately on play
-    const isLiked = window.STORAGE ? window.STORAGE.getLikes().includes(trackId) : false;
-    const fpHeart = document.getElementById('fp-heart-icon');
-    if (fpHeart) {
-        fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
-        fpHeart.style.color = isLiked ? 'var(--accent-green)' : 'white';
-    }
-
-    const bgVisual = document.getElementById('fp-bg-visual');
-    if (bgVisual) bgVisual.style.backgroundImage = `url('${targetAlbum.art_url}')`;
-
     const miniPlayer = document.getElementById('mini-player');
     if (miniPlayer) {
         miniPlayer.style.display = 'flex';
@@ -1290,62 +1355,178 @@ window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
         miniPlayer.classList.add('mini-active');
     }
 
-    // 6. MEDIA SESSION
+    // --- 7. MEDIA SESSION HANDLERS (Seeking Enable) ---
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: track.title, artist: artistName, album: targetAlbum.name,
             artwork: [{ src: targetAlbum.art_url, sizes: '512x512', type: 'image/png' }]
         });
+
+        // ENABLE SEEKING ON LOCKSCREEN
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+            audio.currentTime = details.seekTime;
+        });
     }
 
-    // 7. PERSISTENCE (Hardened for iOS)
-const saveToRecent = (id) => {
-        try {
-            // Priority 1: Use the official helper if available
-            if (window.STORAGE && typeof window.STORAGE.addRecent === 'function') {
-                window.STORAGE.addRecent(id);
-            } else {
-                // Priority 2: Direct Manual Write (Safety Net)
-                let recent = JSON.parse(localStorage.getItem('trm_recent') || '[]');
-                // Remove existing instance to move it to the top
-                recent = recent.filter(x => x !== id);
-                recent.unshift(id);
-                // Keep only the last 20 tracks
-                localStorage.setItem('trm_recent', JSON.stringify(recent.slice(0, 20)));
+    // --- 8. PERSISTENCE ---
+    const recent = JSON.parse(localStorage.getItem('trm_recent') || '[]');
+    const newRecent = [trackId, ...recent.filter(x => x !== trackId)].slice(0, 20);
+    localStorage.setItem('trm_recent', JSON.stringify(newRecent));
+    localStorage.setItem('trm_last_track', trackId);
+
+    window.updatePlayIcons(autoPlay);
+    if (window.currentViewId === 'library' && window.lastActiveTab === 'recent') viewLibrary('recent');
+};
+
+let startY = 0;
+const fp = document.getElementById('full-player');
+
+fp.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    fp.style.transition = 'none'; // Disable transitions during drag
+}, {passive: true});
+
+fp.addEventListener('touchmove', (e) => {
+    let deltaY = e.touches[0].clientY - startY;
+    if (deltaY > 0) {
+        fp.style.transform = `translateY(${deltaY}px)`;
+    }
+}, {passive: true});
+
+fp.addEventListener('touchend', (e) => {
+    let deltaY = e.touches[0].clientY - startY;
+    fp.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    
+    if (deltaY > 150) {
+        closeFullPlayer(); // Your existing function to hide the UI
+    } else {
+        fp.style.transform = 'translateY(0)'; // Snap back
+    }
+});
+
+// Example logic for the seek bar container
+const seekBar = document.getElementById('fp-seek-container');
+
+seekBar.addEventListener('touchstart', (e) => {
+    window.isDraggingSeek = true;
+});
+
+seekBar.addEventListener('touchmove', (e) => {
+    const rect = seekBar.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    let pct = Math.min(Math.max(touchX / rect.width, 0), 1);
+    
+    // Update UI only (Instant feedback)
+    document.getElementById('fp-progress').style.width = (pct * 100) + '%';
+    document.getElementById('time-cur').innerText = formatTime(pct * audio.duration);
+});
+
+seekBar.addEventListener('touchend', (e) => {
+    window.isDraggingSeek = false;
+    // Now actually jump the audio
+    const pct = parseFloat(document.getElementById('fp-progress').style.width) / 100;
+    audio.currentTime = pct * audio.duration;
+});
+
+// --- v1.4.0 SWIPE BACK LOGIC ---
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+const contentEl = document.getElementById('contentView');
+
+contentEl.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+contentEl.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleGesture();
+}, { passive: true });
+
+function handleGesture() {
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    // 1. Ensure it's a horizontal swipe (Width > Height of movement)
+    // 2. Ensure it's a left-to-right swipe (positive deltaX)
+    // 3. Set a threshold (e.g., 120px) so accidental bumps don't trigger it
+    if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 120) {
+        
+        // Only go back if we aren't already on the Home screen
+        if (window.currentViewId !== 'home') {
+            console.log("v1.4.0: Swipe Back Triggered");
+            
+            // Trigger your existing navigation logic
+            if (typeof viewHome === 'function') {
+                viewHome();
+                if (typeof toggleNavUI === 'function') toggleNavUI(true);
             }
-        } catch (e) {
-            console.error("Tracking failed:", e);
+        }
+    }
+}
+
+    // Add this inside window.playTrack
+window.updatePlayerUI = () => {
+    if (!window.audio) return;
+
+    // Clear any existing loops to prevent "double speed" progress bars
+    if (window.playerAnimationId) {
+        cancelAnimationFrame(window.playerAnimationId);
+    }
+
+    const sync = () => {
+        const curr = window.audio.currentTime;
+        const dur = window.audio.duration;
+
+        // 1. Only update if we have valid numbers
+        if (!isNaN(dur) && dur > 0) {
+            const percent = (curr / dur) * 100;
+            
+            // Update Progress Bars (Mini and Full)
+            const miniBar = document.getElementById('mini-progress');
+            const fullBar = document.getElementById('fp-progress');
+            
+            if (miniBar) miniBar.style.width = `${percent}%`;
+            if (fullBar) fullBar.style.width = `${percent}%`;
+
+            // Update Time Strings
+            const curTimeEl = document.getElementById('time-cur');
+            const durTimeEl = document.getElementById('time-dur');
+            
+            if (curTimeEl) curTimeEl.innerText = formatTime(curr);
+            if (durTimeEl) durTimeEl.innerText = formatTime(dur);
+
+            // 2. LOCKSCREEN SYNC: Only sync Media Session once per second
+            if ('mediaSession' in navigator && Math.floor(curr) !== window.lastMediaSync) {
+                navigator.mediaSession.setPositionState({
+                    duration: dur,
+                    playbackRate: window.audio.playbackRate,
+                    position: curr
+                });
+                window.lastMediaSync = Math.floor(curr);
+            }
+        }
+
+        // 3. Keep the loop going if playing
+        if (!window.audio.paused) {
+            window.playerAnimationId = requestAnimationFrame(sync);
         }
     };
 
-    saveToRecent(trackId);
-    localStorage.setItem('trm_last_track', trackId);
-
-    // 8. EXECUTION
-    if (autoPlay) {
-        audio.play().catch(e => console.log("Playback interaction required"));
-    }
-
-    // 9. THE UI FIX: HIGHLIGHTS
-    if (window.currentViewId === 'album') {
-        const trackRows = document.querySelectorAll('.track-row');
-        trackRows.forEach(row => {
-            const rowTrackId = row.getAttribute('data-id') || row.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-            if (rowTrackId === trackId) {
-                row.classList.add('active-track');
-                const icon = row.querySelector('.track-play-icon');
-                if (icon) icon.innerText = autoPlay ? 'pause' : 'play_arrow';
-            } else {
-                row.classList.remove('active-track');
-                const icon = row.querySelector('.track-play-icon');
-                if (icon) icon.innerText = 'play_arrow';
-            }
-        });
-    }
-    
-    // Auto-refresh Library if playing from there
-    if (window.currentViewId === 'library' && window.lastActiveTab === 'recent') viewLibrary('recent');
+    window.playerAnimationId = requestAnimationFrame(sync);
 };
+
+// Ensure your formatTime is solid
+function formatTime(secs) {
+    if (isNaN(secs)) return "0:00";
+    const mins = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+}
         window.goToCurrentArtist = () => {
             if (currentArtistId) {
                 closeFullPlayer();
@@ -1561,6 +1742,32 @@ function copyToClipboardFallback(text) {
         showTRMToast("Failed to copy link", "#ff4444");
     });
 }
+
+window.playAlbum = function(albumId) {
+    // Toggle logic: if already playing this album, just pause/unpause
+    if (window.currentAlbumId === albumId && window.currentTrackId) {
+        window.togglePlay();
+        return;
+    }
+
+    const album = window.ALBUMS.find(a => a.id === albumId);
+    const albumTracks = window.TRACKS[albumId] || [];
+
+    if (albumTracks.length > 0) {
+        // Find first playable (not coming soon)
+        const firstPlayable = albumTracks.find(t => {
+            const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+            const isElsewhere = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
+            return isElsewhere || (album && !album.coming_soon);
+        });
+
+        if (firstPlayable) {
+            // Force UI update BEFORE the track starts to prevent lag
+            window.updatePlayIcons(true);
+            window.playTrack(firstPlayable.id, true, albumId);
+        }
+    }
+};
 
 // Lightweight TRM-styled notification
 function showTRMToast(msg, color = "var(--accent-green)") {
@@ -2011,6 +2218,17 @@ window.handleLikeToggle = (id) => {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+        {
+            version: "v1.0.3.2",
+            date: "February 11, 2026",
+            notes: [
+                "⬆️ Deployed a patch to fix the Spotlight!",
+            ],
+            actionButton: {
+                text: "VISIT THE BRAND SHOP",
+                url: "https://trm-brand-shop.fourthwall.com"
+            }
+        },
                 {
             version: "v1.0.3.2",
             date: "February 11, 2026",
