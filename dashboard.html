@@ -1519,24 +1519,40 @@ window.updatePlayerUI = function() {
 
 // Centralized logic to check if an album should still be "Coming Soon"
 window.isAlbumComingSoon = function(alb) {
-    if (!alb.coming_soon) return false;
-    if (!alb.full_release_date) return true;
+    if (!alb) return false;
 
-    const rawDate = alb.full_release_date.trim();
-    
-    // Check if it's just a year (e.g., "2027")
-    if (/^\d{4}$/.test(rawDate)) {
-        return new Date().getFullYear() <= parseInt(rawDate);
-    } 
-    
-    // Check full date
-    const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
-    const dateObj = new Date(cleanedDate);
-    if (!isNaN(dateObj)) {
-        return new Date() < dateObj;
+    // 1. MANUAL OVERRIDE (Boolean Power)
+    // If you manually set it to false in the DB, it's live immediately.
+    if (alb.coming_soon === false || alb.coming_soon === "false") return false;
+
+    // 2. FALLBACK IF NO DATE
+    if (!alb.full_release_date) return alb.coming_soon;
+
+    try {
+        const rawDate = String(alb.full_release_date).trim();
+        const nowET = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+        // 3. CHECK IF IT'S JUST A YEAR (e.g., "2027")
+        if (/^\d{4}$/.test(rawDate)) {
+            const releaseYear = parseInt(rawDate);
+            // Released once the ET year is greater than or equal to the target year
+            return nowET.getFullYear() < releaseYear;
+        }
+
+        // 4. FULL DATE COMPARISON
+        const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
+        const dateObj = new Date(cleanedDate);
+
+        if (!isNaN(dateObj)) {
+            // If now in ET is before the release date, it is coming soon
+            return nowET < dateObj;
+        }
+
+        return alb.coming_soon; // Fallback to DB boolean if parsing fails
+    } catch (e) {
+        console.error("Date check error:", e);
+        return alb.coming_soon;
     }
-
-    return true; // Fallback to coming soon if date is unparseable
 };
 
 window.viewAlbum = function(id, scrollToTop = true) {
