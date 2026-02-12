@@ -611,35 +611,39 @@ flex: 1;
 
     <div class="main-viewport">
         
-        <div class="sidebar-container">
-            <input type="text" id="search-input" placeholder="Search" oninput="performSearch(this.value)">
-            <div id="sidebar-resizer"></div>
-            <div class="sidebar-nav">
-                <div class="sidebar-item" onclick="viewHome()">
-                    <span class="material-icons">home</span><span>Home</span>
-                </div>
-                <div class="sidebar-item" onclick="viewRecents()">
-                    <span class="material-icons">history</span><span>Recents</span>
-                </div>
-                <div class="sidebar-item" onclick="viewLikedSongs()">
-                    <span class="material-icons" style="color:var(--accent-green);">favorite</span><span>Liked Songs</span>
-                </div>
-
-                <div class="sidebar-item" onclick="openPatchNotes()" style="margin-top: 5px; opacity: 0.6; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
-                    <span class="material-icons" style="font-size: 18px; color:#00ff88">new_releases</span>
-                    <span style="font-size: 11px; letter-spacing: 1px;">Patch Notes</span>
-                    <span style="margin-left: auto; font-size: 9px; background: #222; padding: 2px 6px; border-radius: 4px; color: var(--accent-green);">v1.0.4</span>
-                </div>
-                <div class="sidebar-item" onclick="viewArtistPortal()" style="margin-top: 0px; opacity: 0.6; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
-                    <span class="material-icons" style="font-size: 18px; color:#00ff88">person_add</span>
-                    <span style="font-size: 11px; letter-spacing: 1px;">Become An Artist</span>
-                    <span style="margin-left: auto; font-size: 9px; background: #222; padding: 2px 6px; border-radius: 4px; color: var(--accent-green);">New!</span>
-                </div>
-            </div>
-
-            <div style="padding: 0 20px; font-size: 11px; font-weight: 900; color: #444; letter-spacing: 1px; margin-top: 10px; margin-bottom: 10px;">CATALOGUE</div>
-            <div id="sidebar-releases" style="flex: 1; overflow-y: auto;"></div>
+<div class="sidebar-container">
+    <input type="text" id="search-input" placeholder="Search" oninput="performSearch(this.value)">
+    <div id="sidebar-resizer"></div>
+    <div class="sidebar-nav">
+        <div class="sidebar-item" onclick="viewHome()">
+            <span class="material-icons">home</span><span>Home</span>
         </div>
+
+        <div class="sidebar-item" onclick="openPatchNotes()" style="margin-top: 5px; opacity: 0.6; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+            <span class="material-icons" style="font-size: 18px; color:#00ff88">new_releases</span>
+            <span style="font-size: 11px; letter-spacing: 1px;">Patch Notes</span>
+            <span style="margin-left: auto; font-size: 9px; background: #222; padding: 2px 6px; border-radius: 4px; color: var(--accent-green);">v1.0.4</span>
+        </div>
+
+        <div class="sidebar-item" onclick="viewArtistPortal()" style="margin-top: 0px; opacity: 0.6; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+            <span class="material-icons" style="font-size: 18px; color:#00ff88">person_add</span>
+            <span style="font-size: 11px; letter-spacing: 1px;">Become An Artist</span>
+            <span style="margin-left: auto; font-size: 9px; background: #222; padding: 2px 6px; border-radius: 4px; color: var(--accent-green);">New!</span>
+        </div>
+    </div>
+
+    <div style="padding: 0 20px; font-size: 10px; font-weight: 900; color: #222; letter-spacing: 2px; margin-top: 25px; margin-bottom: 10px; text-transform: uppercase;">
+        Your Library
+    </div>
+    
+    <div id="sidebar-library-placeholder" style="padding: 0 20px; opacity: 0.3;">
+        <p style="font-size: 11px; font-weight: 700; line-height: 1.4; color: #444;">
+            Accounts coming in v1.0.5. <br>Sign in to save your favorite releases.
+        </p>
+    </div>
+    
+    <div id="sidebar-releases" style="display: none;"></div>
+</div>
 
         <div id="content-view">
             <div style="padding: 40px; font-weight: 900; letter-spacing: 1px;">INITIALIZING TRM MUSIC PLAYER...</div>
@@ -778,50 +782,96 @@ audio.ontimeupdate = () => {
 };
 
 window.performSearch = function(query) {
-    if (!query) { window.viewHome(); return; }
-    const q = query.toLowerCase();
+    const content = document.getElementById('content-view');
+    if (!content) return;
     
-    // Filter Data
-const albumResults = window.ALBUMS.filter(a => a.name.toLowerCase().includes(q) && !a.hidden);
-    const artistResults = Object.values(window.ARTISTS).filter(art => art.name.toLowerCase().includes(q));
-    const allTracks = Object.values(window.TRACKS).flat();
-    const trackResults = Array.from(new Map(allTracks.map(t => [t.id, t])).values())
-                              .filter(t => t.title.toLowerCase().includes(q));
+    if (!query || query.trim() === "") { 
+        window.viewHome(); 
+        return; 
+    }
+    
+    const q = query.toLowerCase().trim();
+    const albums = window.ALBUMS || [];
+    const artists = Object.values(window.ARTISTS || {});
+    const tracks = Object.values(window.TRACKS || {}).flat();
 
-    document.getElementById('content-view').innerHTML = `
+    // --- BULLETPROOF GENRE FILTER ---
+    // Uses includes() to catch "Hip-Hop / Alternative" when searching "Hip-Hop"
+    const genreResults = albums.filter(a => {
+        if (!a.genre || a.hidden) return false;
+        const genreStr = a.genre.toLowerCase();
+        return genreStr.includes(q) || genreStr.replace(/-/g, ' ').includes(q);
+    });
+
+    const albumResults = albums.filter(a => !a.hidden && a.name && a.name.toLowerCase().includes(q));
+    const artistResults = artists.filter(art => art.name && art.name.toLowerCase().includes(q));
+    const trackResults = tracks.filter(t => t.title && t.title.toLowerCase().includes(q));
+
+    content.innerHTML = `
     <div class="view-animate" style="padding:50px;">
-        <h1 style="font-size:32px; font-weight:900; margin-bottom:40px;">Results for "${query}"</h1>
+        <h1 style="font-size:32px; font-weight:900; margin-bottom:40px; letter-spacing:-1px;">Results for "${query}"</h1>
         
-        ${artistResults.length ? `
-            <section style="margin-bottom:40px;">
-                <h3 style="color:#666; font-size:12px; letter-spacing:1px; margin-bottom:15px;">ARTISTS</h3>
-                ${artistResults.map(art => `
-                    <div onclick="viewArtist('${art.id}')" style="display:flex; align-items:center; gap:15px; cursor:pointer; padding:10px; border-radius:8px;" class="track-row">
-                        <div style="width:50px; height:50px; border-radius:50%; background:#222; display:flex; align-items:center; justify-content:center; font-weight:900;">${art.name[0]}</div>
-                        <div style="font-weight:700;">${art.name}</div>
-                    </div>
-                `).join('')}
-            </section>
-        ` : ''}
-
-        ${albumResults.length ? `
-            <section style="margin-bottom:40px;">
-                <h3 style="color:#666; font-size:12px; letter-spacing:1px; margin-bottom:15px;">ALBUMS</h3>
-                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:20px;">
-                    ${albumResults.map(alb => `
-                        <div onclick="viewAlbum('${alb.id}')" class="glow-card" style="padding:15px; background:#111; border-radius:10px; cursor:pointer;">
-                            <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:5px; margin-bottom:10px;">
-                            <div style="font-weight:700;">${alb.name}</div>
+        ${genreResults.length ? `
+            <section style="margin-bottom:50px;">
+                <h3 style="color:var(--accent-green); font-size:11px; letter-spacing:2px; margin-bottom:20px; font-weight:900; text-transform:uppercase;">Genre: ${query}</h3>
+                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:25px;">
+                    ${genreResults.map(alb => `
+                        <div onclick="viewAlbum('${alb.id}')" class="glow-card" style="padding:15px; background:#0f0f0f; border-radius:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.05);">
+                            <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px; ${window.isAlbumComingSoon(alb) ? 'filter:grayscale(1); opacity:0.5;' : ''}">
+                            <div style="font-weight:700; color:white; font-size:15px;">${alb.name}</div>
+                            <div style="font-size:11px; color:#666; margin-top:4px; font-weight:600;">${alb.genre}</div>
                         </div>
                     `).join('')}
                 </div>
             </section>
         ` : ''}
 
+        ${artistResults.length ? `
+            <section style="margin-bottom:40px;">
+                <h3 style="color:#444; font-size:11px; letter-spacing:1.5px; margin-bottom:15px; font-weight:800;">ARTISTS</h3>
+                ${artistResults.map(art => `
+                    <div onclick="viewArtist('${art.id}')" style="display:flex; align-items:center; gap:15px; cursor:pointer; padding:12px; border-radius:10px;" class="track-row">
+                        <div style="width:45px; height:45px; border-radius:50%; background:#1a1a1a; display:flex; align-items:center; justify-content:center; font-weight:900; color:var(--accent-green); border:1px solid rgba(255,255,255,0.1);">${art.name[0]}</div>
+                        <div style="font-weight:700; font-size:16px; color:white;">${art.name}</div>
+                    </div>
+                `).join('')}
+            </section>
+        ` : ''}
+
         <section>
-            <h3 style="color:#666; font-size:12px; letter-spacing:1px; margin-bottom:15px;">SONGS</h3>
-            ${trackResults.map((t, i) => renderTrackRow(t, i)).join('')}
+            <h3 style="color:#444; font-size:11px; letter-spacing:1.5px; margin-bottom:15px; font-weight:800;">SONGS</h3>
+            <div style="max-width:800px;">
+                ${trackResults.length ? trackResults.map((t, i) => renderTrackRow(t, i)).join('') : '<p style="color:#333; font-weight:600;">No matching songs found.</p>'}
+            </div>
         </section>
+    </div>`;
+};
+
+window.renderTrackRow = function(t, i) {
+    if (!t) return '';
+
+    // Safety check for album_id to prevent split() errors
+    const parentAlbumIds = t.album_id ? String(t.album_id).split(',').map(s => s.trim()) : [];
+    
+    // Check if playable (at least one parent album is NOT coming_soon)
+    const isPlayable = parentAlbumIds.some(aid => {
+        const alb = (window.ALBUMS || []).find(a => a.id === aid);
+        return alb && !window.isAlbumComingSoon(alb);
+    });
+
+    // Match your screenshot's "BONUS TRACK" styling
+    const isBonus = t.title && t.title.toLowerCase().includes('bonus');
+
+    return `
+    <div class="track-row ${isPlayable ? '' : 'disabled'}" 
+         style="display:flex; align-items:center; padding:12px; border-radius:8px; margin-bottom:4px; transition: 0.2s; ${isPlayable ? 'cursor:pointer;' : 'opacity:0.3; pointer-events:none;'}"
+         onclick="if(window.playTrack) window.playTrack('${t.id}')">
+        <div style="width:35px; color:#444; font-weight:800; font-size:13px;">${String(i + 1).padStart(2, '0')}</div>
+        <div style="flex:1; font-weight:700; color:white; display:flex; align-items:center; gap:12px;">
+            ${t.title}
+            ${isBonus ? `<span style="background:rgba(0,255,136,0.05); color:#00ff88; font-size:9px; padding:3px 8px; border-radius:4px; border:1px solid rgba(0,255,136,0.2); font-weight:900; letter-spacing:0.5px;">BONUS TRACK</span>` : ''}
+        </div>
+        <div style="color:#444; font-family:monospace; font-size:12px;">${t.duration || '??:??'}</div>
     </div>`;
 };
 
@@ -1101,88 +1151,6 @@ const socialConfig = [
     </div>`;
 };
 
-window.updateLikeButtonUI = function(trackId) {
-    const likeBtn = document.querySelector('.player-controls .like-btn i');
-    if (!likeBtn) return;
-
-    // Check if the user has liked this track
-    // If you don't have a global getLikes function yet, we default to false
-    const isLiked = (typeof window.getLikes === 'function') ? window.getLikes().includes(trackId) : false;
-
-    if (isLiked) {
-        likeBtn.classList.remove('fa-regular');
-        likeBtn.classList.add('fa-solid');
-        likeBtn.style.color = '#1db954';
-    } else {
-        likeBtn.classList.remove('fa-solid');
-        likeBtn.classList.add('fa-regular');
-        likeBtn.style.color = '#ffffff';
-    }
-};
-
-window.handleLikeClick = function() {
-if (!window.currentTrackId) return;
-    if (typeof window.toggleLike === 'function') {
-        window.toggleLike(window.currentTrackId);
-    }
-    window.updateLikeButtonUI(window.currentTrackId);
-    
-    // Refresh view if on Liked Songs page
-    const title = document.querySelector('#content-view h1');
-    if (title && title.innerText === 'Liked Songs') window.viewLikedSongs();
-};
-
-window.viewLikedSongs = function() {
-    // Call getLikes() directly
-    const likedIds = (typeof window.getLikes === 'function') ? window.getLikes() : [];
-    const allTracks = Object.values(window.TRACKS).flat();
-    // Unique tracks only (since tracks can belong to multiple albums)
-    const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
-    const likedTracks = uniqueTracks.filter(t => likedIds.includes(t.id));
-
-    document.getElementById('content-view').innerHTML = `
-    <div class="view-animate" style="padding:50px;">
-        <h1 style="font-size:48px; margin-bottom:30px; font-weight:900;">Liked Songs</h1>
-        <div style="margin-top:20px;">
-            ${likedTracks.length ? likedTracks.map((t, i) => renderTrackRow(t, i)).join('') : '<p style="color:#666;">No liked songs yet.</p>'}
-        </div>
-    </div>`;
-};
-
-function renderTrackRow(t, i) {
-    const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
-    const isPlayable = parentAlbumIds.some(aid => {
-        const alb = window.ALBUMS.find(a => a.id === aid);
-        return alb && !alb.coming_soon;
-    });
-
-    return `
-    <div class="track-row ${isPlayable ? '' : 'disabled'}" 
-         style="display:flex; align-items:center; padding:10px; border-radius:4px; ${isPlayable ? '' : 'opacity:0.3; pointer-events:none;'}"
-         onclick="playTrack('${t.id}')">
-        <div style="width:30px; color:#666;">${i + 1}</div>
-        <div style="flex:1; font-weight:700;">${t.title}</div>
-        <div style="color:#666;">${t.duration || '0:00'}</div>
-    </div>`;
-}
-
-window.viewRecents = function() {
-    const recentIds = (typeof window.getRecents === 'function') ? window.getRecents() : [];
-    const allTracks = Object.values(window.TRACKS).flat();
-    const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
-    
-    // Maintain the order of the recents array
-    const recentTracks = recentIds.map(id => uniqueTracks.find(t => t.id === id)).filter(Boolean);
-
-    document.getElementById('content-view').innerHTML = `
-    <div class="view-animate" style="padding:50px;">
-        <h1 style="font-size:48px; margin-bottom:30px; font-weight:900;">Recently Played</h1>
-        <div style="margin-top:20px;">
-            ${recentTracks.length ? recentTracks.map((t, i) => renderTrackRow(t, i)).join('') : '<p style="color:#666;">Your history is empty.</p>'}
-        </div>
-    </div>`;
-};
-
 // --- 3. VOLUME & NAVIGATION ---
 
 window.updateVolume = (val) => {
@@ -1228,148 +1196,111 @@ window.viewHome = function() {
         return days > 0 ? days : 0;
     };
 
-// 2. DATA PREP
-const publicCatalogue = (window.ALBUMS || []).filter(alb => !alb.hidden).map(alb => ({
-        ...alb,
-        // Override coming_soon based on date
-        coming_soon: window.isAlbumComingSoon(alb)
-    }));
+    // 2. DATA PREP
+    const publicCatalogue = (window.ALBUMS || [])
+        .filter(alb => !alb.hidden)
+        .map(alb => ({
+            ...alb,
+            coming_soon: window.isAlbumComingSoon(alb)
+        }))
+        // Sort by newest release date first
+        .sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date));
 
-// SORT: Now using orderId (the Primary Key from Supabase)
-const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => {
-    return Number(a.orderId) - Number(b.orderId);
-});
+    // Get only the first 4 for the Home Page
+    const recentReleases = publicCatalogue.slice(0, 6);
 
-console.log("Spotlight Order sequence (Numerical):", spotlights.map(s => s.orderId));
+    const spotlights = (window.SPOTLIGHTS || []).sort((a, b) => Number(a.orderId) - Number(b.orderId));
 
     // 3. RENDERER (Dynamic Tags & Pill Indicators)
-const renderSlide = (index) => {
-    const s = spotlights[index];
-    if (!s) return '';
+    const renderSlide = (index) => {
+        const s = spotlights[index];
+        if (!s) return '';
 
-    let displayImg = "";
-    let displayTitle = s.customTitle || "Featured";
-    let tagText = "FEATURED";
-    let subText = s.customSub || "";
-    let actionTarget = "";
-    let btnText = "View More";
+        let displayImg = "";
+        let displayTitle = s.customTitle || "Featured";
+        let tagText = "FEATURED";
+        let subText = s.customSub || "";
+        let actionTarget = "";
+        let btnText = "View More";
 
-    // 1. RELEASE (ALBUM) LOGIC
-if (s.type === "Release") {
-        const alb = publicCatalogue.find(a => a.id === s.targetId);
-        if (alb) {
-            // ... (rest of image/title logic)
-            if (alb.coming_soon) {
-                tagText = "COMING SOON";
-                subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
-            } else {
-                tagText = "RELEASE SPOTLIGHT";
-                // Clear the subText if it was a countdown but the album is now out
-                if (!s.customSub) subText = "Available Now"; 
+        if (s.type === "Release") {
+            const alb = publicCatalogue.find(a => a.id === s.targetId);
+            if (alb) {
+                displayImg = alb.art_url;
+                displayTitle = s.customTitle || alb.name;
+                actionTarget = `viewAlbum('${alb.id}')`;
+                if (alb.coming_soon) {
+                    tagText = "COMING SOON";
+                    subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
+                } else {
+                    tagText = "RELEASE SPOTLIGHT";
+                    if (!s.customSub) subText = "Available Now"; 
+                }
             }
-        }
-    }
-    
-    // 2. ARTIST LOGIC
-    else if (s.type === "Artist") {
-        const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
-        displayImg = art ? (art.banner_url || art.img_url) : "";
-        displayTitle = s.customTitle || (art ? art.name : "Artist");
-        tagText = "ARTIST SPOTLIGHT";
-        actionTarget = `viewArtist('${s.targetId}')`;
-        btnText = "View Profile";
-    } 
-    
-    // 3. TRACK HIGHLIGHT LOGIC
-else if (s.type === "Track") {
-        // 1. Get all albums that contain this track
-        const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
-        
-        // 2. Filter for strictly NON-coming-soon albums
-        const publicReleases = parentAlbums.filter(a => !a.coming_soon);
-        
-        let latestAlb = null;
-        if (publicReleases.length > 0) {
-            // Grab the newest PUBLIC release
-            latestAlb = publicReleases.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
-        } else {
-            // Fallback to newest regardless if nothing is public yet
-            latestAlb = parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
-        }
+        } else if (s.type === "Artist") {
+            const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
+            displayImg = art ? (art.banner_url || art.img_url) : "";
+            displayTitle = s.customTitle || (art ? art.name : "Artist");
+            tagText = "ARTIST SPOTLIGHT";
+            actionTarget = `viewArtist('${s.targetId}')`;
+            btnText = "View Profile";
+        } else if (s.type === "Track") {
+            const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
+            const publicReleases = parentAlbums.filter(a => !a.coming_soon);
+            let latestAlb = publicReleases.length > 0 ? publicReleases[0] : parentAlbums[0];
 
-        let trackData = null;
-        if (latestAlb && window.TRACKS && window.TRACKS[latestAlb.id]) {
-            const bucket = window.TRACKS[latestAlb.id];
-            // Match against s.targetId (the string ID from Supabase)
-            trackData = Array.isArray(bucket) 
-                ? bucket.find(t => t.id === s.targetId) 
-                : bucket[s.targetId];
+            let trackData = null;
+            if (latestAlb && window.TRACKS && window.TRACKS[latestAlb.id]) {
+                const bucket = window.TRACKS[latestAlb.id];
+                trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
+            }
+
+            if (trackData && latestAlb) {
+                displayImg = trackData.art_url || latestAlb.art_url;
+                displayTitle = s.customTitle || trackData.title;
+                subText = s.customSub || (latestAlb.track_ids.length === 1 ? 'Featured Single' : 'Featured Track');
+                tagText = "TRACK HIGHLIGHT";
+                btnText = "Play Now";
+                actionTarget = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
+            }
+        } else if (s.type === "Video") {
+            displayImg = getYTThumb(s.url);
+            displayTitle = s.customTitle || "New Video";
+            tagText = "FEATURED VIDEO";
+            actionTarget = `window.open('${s.url}', '_blank')`;
+            btnText = "Watch Now";
         }
 
-        if (trackData && latestAlb) {
-            displayImg = trackData.art_url || latestAlb.art_url;
-            displayTitle = s.customTitle || trackData.title;
-            
-            const albumType = latestAlb.track_ids.length === 1 ? 'Single' : 'Album';
-            subText = s.customSub || `Featured ${albumType}`;
-            
-            tagText = "TRACK HIGHLIGHT";
-            btnText = "Play Now";
-            
-            // ACTION FIX: Use s.targetId for the play function
-            actionTarget = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
-        }
-    }
+        if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
 
-    // 4. VIDEO LOGIC
-    else if (s.type === "Video") {
-        displayImg = getYTThumb(s.url);
-        displayTitle = s.customTitle || "New Video";
-        tagText = "FEATURED VIDEO";
-        actionTarget = `window.open('${s.url}', '_blank')`;
-        btnText = "Watch Now";
-    }
-
-    // FALLBACK IMAGE
-    if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
-
-    return `
-    <div class="slide-content slide-anim" onclick="${actionTarget}" style="position:relative; height:100%; width:100%; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
-        <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
-        <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center; width:100%;">
-            <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; object-fit:cover; box-shadow:0 20px 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);">
-            <div>
-                <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; text-transform:uppercase; letter-spacing:1px;">${tagText}</span>
-                <h1 style="font-size:72px; margin:15px 0; font-weight:900; color:white; line-height:1; letter-spacing:-3px;">${displayTitle}</h1>
-                ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
-                
-                <div style="display:flex; align-items:center; gap:20px;">
-                    <button class="signup-btn">${btnText}</button>
-                    ${spotlights.length > 1 ? `
-                    <div style="display:flex; gap:8px;">
-                        ${spotlights.map((_, i) => `
-                            <div style="width:${i === index ? '24px' : '8px'}; height:8px; background:${i === index ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'}; border-radius:4px; transition: all 0.3s ease;"></div>
-                        `).join('')}
+        return `
+        <div class="slide-content slide-anim" onclick="${actionTarget}" style="position:relative; height:100%; width:100%; cursor:pointer; display:flex; align-items:center; padding:0 60px;">
+            <div style="position:absolute; inset:0; background:url('${displayImg}') center/cover; filter:blur(40px) brightness(0.3); z-index:1;"></div>
+            <div style="position:relative; z-index:2; display:flex; gap:40px; align-items:center; width:100%;">
+                <img src="${displayImg}" style="width:220px; height:220px; border-radius:12px; object-fit:cover; box-shadow:0 20px 50px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1);">
+                <div>
+                    <span style="background:var(--accent-green); color:#000; padding:5px 12px; font-size:11px; font-weight:900; border-radius:4px; text-transform:uppercase; letter-spacing:1px;">${tagText}</span>
+                    <h1 style="font-size:72px; margin:15px 0; font-weight:900; color:white; line-height:1; letter-spacing:-3px;">${displayTitle}</h1>
+                    ${subText ? `<p style="color:rgba(255,255,255,0.6); margin-bottom:20px; font-weight:600;">${subText}</p>` : ''}
+                    <div style="display:flex; align-items:center; gap:20px;">
+                        <button class="signup-btn">${btnText}</button>
+                        ${spotlights.length > 1 ? `
+                        <div style="display:flex; gap:8px;">
+                            ${spotlights.map((_, i) => `<div style="width:${i === index ? '24px' : '8px'}; height:8px; background:${i === index ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'}; border-radius:4px; transition: all 0.3s ease;"></div>`).join('')}
+                        </div>` : ''}
                     </div>
-                    ` : ''}
                 </div>
             </div>
-        </div>
-    </div>`;
-};
+        </div>`;
+    };
 
-    // 4. MOVE LOGIC (With Animation trigger)
+    // 4. MOVE LOGIC
     window.moveSpotlight = (dir) => {
         if (!spotlights.length) return;
         const slider = document.getElementById('spotlight-slider-content');
         if (!slider) return;
-
         window.currentSpotlightIndex = ((window.currentSpotlightIndex || 0) + dir + spotlights.length) % spotlights.length;
-        
-        // Instant update
         slider.innerHTML = renderSlide(window.currentSpotlightIndex);
-        
-        // Reset timer
         if (window.spotlightInterval) clearInterval(window.spotlightInterval);
         window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
     };
@@ -1381,39 +1312,30 @@ else if (s.type === "Track") {
     content.innerHTML = `
     <style>
         .spot-container { position:relative; height:320px; border-radius:15px; overflow:hidden; background:#000; margin-bottom:40px; }
-        .nav-arrow { 
-            position:absolute; top:0; bottom:0; width:80px; z-index:10; 
-            display:flex; align-items:center; justify-content:center; 
-            cursor:pointer; opacity:0; transition:0.3s; color:white;
-        }
+        .nav-arrow { position:absolute; top:0; bottom:0; width:80px; z-index:10; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; transition:0.3s; color:white; }
         .spot-container:hover .nav-arrow { opacity:1; }
         .prev-arrow { left:0; background: linear-gradient(to right, rgba(0,0,0,0.7), transparent); }
         .next-arrow { right:0; background: linear-gradient(to left, rgba(0,0,0,0.7), transparent); }
-        
-        /* The Sliding Animation */
         .slide-anim { animation: slideIn 0.4s ease-out forwards; }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        .browse-all-btn { background: #111; color: white; border: 1px solid #333; padding: 10px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 11px; letter-spacing: 1px; transition: 0.2s; }
+        .browse-all-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
     </style>
 
     <div class="view-animate" style="padding:40px;">
         <div class="spot-container">
-            <div class="nav-arrow prev-arrow" onclick="event.stopPropagation(); window.moveSpotlight(-1)">
-                <span class="material-icons" style="font-size:40px;">chevron_left</span>
-            </div>
-            <div class="nav-arrow next-arrow" onclick="event.stopPropagation(); window.moveSpotlight(1)">
-                <span class="material-icons" style="font-size:40px;">chevron_right</span>
-            </div>
-            <div id="spotlight-slider-content" style="height:100%;">
-                ${renderSlide(window.currentSpotlightIndex || 0)}
-            </div>
+            <div class="nav-arrow prev-arrow" onclick="event.stopPropagation(); window.moveSpotlight(-1)"><span class="material-icons" style="font-size:40px;">chevron_left</span></div>
+            <div class="nav-arrow next-arrow" onclick="event.stopPropagation(); window.moveSpotlight(1)"><span class="material-icons" style="font-size:40px;">chevron_right</span></div>
+            <div id="spotlight-slider-content" style="height:100%;">${renderSlide(window.currentSpotlightIndex || 0)}</div>
         </div>
 
-        <h2 style="margin-bottom:24px; font-weight:900; font-size:24px;">Catalogue</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2 style="font-weight:900; font-size:24px; text-transform:uppercase; letter-spacing:-1px;">Latest Releases</h2>
+            <button class="browse-all-btn" onclick="viewAllReleases()">BROWSE ALL</button>
+        </div>
+
         <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:30px;">
-            ${publicCatalogue.map(alb => `
+            ${recentReleases.map(alb => `
                 <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer; background:#0a0a0a; padding:20px; border-radius:12px;">
                     <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px; ${alb.coming_soon ? 'filter:grayscale(1); opacity:0.5;' : ''}">
                     <div style="font-weight:700; color:white;">${alb.name}</div>
@@ -1426,9 +1348,27 @@ else if (s.type === "Track") {
     </div>`;
 
     if (window.spotlightInterval) clearInterval(window.spotlightInterval);
-    if (spotlights.length > 1) {
-        window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
-    }
+    if (spotlights.length > 1) window.spotlightInterval = setInterval(() => window.moveSpotlight(1), 7000);
+};
+
+// New View All function
+window.viewAllReleases = function() {
+    const allPublic = (window.ALBUMS || []).filter(a => !a.hidden).sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date));
+    document.getElementById('content-view').innerHTML = `
+    <div class="view-animate" style="padding:50px;">
+        <h1 style="font-size:48px; font-weight:900; margin-bottom:40px; text-transform:uppercase;">Catalogue</h1>
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:30px;">
+            ${allPublic.map(alb => `
+                <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer; background:#0a0a0a; padding:20px; border-radius:12px;">
+                    <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px; ${window.isAlbumComingSoon(alb) ? 'filter:grayscale(1); opacity:0.5;' : ''}">
+                    <div style="font-weight:700; color:white;">${alb.name}</div>
+                    <div style="color:${window.isAlbumComingSoon(alb) ? '#ff4444' : '#666'}; font-size:12px; margin-top:5px; font-weight:700;">
+                        ${window.isAlbumComingSoon(alb) ? 'COMING SOON' : 'RELEASED'}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
 };
 
 
