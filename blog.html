@@ -162,6 +162,11 @@
     overflow: hidden;
 }
 
+#full-post-body {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 .close-post-btn {
     position: absolute;
     top: 15px;
@@ -186,12 +191,26 @@
     transform: rotate(90deg);
 }
 
-.post-meta-row {
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    margin-bottom: 20px;
-    padding-right: 40px; /* Space so it doesn't clip under the X button */
+.post-meta-row, 
+h1, 
+.article-text p, 
+.modal-cta-container {
+    padding-left: 30px !important;
+    padding-right: 30px !important;
+}
+
+.post-inline-image, 
+.video-container, 
+.featured-image-container {
+    width: 100% !important;
+    margin: 5px 0 !important;
+}
+
+.post-inline-image img {
+    width: 100% !important;
+    display: block !important;
+    border-radius: 12px; /* Gives images a nice rounded look to match the modal */
+    margin: 0 auto;
 }
 
 .category-badge {
@@ -213,24 +232,61 @@
     color: var(--text);
 }
 
-/* Removes any automatic indentation from the blog content */
-/* Fix Indents & Text alignment */
+/* Ensure the article content starts at the very edge */
 .article-text {
-    text-align: left;
-    line-height: 1.8;
-    color: var(--text);
-    font-size: 1.1rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    display: block !important;
 }
 
+/* Tighten up paragraph spacing */
 .article-text p {
-    margin-bottom: 1.5rem;
-    text-indent: 0 !important;
+    margin: 0 0 1rem 0 !important; /* Only bottom margin to separate ideas */
+    padding: 0 !important;
+    line-height: 1.6;
 }
 
-/* Ensure the container doesn't have internal padding pushing content */
+/* Force inline images to be full-bleed */
+.post-inline-image {
+    margin: 10px 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.post-inline-image img {
+    width: 100% !important;
+    display: block !important;
+    border-radius: 8px; /* Optional: keep it slightly rounded or set to 0 for sharp edges */
+}
+
+/* Fix for the modal's internal alignment */
 .content-fade-in {
-    width: 100%;
-    display: block;
+    width: 100% !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.post-meta-row, 
+.article-text p, 
+h1, 
+.modal-cta-container {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+    box-sizing: border-box;
+}
+
+
+#post-modal .modal-content, 
+.modal-content {
+    width: 100% !important;
+    max-width: 1200px !important;
+    min-height: 500px;
+    margin: 10px auto !important;
+    border-radius: 16px;
+    /* CHANGE THIS: Add padding back so content doesn't hit edges */
+    padding: 40px !important; 
+    box-sizing: border-box;
 }
 
 .read-btn {
@@ -431,7 +487,7 @@
 
     <div id="post-modal" class="post-modal">
         <div class="modal-content">
-            <button onclick="closePost()" class="close-btn">&times;</button>
+            <!-- <button onclick="closePost()" class="close-btn">&times;</button> -->
             <div id="full-post-body"></div>
         </div>
     </div>
@@ -569,18 +625,24 @@ applyFilters() {
 const transformEmbeds = (content) => {
     if (!content) return '';
 
-    // YouTube Fix
+    // 1. Custom Image Support (No extra wrapper padding)
+    const imgRegex = /img_([^\s<]+)/g;
+    content = content.replace(imgRegex, (match, url) => {
+        return `<div class="post-inline-image"><img src="${url}"></div>`;
+    });
+
+    // 2. YouTube Embeds (Standardized margin)
     const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
     content = content.replace(youtubeRegex, (match, id) => {
-        return `<div class="video-container" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; margin:30px 0; border-radius:12px; background:#000;">
+        return `<div class="video-container" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; margin: 20px 0; border-radius:12px; background:#000;">
                     <iframe src="https://www.youtube.com/embed/${id}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
                 </div>`;
     });
 
-    // Spotify Fix (The Syntax Error was here)
+    // 3. Spotify Embeds (Corrected variable syntax)
     const spotifyRegex = /(?:https?:\/\/)?open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/g;
     content = content.replace(spotifyRegex, (match, type, id) => {
-        return `<iframe src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="margin:20px 0; border-radius:12px;"></iframe>`;
+        return `<iframe src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="margin: 15px 0; border-radius:12px;"></iframe>`;
     });
 
     return content;
@@ -590,12 +652,10 @@ window.viewFullPost = async (slug, btnElement) => {
     const modal = document.getElementById('post-modal');
     const body = document.getElementById('full-post-body');
     
-    // 1. INSTANT OPEN: Show the modal immediately
     modal.classList.add('is-active');
-    document.body.style.overflow = 'hidden'; // Lock background scroll
-    modal.scrollTop = 0; // Reset scroll to top
+    document.body.style.overflow = 'hidden'; 
+    modal.scrollTop = 0; 
 
-    // 2. LOADING STATE: Clear old content and show loader
     body.innerHTML = `
         <button class="close-post-btn" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
         <div style="padding: 60px; text-align: center; color: white;">
@@ -605,50 +665,44 @@ window.viewFullPost = async (slug, btnElement) => {
     `;
 
     try {
-        // 3. FETCH DATA
         const { data, error } = await window.db.from('blog_posts').select('*').eq('slug', slug).single();
-        
-        if (error || !data) {
-            body.innerHTML = `<button class="close-post-btn" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
-                              <div style="padding:80px; text-align:center;">Post not found.</div>`;
-            return;
-        }
+        if (error || !data) throw error;
 
-        // 4. PREPARE CONTENT
-        const mediaHTML = getMediaHTML(data.featured_image); // Main image/video
-        const enrichedContent = transformEmbeds(data.content); // Body embeds
+        const mediaHTML = getMediaHTML(data.featured_image); 
+        const enrichedContent = transformEmbeds(data.content); 
         const dateString = new Date(data.created_at).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
 
-        // 5. RENDER FINAL UI
-        body.innerHTML = `
+body.innerHTML = `
             <button class="close-post-btn animate-pop" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
-            <div class="content-fade-in">
-                <div class="post-meta-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-right:50px;">
+            
+            <div class="content-fade-in" style="padding: 0 40px; box-sizing: border-box; width: 100%;">
+                
+                <div class="post-meta-row" style="margin-top: 50px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:var(--accent); font-weight:bold; text-transform:uppercase; font-size:0.8rem;">${data.category || 'Music'}</span>
                     <span style="color:var(--text-dim); font-size:0.8rem;"><i class="fa-regular fa-calendar"></i> ${dateString}</span>
                 </div>
                 
-                <h1 style="font-size:2.5rem; margin:10px 0 20px 0; line-height:1.2; text-align:left;">${data.title}</h1>
+                <h1 style="font-size: 2.5rem; margin: 15px 0 25px 0; line-height: 1.2; text-align: left;">${data.title}</h1>
                 
-                ${mediaHTML}
+                <div class="featured-image-container" style="width: 100%;">
+                    ${mediaHTML}
+                </div>
                 
-                <div class="article-text" style="text-align: left !important; line-height: 1.8;">${enrichedContent}</div>
-<div class="modal-cta-container" style="margin-top:50px; display: flex; justify-content: flex-start;">
-    <a href="${data.cta_link || 'https://trm-records.com/store'}" target="_blank" class="modal-cta-btn" 
-       style="background:var(--accent); color:white; padding:16px 32px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:10px;">
-        ${data.cta_text || 'Visit TRM Store'} <i class="fa-solid fa-arrow-right"></i>
-    </a>
-</div>
+                <div class="article-text" style="white-space: pre-wrap; width: 100%;">${enrichedContent}</div>
 
-                <div style="height: 120px; width: 100%;"></div>
+                <div class="modal-cta-container" style="margin-top: 40px; padding-bottom: 60px;">
+                    <a href="${data.cta_link || 'https://trm-records.com/store'}" target="_blank" class="modal-cta-btn" 
+                       style="background:var(--accent); color:white; padding:16px 32px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:10px;">
+                         ${data.cta_text || 'Visit TRM Store'} <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         `;
 
     } catch (err) {
-        console.error("Critical Render Error:", err);
-        // We stay open so the user can at least use the "X" button to leave
+        console.error("Error:", err);
     }
 };
 
