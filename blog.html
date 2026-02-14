@@ -540,7 +540,7 @@ window.viewFullPost = async (slug, btnElement) => {
         // 3. Smoothly swap skeleton for real content
 // Inside your viewFullPost function, ensure this part looks like this:
 body.innerHTML = `
-    <button class="close-post-btn animate-pop" onclick="closePost()">
+    <button class="close-post-btn" onclick="closePost()">
         <i class="fa-solid fa-xmark"></i>
     </button>
     <div class="content-fade-in">
