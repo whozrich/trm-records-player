@@ -109,8 +109,10 @@
     width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.85);
     z-index: 9999;
-    overflow-y: auto;
-    padding: 40px 20px;
+    /* THE FIX: Allow vertical scrolling on the wrapper */
+    overflow-y: auto; 
+    padding: 40px 20px; 
+    align-items: flex-start; /* Start at the top so users can scroll down */
 }
 .post-modal.is-active {
     display: flex;
@@ -123,6 +125,13 @@
     max-width: 850px;
     border-radius: 15px;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin: 0 auto; /* Center the card horizontally */
+    max-height: none; /* Allow it to grow as tall as the content */
+    width: 100%;
+    max-width: 850px;
+    position: relative;
+    /* Ensure no internal clipping */
+    overflow: visible;
 }
 
 #full-post-body:not(:empty) {
@@ -205,16 +214,17 @@
 }
 
 /* Removes any automatic indentation from the blog content */
+/* Fix Indents & Text alignment */
 .article-text {
     text-align: left;
-    padding: 0;
-    margin: 0;
+    line-height: 1.8;
+    color: var(--text);
+    font-size: 1.1rem;
 }
 
 .article-text p {
-    margin-bottom: 1.5rem; /* Adds nice spacing between paragraphs */
-    text-indent: 0 !important; /* Forces removal of any paragraph indents */
-    padding-left: 0 !important;
+    margin-bottom: 1.5rem;
+    text-indent: 0 !important;
 }
 
 /* Ensure the container doesn't have internal padding pushing content */
@@ -344,6 +354,51 @@
 
 .scroll-top-btn:hover {
     transform: translateY(-5px);
+}
+
+
+
+/* Responsive Video Embeds */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    margin: 30px 0;
+    border-radius: 12px;
+    background: #000;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
+/* CTA Button Styling */
+.modal-cta-container {
+    margin: 50px 0 20px 0;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.modal-cta-btn {
+    background: var(--accent);
+    color: white !important;
+    padding: 16px 32px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.modal-cta-btn:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(var(--accent-rgb), 0.4);
 }
 </style>
 
@@ -510,55 +565,90 @@ applyFilters() {
 }
     };
 
-    // Global Functions
+    // 1. Corrected Embed Helper
+const transformEmbeds = (content) => {
+    if (!content) return '';
+
+    // YouTube Fix
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
+    content = content.replace(youtubeRegex, (match, id) => {
+        return `<div class="video-container" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; margin:30px 0; border-radius:12px; background:#000;">
+                    <iframe src="https://www.youtube.com/embed/${id}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
+                </div>`;
+    });
+
+    // Spotify Fix (The Syntax Error was here)
+    const spotifyRegex = /(?:https?:\/\/)?open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/g;
+    content = content.replace(spotifyRegex, (match, type, id) => {
+        return `<iframe src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="margin:20px 0; border-radius:12px;"></iframe>`;
+    });
+
+    return content;
+};
+
 window.viewFullPost = async (slug, btnElement) => {
     const modal = document.getElementById('post-modal');
     const body = document.getElementById('full-post-body');
     
-    // 1. INSTANT ACTION: Open modal and show loading state immediately
+    // 1. INSTANT OPEN: Show the modal immediately
     modal.classList.add('is-active');
-    document.body.style.overflow = 'hidden';
-    
+    document.body.style.overflow = 'hidden'; // Lock background scroll
+    modal.scrollTop = 0; // Reset scroll to top
+
+    // 2. LOADING STATE: Clear old content and show loader
     body.innerHTML = `
         <button class="close-post-btn" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
-        <div class="skeleton-loader">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-media"></div>
-            <div class="skeleton-text"></div>
+        <div style="padding: 60px; text-align: center; color: white;">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 20px;"></i>
+            <p>Loading post...</p>
         </div>
     `;
 
     try {
-        // 2. Fetch data in the background
+        // 3. FETCH DATA
         const { data, error } = await window.db.from('blog_posts').select('*').eq('slug', slug).single();
-        if (error || !data) throw error;
+        
+        if (error || !data) {
+            body.innerHTML = `<button class="close-post-btn" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
+                              <div style="padding:80px; text-align:center;">Post not found.</div>`;
+            return;
+        }
 
+        // 4. PREPARE CONTENT
+        const mediaHTML = getMediaHTML(data.featured_image); // Main image/video
+        const enrichedContent = transformEmbeds(data.content); // Body embeds
         const dateString = new Date(data.created_at).toLocaleDateString('en-US', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
 
-        // 3. Smoothly swap skeleton for real content
-// Inside your viewFullPost function, ensure this part looks like this:
-body.innerHTML = `
-    <button class="close-post-btn" onclick="closePost()">
-        <i class="fa-solid fa-xmark"></i>
-    </button>
-    <div class="content-fade-in">
-        <div class="post-meta-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-right: 50px;">
-            <span style="color:var(--accent); font-weight:bold; text-transform: uppercase; font-size: 0.8rem;">${data.category}</span>
-            <span style="color:var(--text-dim); font-size: 0.8rem;"><i class="fa-regular fa-calendar"></i> ${dateString}</span>
-        </div>
-        <h1 style="font-size: 2.5rem; margin: 10px 0 20px 0; line-height: 1.2; text-align: left;">${data.title}</h1>
-        <div class="featured-image-container" style="width: 100%; margin-bottom: 30px;">
-            ${getMediaHTML(data.featured_image)}
-        </div>
-        <div class="article-text">${data.content}</div>
-    </div>
-`;
+        // 5. RENDER FINAL UI
+        body.innerHTML = `
+            <button class="close-post-btn animate-pop" onclick="closePost()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="content-fade-in">
+                <div class="post-meta-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-right:50px;">
+                    <span style="color:var(--accent); font-weight:bold; text-transform:uppercase; font-size:0.8rem;">${data.category || 'Music'}</span>
+                    <span style="color:var(--text-dim); font-size:0.8rem;"><i class="fa-regular fa-calendar"></i> ${dateString}</span>
+                </div>
+                
+                <h1 style="font-size:2.5rem; margin:10px 0 20px 0; line-height:1.2; text-align:left;">${data.title}</h1>
+                
+                ${mediaHTML}
+                
+                <div class="article-text" style="text-align: left !important; line-height: 1.8;">${enrichedContent}</div>
+<div class="modal-cta-container" style="margin-top:50px; display: flex; justify-content: flex-start;">
+    <a href="${data.cta_link || 'https://trm-records.com/store'}" target="_blank" class="modal-cta-btn" 
+       style="background:var(--accent); color:white; padding:16px 32px; border-radius:12px; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:10px;">
+        ${data.cta_text || 'Visit TRM Store'} <i class="fa-solid fa-arrow-right"></i>
+    </a>
+</div>
+
+                <div style="height: 120px; width: 100%;"></div>
+            </div>
+        `;
 
     } catch (err) {
-        console.error("Error:", err);
-        closePost(); // Auto-close if fetch fails
+        console.error("Critical Render Error:", err);
+        // We stay open so the user can at least use the "X" button to leave
     }
 };
 
@@ -570,22 +660,35 @@ window.closePost = () => {
 };
 
     // Helper to detect and convert YouTube links to Embeds
-function getMediaHTML(url) {
+const getMediaHTML = (url) => {
     if (!url) return '';
-    
-    // Check for YouTube patterns (standard, shorts, or shared)
-    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-    const match = url.match(ytRegex);
 
-    if (match && match[1]) {
-        return `<div class="video-container">
-                    <iframe src="https://www.youtube.com/embed/${match[1]}" allowfullscreen></iframe>
-                </div>`;
+    // Check if the "Main Image" is actually a YouTube link
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const ytMatch = url.match(youtubeRegex);
+
+    if (ytMatch) {
+        const id = ytMatch[1];
+        return `
+            <div class="video-container" style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; margin-bottom:30px; border-radius:12px; background:#000;">
+                <iframe src="https://www.youtube.com/embed/${id}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
+            </div>`;
     }
 
-    // Default to Image if not YouTube
-    return `<img src="${url}" alt="Blog Media">`;
-}
+    // Check if it's a standard video file (mp4, etc.)
+    if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+        return `
+            <video controls style="width:100%; border-radius:12px; margin-bottom:30px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <source src="${url}" type="video/mp4">
+            </video>`;
+    }
+
+    // Default to Image
+    return `
+        <div class="featured-image-container" style="width:100%; margin-bottom:30px;">
+            <img src="${url}" alt="Post Media" style="width:100%; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        </div>`;
+};
 
 document.getElementById('post-modal').addEventListener('scroll', function() {
     const winScroll = this.scrollTop;
