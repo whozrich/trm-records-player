@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRM ARTIST HUB</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        :root {
+            --accent-green: #00ff88;
+            --sidebar-width: 280px;
+        }
+
+        body { 
+            margin: 0; 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+        }
+
+        #dashboard-wrapper {
+            display: flex; 
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-viewport {
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: var(--sidebar-width);
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #111;
+            padding: 20px 0;
+        }
+
+        .sidebar-title {
+            padding: 0 25px 20px 25px;
+            font-size: 10px;
+            font-weight: 900;
+            color: #444;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 25px; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            color: #fff; 
+            font-weight: 700;
+            text-decoration: none;
+            background: rgba(0, 255, 136, 0.05);
+            border-right: 3px solid var(--accent-green);
+        }
+
+        /* Builder Specific Buttons */
+.btn-builder-add {
+    background: #fff; 
+    color: #000; 
+    border: none; 
+    padding: 8px 15px; 
+    border-radius: 8px; 
+    font-size: 10px; 
+    font-weight: 900; 
+    cursor: pointer;
+    transition: 0.2s;
+    text-transform: uppercase;
+}
+.btn-builder-add:hover { opacity: 0.8; }
+
+/* The Track Row Bonus Tag */
+.bonus-tag {
+    font-size: 9px;
+    font-weight: 900;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #222;
+    color: #444;
+    cursor: pointer;
+    transition: 0.2s;
+    background: #151515;
+}
+.bonus-tag.active {
+    background: rgba(0, 255, 136, 0.1);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+        #login-btn-container {
+            margin-top: auto;
+            padding: 20px;
+            border-top: 1px solid #111;
+        }
+
+        /* MAIN CONTENT */
+        #content-view {
+            flex: 1;
+            overflow-y: auto;
+            background: linear-gradient(to bottom, #121212, #000);
+            padding: 60px;
+        }
+
+        .release-banner {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 24px;
+            padding: 40px;
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            max-width: 900px;
+        }
+
+        .release-art {
+            width: 200px;
+            height: 200px;
+            background: #111;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .badge {
+            background: var(--accent-green);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 12px;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .search-result-item {
+            background: #111;
+            border: 1px solid #222;
+            padding: 15px 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        /* MODAL ANIMATION */
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-animate-in { animation: modalIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body>
+
+<div id="dashboard-wrapper">
+    <div class="main-viewport" id="viewport-container">
+        </div>
+
+    <div id="mini-player" style="height: 100px; background: #050505; border-top: 1px solid #111; display: flex; align-items: center; padding: 0 25px;">
+        <div style="color: #444; font-size: 11px; font-weight: 900; letter-spacing: 1px;">STUDIO MONITOR OFF</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
+
+<script>
+// SUPABASE CONFIG
+const SB_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
+const SB_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
+window.db = window.supabase.createClient(SB_URL, SB_KEY);
+
+let client;
+const viewport = document.getElementById('viewport-container');
+
+// 1. INITIALIZE & CHECK
+async function init() {
+    client = supabase.createClient(SB_URL, SB_KEY);
+    window.supabaseClient = client;
+
+    const { data: { session } } = await client.auth.getSession();
+
+    if (!session) {
+        renderLoginState();
+        return;
+    }
+
+    // Fetch user record (Protected by RLS: auth.uid() = id)
+    const { data: profile, error } = await client
+        .from('users')
+        .select('userArtistId')
+        .eq('id', session.user.id)
+        .single();
+
+    if (profile && profile.userArtistId && profile.userArtistId.trim() !== "") {
+        showArtistDashboard(profile.userArtistId);
+    } else {
+        showArtistSearchUI();
+    }
+}
+
+// 2. STATE: LOGIN REQUIRED
+function renderLoginState() {
+    viewport.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; gap:20px;">
+            <i class="fa-solid fa-lock fa-3x" style="color:#222;"></i>
+            <h1 style="font-weight:900;">Please Login</h1>
+            <p style="color:#666;">Access the Artist Hub by logging into your account.</p>
+            <button onclick="window.openAuthModal('login')" class="btn-primary">LOGIN TO ACCOUNT</button>
+        </div>
+    `;
+}
+
+// 3. STATE: SEARCH/CLAIM ARTIST
+function showArtistSearchUI() {
+    viewport.innerHTML = `
+        <div style="flex:1; padding:60px; max-width:800px; margin:0 auto; overflow-y:auto;">
+            <h1 style="font-weight:900; font-size:42px; letter-spacing:-1.5px;">Claim Your Artist Profile</h1>
+            <p style="color:#666; margin-bottom:40px;">Search for your artist name to get started.</p>
+            
+            <input type="text" id="artist-search" placeholder="Type artist name..." 
+                style="width:100%; background:#111; border:1px solid #222; padding:18px; border-radius:12px; color:white; font-size:16px; outline:none; margin-bottom:20px;">
+
+            <div id="search-results"></div>
+
+            <div style="border-top:1px solid #111; padding-top:30px; margin-top:20px;">
+                <p style="color:#444; font-weight:700;">DON'T SEE YOURSELF?</p>
+                <button class="btn-primary" style="background:transparent; border:1px solid #222; color:white;">CREATE NEW ARTIST ENTITY</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('artist-search').addEventListener('input', debounce(handleArtistSearch, 400));
+}
+
+async function handleArtistSearch(e) {
+    const query = e.target.value;
+    const resultsContainer = document.getElementById('search-results');
+    if (query.length < 2) { resultsContainer.innerHTML = ''; return; }
+
+    const { data: artists } = await client
+        .from('artists')
+        .select('id, name')
+        .ilike('name', `%${query}%`)
+        .limit(5);
+
+    if (artists && artists.length > 0) {
+        resultsContainer.innerHTML = artists.map(a => `
+            <div class="search-result-item">
+                <span style="font-weight:700;">${a.name}</span>
+                <button class="btn-primary" style="padding:8px 16px;" onclick="openApplyModal('${a.name}', '${a.id}')">APPLY</button>
+            </div>
+        `).join('');
+    } else {
+        resultsContainer.innerHTML = `<p style="color:#444;">No results found.</p>`;
+    }
+}
+
+// 3. View Switcher Logic
+function switchView(view) {
+    const content = document.getElementById('content-view');
+    const navHome = document.getElementById('nav-home');
+    const navReleases = document.getElementById('nav-releases');
+
+    // Reset Sidebar Styles
+    [navHome, navReleases].forEach(el => {
+        el.style.background = 'transparent';
+        el.style.borderRight = 'none';
+        el.style.color = '#888';
+    });
+
+    if (view === 'home') {
+        navHome.style.background = 'rgba(0, 255, 136, 0.05)';
+        navHome.style.borderRight = '3px solid var(--accent-green)';
+        navHome.style.color = '#fff';
+        renderHomeView();
+    } else {
+        navReleases.style.background = 'rgba(0, 255, 136, 0.05)';
+        navReleases.style.borderRight = '3px solid var(--accent-green)';
+        navReleases.style.color = '#fff';
+        renderReleaseList();
+    }
+}
+
+// 4. STATE: DASHBOARD (HOME)
+// Variable to store albums globally for this session to avoid re-fetching
+let artistAlbums = [];
+
+async function showArtistDashboard(artistSlug) {
+    // 1. Fetch data once
+    const { data: albums, error } = await client
+        .from('albums')
+        .select('name, art_url, type, full_release_date, coming_soon, artist_id')
+        .eq('artist_id', artistSlug);
+
+    if (error) {
+        console.error("Fetch error:", error.message);
+        return;
+    }
+    
+    artistAlbums = albums || [];
+
+    // 2. Render Sidebar and Main Shell
+    viewport.innerHTML = `
+        <nav id="sidebar">
+            <div class="sidebar-title">Menu</div>
+            <div class="sidebar-item active" id="nav-home" onclick="switchView('home')">
+                <i class="fa-solid fa-house"></i><span>Home</span>
+            </div>
+            <div class="sidebar-item" id="nav-releases" onclick="switchView('releases')">
+                <i class="fa-solid fa-compact-disc"></i><span>Releases</span>
+            </div>
+            <div id="login-btn-container"></div>
+        </nav>
+        <main id="content-view">
+            </main>
+    `;
+
+    if (window.updateAuthUI) window.updateAuthUI();
+    
+    // Default to home view
+    switchView('home');
+}
+
+function renderHomeView() {
+    const content = document.getElementById('content-view');
+    
+    // Use the prioritization logic we built previously
+    const nowET = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const upcoming = artistAlbums.filter(a => a.coming_soon === true && new Date(a.full_release_date) > nowET);
+    
+    let featured;
+    let badgeText;
+
+    if (upcoming.length > 0) {
+        featured = upcoming.sort((a, b) => new Date(a.full_release_date) - new Date(b.full_release_date))[0];
+        badgeText = "COMING SOON";
+    } else {
+        featured = [...artistAlbums].sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
+        badgeText = `LATEST ${featured?.type?.toUpperCase() || 'RELEASE'}`;
+    }
+
+    if (!featured) {
+        content.innerHTML = `<h1>No projects found.</h1>`;
+        return;
+    }
+
+    content.innerHTML = `
+        <h1 style="font-size: 42px; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 5px;">Welcome Back</h1>
+        <p style="color: #666; margin-bottom: 40px;">Dashboard Overview</p>
+        
+        <div class="release-banner">
+            <img class="release-art" src="${featured.art_url}">
+            <div class="release-info">
+                <span class="badge" style="${badgeText === 'COMING SOON' ? 'background:#fff; color:#000;' : ''}">${badgeText}</span>
+                <h3 style="font-size: 28px; margin: 0 0 5px 0;">${featured.name}</h3>
+                <p style="color: #666; margin: 0;">${badgeText === 'COMING SOON' ? 'Releasing' : 'Released'}: ${featured.full_release_date}</p>
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button class="btn-primary" style="font-size:10px; padding:8px 16px;">EDIT PROJECT</button>
+                    <button class="btn-primary" style="background:transparent; border:1px solid #222; color:white; font-size:10px; padding:8px 16px;">VIEW STATS</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderReleaseList() {
+    const content = document.getElementById('content-view');
+    
+    // 1. Helper to turn any of your string formats into a sortable number
+    const getNumericDateValue = (dateStr) => {
+        if (!dateStr) return 0;
+
+        const months = {
+            jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+            jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+        };
+
+        // Clean the string: lowercase and remove "st, nd, rd, th"
+        const clean = dateStr.toLowerCase().replace(/(st|nd|rd|th)/g, "");
+        const parts = clean.split(/[\s,]+/); // Split by space or comma
+
+        let year = 0, month = 0, day = 1;
+
+        if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+            // Case: "2027"
+            year = parseInt(parts[0]);
+        } else {
+            // Case: "March 17, 2026" or "February 7 2026"
+            // We find which part is the month, which is the year (4 digits), and which is the day
+            parts.forEach(p => {
+                if (/^\d{4}$/.test(p)) year = parseInt(p);
+                else if (months[p.substring(0, 3)] !== undefined) month = months[p.substring(0, 3)];
+                else if (/^\d{1,2}$/.test(p)) day = parseInt(p);
+            });
+        }
+
+        // Return a comparable timestamp (Year, Month, Day)
+        return new Date(year, month, day).getTime();
+    };
+
+    // 2. Perform the sort using our new numeric values
+    const sorted = [...artistAlbums].sort((a, b) => {
+        return getNumericDateValue(b.full_release_date) - getNumericDateValue(a.full_release_date);
+    });
+
+    content.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+            <h1 style="font-size: 42px; font-weight: 900; letter-spacing: -1.5px; margin:0;">Releases</h1>
+            <button onclick="openCreateReleaseModal()" class="btn-primary" style="font-size:11px;">+ NEW RELEASE</button>
+        </div>
+
+        <div style="display:grid; gap:15px;">
+            ${sorted.map(album => `
+                <div class="release-list-item" style="display:flex; align-items:center; background:#0a0a0a; border:1px solid #111; padding:15px; border-radius:16px;">
+                    <img src="${album.art_url}" style="width:60px; height:60px; border-radius:8px; object-fit:cover; margin-right:20px;" onerror="this.src='https://via.placeholder.com/60?text=Disc'">
+                    
+                    <div style="flex:1;">
+                        <h4 style="margin:0; font-size:16px;">${album.name}</h4>
+                        <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
+                            <span style="font-size:10px; font-weight:900; color:var(--accent-green);">${album.type?.toUpperCase()}</span>
+                            <span style="font-size:12px; color:#444;">•</span>
+                            <span style="font-size:12px; color:#666;">${album.full_release_date}</span>
+                            ${album.coming_soon ? '<span style="font-size:9px; background:#fff; color:#000; padding:2px 6px; border-radius:4px; font-weight:900; margin-left:10px;">UPCOMING</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-primary" style="background:#111; color:#fff; border:1px solid #222; font-size:10px; padding:8px 12px;">STATS</button>
+                        <button class="btn-primary" style="font-size:10px; padding:8px 12px;">EDIT</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+let trackItems = []; 
+
+window.openCreateReleaseModal = () => {
+    const modal = document.createElement('div');
+    modal.id = 'create-release-modal';
+    Object.assign(modal.style, {
+        position: 'fixed', inset: '0', zIndex: '100000',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', padding: '40px'
+    });
+
+    modal.innerHTML = `
+        <div class="modal-animate-in" style="background: #080808; border: 1px solid #111; width: 100%; max-width: 900px; max-height: 95vh; border-radius: 32px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
+            
+            <div style="padding: 30px 40px; border-bottom: 1px solid #111; display:flex; justify-content:space-between; align-items:center; background: #0a0a0a;">
+                <div style="flex:1; margin-right: 40px;">
+                    <input type="text" id="project-title-input" placeholder="Project Title" 
+                           style="background: transparent; border: none; font-size: 28px; font-weight: 900; letter-spacing: -1px; color: white; width: 100%; outline: none; padding: 0;">
+                    <p id="item-counter" style="color: #444; font-size: 10px; font-weight: 800; margin-top: 5px; letter-spacing: 1px; text-transform: uppercase;">0 / 30 ITEMS USED</p>
+                </div>
+                <button onclick="document.getElementById('create-release-modal').remove()" style="background:none; border:none; color:#333; cursor:pointer; transition: 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#333'"><i class="fa-solid fa-circle-xmark fa-2x"></i></button>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto; padding: 40px; scrollbar-width: thin; scrollbar-color: #222 transparent;">
+                
+                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 30px; margin-bottom: 30px;">
+                    <div id="drop-zone" onclick="document.getElementById('art-upload').click()" style="width: 200px; height: 200px; background: #000; border: 2px dashed #111; border-radius: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; transition: 0.3s;">
+                        <span id="upload-txt" style="font-size: 9px; color: #333; font-weight: 900; text-align: center; letter-spacing: 1px;">UPLOAD ART</span>
+                        <input type="file" id="art-upload" hidden accept="image/*" onchange="previewImage(this)">
+                        <img id="art-preview" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none;">
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <textarea id="project-desc-input" placeholder="Add a description for this project..." 
+                                  style="width: 100%; height: 100px; background: #000; border: 1px solid #111; padding: 15px; border-radius: 12px; color: white; font-size: 13px; resize: none; outline: none;"></textarea>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <input type="text" id="date-input" placeholder="Release Date" oninput="checkFutureDate(this.value)" 
+                                       style="background: #000; border: 1px solid #111; padding: 14px; border-radius: 12px; color: white; font-size: 13px;">
+                                
+                                <div id="press-release-container" style="display:none; flex-direction:column; gap:10px; background: #050505; padding: 10px; border-radius: 12px; border: 1px solid #111;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <input type="checkbox" id="press-toggle" onchange="window.toggleSignupFields(this.checked)" style="accent-color:var(--accent-green);">
+                                        <label for="press-toggle" style="font-size:9px; font-weight:900; color:var(--accent-green); text-transform:uppercase;">Press Release</label>
+                                    </div>
+                                    <input type="text" id="signup-link-input" placeholder="SIGNUP / PRE-SAVE URL" 
+                                           style="display:none; background:#000; border:1px solid #1a1a1a; padding:10px; border-radius:8px; color:white; font-size:11px; width: 75%;">
+                                </div>
+                            </div>
+                            <input type="text" id="genre-input" placeholder="Genre" 
+                                   style="background: #000; border: 1px solid #111; padding: 14px; border-radius: 12px; color: white; font-size: 13px; height: fit-content;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <label style="display: block; font-size: 9px; font-weight: 900; color: #444; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;">Featured Trailer/Video</label>
+                    <input type="text" id="trailer-url-input" placeholder="YouTube URL" style="width: 100%; background: #000; border: 1px solid #111; padding: 14px; border-radius: 12px; color: white; font-size: 13px;">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">Tracklist Content</h3>
+                    <div id="add-buttons-container" style="display: flex; gap: 8px;">
+                        <button onclick="addTrackItem('disc')" class="btn-builder-add">+ DISC</button>
+                        <button onclick="addTrackItem('video')" class="btn-builder-add">+ VIDEO</button>
+                        <button onclick="addTrackItem('track')" class="btn-builder-add" style="background:var(--accent-green); color:#000; border-color:var(--accent-green);">+ TRACK</button>
+                    </div>
+                </div>
+
+                <div id="track-list-render" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+
+            <div style="padding: 20px 40px; background: #050505; border-top: 1px solid #111; text-align: right;">
+                <button onclick="publishProject()" class="btn-primary" style="padding: 14px 60px; font-weight: 900; border-radius: 12px;">PUBLISH</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    trackItems = []; 
+    renderTracklist();
+};
+
+// Clean strings for IDs: lowercase, spaces to "-", remove parentheses
+const createSlug = (text) => {
+    return text.toLowerCase()
+        .replace(/\s+/g, '-')           // Spaces to -
+        .replace(/[()]/g, '')           // Remove parentheses
+        .replace(/[^a-z0-0-]/g, '');    // Remove other special chars
+};
+
+// Calculate project type based on track count (excluding discs/videos)
+const calculateReleaseType = (items) => {
+    const trackCount = items.filter(i => i.type === 'track').length;
+    if (trackCount <= 2) return "Single";
+    if (trackCount <= 6) return "EP";
+    if (trackCount <= 10) return "Mixtape";
+    return "Album";
+};
+
+// Get Audio Duration
+const getDuration = (file) => {
+    return new Promise((resolve) => {
+        const audio = new Audio();
+        audio.src = URL.createObjectURL(file);
+        audio.onloadedmetadata = () => resolve(Math.floor(audio.duration).toString());
+    });
+};
+
+// 1. GLOBAL DATE NORMALIZER (Needed for Sorting & Future Date Detection)
+window.getNumericDateValue = (dateStr) => {
+    if (!dateStr) return 0;
+
+    const months = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    };
+
+    // Clean the string: lowercase and remove "st, nd, rd, th"
+    const clean = dateStr.toLowerCase().replace(/(st|nd|rd|th)/g, "");
+    const parts = clean.split(/[\s,]+/); 
+
+    let year = 0, month = 0, day = 1;
+
+    if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+        year = parseInt(parts[0]);
+    } else {
+        parts.forEach(p => {
+            if (/^\d{4}$/.test(p)) year = parseInt(p);
+            else if (months[p.substring(0, 3)] !== undefined) month = months[p.substring(0, 3)];
+            else if (/^\d{1,2}$/.test(p)) day = parseInt(p);
+        });
+    }
+
+    return new Date(year, month, day).getTime();
+};
+
+// 2. FUTURE DATE CHECKER
+window.toggleSignupFields = (isChecked) => {
+    const signupInput = document.getElementById('signup-link-input');
+    if (signupInput) signupInput.style.display = isChecked ? 'block' : 'none';
+};
+
+// Also update your date checker to make sure the container shows up
+window.checkFutureDate = (val) => {
+    const container = document.getElementById('press-release-container');
+    if (!container) return;
+    
+    const inputDate = getNumericDateValue(val);
+    const today = new Date().getTime();
+    
+    // Show the press option only if the date is in the future
+    container.style.display = (inputDate > today) ? 'flex' : 'none';
+};
+
+window.togglePressFields = (checked) => {
+    const signupContainer = document.getElementById('signup-link-area');
+    if (signupContainer) {
+        signupContainer.style.display = checked ? 'block' : 'none';
+    }
+};
+
+window.previewImage = (input) => {
+    const preview = document.getElementById('art-preview');
+    const uploadTxt = document.getElementById('upload-txt');
+    const dropZone = document.getElementById('drop-zone');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            // Update the image source with the local file data
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            
+            // Hide the placeholder text/icon
+            if (uploadTxt) uploadTxt.style.display = 'none';
+            
+            // Optional: Change border style to show success
+            dropZone.style.border = '1px solid #222';
+        };
+
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
+window.addTrackItem = (type) => {
+    if (trackItems.length >= 30) return;
+    trackItems.push({ type: type, title: '', isBonus: false });
+    renderTracklist();
+};
+
+window.removeTrackItem = (index) => {
+    trackItems.splice(index, 1);
+    renderTracklist();
+};
+
+window.toggleBonus = (index) => {
+    trackItems[index].isBonus = !trackItems[index].isBonus;
+    renderTracklist();
+};
+
+window.moveItem = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= trackItems.length) return; // Boundary check
+    
+    // Swap the items in the array
+    const temp = trackItems[index];
+    trackItems[index] = trackItems[newIndex];
+    trackItems[newIndex] = temp;
+    
+    renderTracklist();
+};
+
+window.handleAudioPreview = (input, index) => {
+    if (input.files && input.files[0]) {
+        // Save the actual file object to our global array
+        trackItems[index].audioFile = input.files[0];
+        // Re-render to show the file name and the audio player
+        renderTracklist();
+    }
+};
+
+window.handleAudioSelect = (input, index) => {
+    if (input.files && input.files[0]) {
+        // Store the file object in our global array
+        trackItems[index].audioFile = input.files[0];
+        // Re-render the list to show the player and the "✓" status
+        renderTracklist();
+    }
+};
+
+function renderTracklist() {
+    const list = document.getElementById('track-list-render');
+    const counter = document.getElementById('item-counter');
+    const btnContainer = document.getElementById('add-buttons-container');
+    
+    list.innerHTML = '';
+    let trackNum = 1;
+
+    trackItems.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = "track-row";
+        row.style = `display: flex; gap: 15px; align-items: center; padding: 12px 20px; border-radius: 16px; border: 1px solid #111; background: ${item.type === 'track' ? '#0a0a0a' : '#111'};`;
+        
+        // 1. Determine Icon & Content Layout based on type
+        let contentHTML = '';
+        let iconHTML = '';
+
+        if (item.type === 'track') {
+            iconHTML = `<span style="color:#444; font-weight:900; width:20px; text-align:center;">${trackNum++}</span>`;
+            contentHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+                    <input type="text" placeholder="TRACK NAME" value="${item.title || ''}" 
+                           oninput="trackItems[${index}].title = this.value" 
+                           style="width:100%; background:transparent; border:none; color:white; font-size:14px; outline:none;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button onclick="document.getElementById('audio-input-${index}').click()" style="background:none; border:none; color:var(--accent-green); font-size:9px; font-weight:900; cursor:pointer; padding:0; text-transform:uppercase;">
+                            ${item.audioFile ? '✓ Change Audio' : '+ Upload Audio'}
+                        </button>
+                        <input type="file" id="audio-input-${index}" hidden accept="audio/*" onchange="handleAudioSelect(this, ${index})">
+                        ${item.audioFile ? `<audio controls src="${URL.createObjectURL(item.audioFile)}" style="height:20px; filter:invert(1) grayscale(1); opacity:0.5;"></audio>` : ''}
+                    </div>
+                </div>
+                <div onclick="toggleBonus(${index})" class="bonus-tag ${item.isBonus ? 'active' : ''}">BONUS</div>
+            `;
+        } 
+        else if (item.type === 'video') {
+            iconHTML = `<i class="fa-solid fa-video" style="color:#444; width:20px; text-align:center;"></i>`;
+            contentHTML = `
+                <div style="flex:1; display:flex; flex-direction:column; gap:10px; padding: 5px 0;">
+                    <input type="text" placeholder="VIDEO NAME" value="${item.title || ''}" 
+                           oninput="trackItems[${index}].title = this.value" 
+                           style="background:transparent; border:none; color:white; font-size:14px; outline:none; font-weight:600; width:100%;">
+                    
+                    <div style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:10px; border:1px solid #1a1a1a;">
+                        <i class="fa-solid fa-link" style="font-size:10px; color:#444;"></i>
+                        <input type="text" placeholder="PASTE YOUTUBE URL" value="${item.videoUrl || ''}" 
+                               oninput="trackItems[${index}].videoUrl = this.value" 
+                               style="flex:1; background:transparent; border:none; color:var(--accent-green); font-size:11px; font-family:monospace; outline:none;">
+                    </div>
+                </div>
+            `;
+        } 
+        else {
+            iconHTML = `<i class="fa-solid fa-compact-disc" style="color:var(--accent-green); width:20px; text-align:center;"></i>`;
+            contentHTML = `
+                <div style="flex:1;">
+                    <input type="text" placeholder="DISC NAME" value="${item.title || ''}" 
+                           oninput="trackItems[${index}].title = this.value" 
+                           style="width:100%; background:transparent; border:none; color:white; font-size:14px; font-weight:900; outline:none;">
+                </div>
+            `;
+        }
+
+        // 2. Assemble the Row
+        row.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <button onclick="moveItem(${index}, -1)" style="background:none; border:none; color:#222; cursor:pointer; font-size:10px;"><i class="fa-solid fa-chevron-up"></i></button>
+                <button onclick="moveItem(${index}, 1)" style="background:none; border:none; color:#222; cursor:pointer; font-size:10px;"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+
+            ${iconHTML}
+            ${contentHTML}
+
+            <button onclick="removeTrackItem(${index})" style="background:none; border:none; color:#333; cursor:pointer; margin-left: auto;"><i class="fa-solid fa-trash-can"></i></button>
+        `;
+        list.appendChild(row);
+    });
+
+    counter.innerText = `${trackItems.length} / 30 ITEMS USED`;
+    const isFull = trackItems.length >= 30;
+    counter.style.color = isFull ? 'var(--accent-green)' : '#444';
+    btnContainer.style.opacity = isFull ? '0.2' : '1';
+    btnContainer.style.pointerEvents = isFull ? 'none' : 'auto';
+}
+
+const IMGBB_API_KEY = 'e403a366e471b218bd958732a550add8';
+
+window.generateSlug = (text) => {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[()]/g, '')           // Remove parentheses
+        .replace(/[^\w-]+/g, '')        // Remove all non-word chars
+        .replace(/--+/g, '-')           // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start
+        .replace(/-+$/, '');            // Trim - from end
+};
+
+window.publishProject = async () => {
+    const publishBtn = document.querySelector('.btn-primary');
+    
+    // 1. GATHER DATA
+    const title = document.getElementById('project-title-input')?.value;
+    const genre = document.getElementById('genre-input')?.value;
+    const dateValue = document.getElementById('date-input')?.value;
+
+    if (!title || !genre) return alert("Please enter a Title and Genre.");
+
+    try {
+        publishBtn.disabled = true;
+        publishBtn.innerText = "UPLOADING AUDIO...";
+
+        const albumId = window.generateSlug(title);
+        const processedTracks = [];
+
+        // 2. LOOP THROUGH TRACKS
+        for (let item of trackItems) {
+            let trackEntry = { ...item };
+            
+            if (item.type === 'track' && item.audioFile) {
+                // The heavy lifting
+                trackEntry.url = await uploadToR2(item.audioFile);
+                delete trackEntry.audioFile; // Don't save the raw file object to DB
+            }
+            processedTracks.push(trackEntry);
+        }
+
+        publishBtn.innerText = "SAVING PROJECT...";
+
+        // 3. SAVE TO SUPABASE
+        const { error } = await window.db.from('albumrequests').insert([{
+            id: albumId,
+            name: title,
+            genre: genre,
+            full_release_date: dateValue,
+            track_metadata: processedTracks, // Stores your R2 links
+            track_ids: processedTracks.map(t => `${albumId}-${window.generateSlug(t.title)}`),
+            status: 'pending'
+        }]);
+
+        if (error) throw error;
+
+        alert("Release Published Successfully!");
+        location.reload();
+
+    } catch (err) {
+        console.error(err);
+        alert("Error: " + err.message);
+    } finally {
+        publishBtn.disabled = false;
+        publishBtn.innerText = "PUBLISH";
+    }
+};
+
+// Helper: Supabase Audio Upload
+async function uploadToR2(file) {
+    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
+    const WORKER_URL = 'https://round-morning-7269.g2022426.workers.dev/'; // From your screenshot
+
+    // Send the file to your Worker
+    const response = await fetch(`${WORKER_URL}?file=${fileName}`, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+    });
+
+    if (!response.ok) throw new Error("Upload failed");
+
+    // This is the final link for your music player
+    return `https://pub-a85258b4418f45e69a91ce48f147f18d.r2.dev/audio/${fileName}`;
+}
+
+// 5. MODAL: APPLY FOR ARTIST
+window.openApplyModal = (name, slug) => {
+    const modal = document.createElement('div');
+    modal.id = 'apply-modal-root';
+    Object.assign(modal.style, {
+        position:'fixed', inset:'0', zIndex:'99999', display:'flex', 
+        alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.9)', backdropFilter:'blur(10px)'
+    });
+
+    modal.innerHTML = `
+        <div class="modal-animate-in" style="background:#0d0d0d; border:1px solid #222; width:90%; max-width:450px; padding:40px; border-radius:24px;">
+            <h2 style="font-weight:900; margin-bottom:5px;">Claim ${name}</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:25px;">Provide details to verify ownership.</p>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <input type="text" id="req-name" placeholder="Full Name" style="background:#111; border:1px solid #222; padding:15px; border-radius:10px; color:white;">
+                <input type="date" id="req-dob" style="background:#111; border:1px solid #222; padding:15px; border-radius:10px; color:white;">
+                <textarea id="req-proof" placeholder="Links to socials / Proof of identity" style="background:#111; border:1px solid #222; padding:15px; border-radius:10px; color:white; min-height:80px;"></textarea>
+                <button onclick="submitRequest('${slug}')" class="btn-primary" style="margin-top:10px;">SUBMIT APPLICATION</button>
+                <button onclick="document.getElementById('apply-modal-root').remove()" style="background:none; border:none; color:#444; cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.submitRequest = async (slug) => {
+const { data: { session } } = await client.auth.getSession();
+    
+    // DEBUG: Make sure this ID actually exists
+    console.log("Submitting for User ID:", session?.user?.id);
+
+    const payload = {
+        user_id: session.user.id, // This MUST match the policy auth.uid()
+        artist_slug: slug,
+        full_name: document.getElementById('req-name').value,
+        dob: document.getElementById('req-dob').value,
+        proof_details: document.getElementById('req-proof').value,
+        status: 'pending'
+    };
+
+    const { error } = await client.from('requests').insert([payload]);
+    if (!error) {
+        alert("Application sent successfully!");
+        document.getElementById('apply-modal-root').remove();
+    } else {
+        alert("Error: " + error.message);
+    }
+};
+
+// HELPERS
+function debounce(func, timeout) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
+init();
+</script>
+</body>
+</html>
