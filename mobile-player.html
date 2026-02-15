@@ -37,6 +37,30 @@ body, html {
     overscroll-behavior-x: none;
 }
 
+#toast-container {
+    position: fixed;
+    bottom: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1ed760;
+    color: black;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 14px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    animation: toastIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes toastIn {
+    from { bottom: 80px; opacity: 0; }
+    to { bottom: 120px; opacity: 1; }
+}
+
 #content-view::-webkit-scrollbar {
     width: 0px; /* Most mobile apps hide the bar entirely for that clean look */
     background: transparent;
@@ -121,7 +145,16 @@ body, html {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.nav-item { color: var(--text-dim); transition: 0.3s; flex: 1; text-align: center; font-size: 10px; font-weight: 600; }
+.nav-item { 
+    color: var(--text-dim); 
+    transition: 0.3s; 
+    flex: 1; 
+    text-align: center; 
+    font-size: 9px; /* Slightly smaller for 4 items */
+    font-weight: 600;
+    min-width: 0; /* Prevents flex items from overflowing */
+    white-space: nowrap;
+}
 .nav-item.active { color: white; transform: translateY(-2px); }
 .nav-item .material-icons { display: block; font-size: 24px; margin-bottom: 2px; }
 
@@ -485,88 +518,84 @@ overflow: hidden; /* This is necessary for the squircle shape */
 </head>
 <body>
 
-    <div id="content-view">
-        <div style="padding: 100px 20px; text-align: center; color: var(--text-dim);">Loading TRM...</div>
-    </div>
-
-    <div id="mini-player" onclick="openFullPlayer()">
-        <div class="mini-main">
-            <img id="m-art" src="">
-            <div style="flex:1; overflow:hidden;">
-                <div id="m-title" style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
-                <div id="m-artist" style="font-size:12px; color:var(--text-dim);"></div>
-            </div>
-            <span class="material-icons" id="m-play-btn" onclick="event.stopPropagation(); togglePlay();" style="font-size:35px; padding:5px;">play_arrow</span>
-        </div>
-        <div class="progress-container" onclick="event.stopPropagation(); seek(event, this)">
-            <div id="mini-progress" class="progress-fill"></div>
-        </div>
-    </div>
-
-    <div id="full-player" style="display:none; flex-direction:column; background:#000; height:100vh; width:100vw; position:fixed; top:0; left:0; z-index:9999; overflow:hidden;">
-        <div id="fp-bg-visual"></div>
-        <div class="bg-glow" id="fp-glow"></div>
-
-        <div class="fp-header" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 100;">
-            <div class="back-btn" onclick="closeFullPlayer()">
-                <span class="material-icons" style="font-size:32px; color: white;">expand_more</span>
-            </div>
-            <span style="font-size:10px; font-weight:800; letter-spacing:2px; opacity: 0.5; color: white;">NOW PLAYING</span>
-            <span class="material-icons" id="fp-heart-icon" onclick="handleLikeClick()" style="font-size:26px; color: white;">favorite_border</span>
-        </div>
-
-<div id="fp-scroll-container" style="flex: 1; overflow-y: auto; padding: 0 30px; scrollbar-width: none;">
-    <div style="padding: 5px 0; display: flex; justify-content: center;">
-        <img id="fp-art" src="" style="width: 100%; aspect-ratio:1; object-fit: cover; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
-    </div>
-
-    <div class="fp-meta" style="margin-bottom: 20px;">
-        <h1 id="fp-title" style="margin:0; font-size:28px; font-weight: 800; color: white; line-height: 1;"></h1>
-        <p id="fp-artist" style="margin: 5px 0 0 0; font-size: 18px; font-weight: 500; color: var(--accent-green);"></p>
-    </div>
-
-    <div id="fp-lyrics-wrapper" onclick="openLyricsTab()" style="padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 100px;">
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-    <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">
-        LYRICS
-    </div>
-    <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">
-        TAP TO EXPAND
-    </div>
+<div id="content-view">
+    <div style="padding: 100px 20px; text-align: center; color: var(--text-dim);">Loading TRM...</div>
 </div>
-        <div id="fp-lyrics-text" style="font-size: 22px; font-weight: 700; color: white; white-space: pre-wrap;"></div>
+
+<div id="mini-player" onclick="openFullPlayer()">
+    <div class="mini-main">
+        <img id="m-art" src="">
+        <div style="flex:1; overflow:hidden;">
+            <div id="m-title" style="font-weight:bold; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+            <div id="m-artist" style="font-size:12px; color:var(--text-dim);"></div>
+        </div>
+        <span class="material-icons" id="m-play-btn" onclick="event.stopPropagation(); togglePlay();" style="font-size:35px; padding:5px;">play_arrow</span>
+    </div>
+    <div class="progress-container" onclick="event.stopPropagation(); seek(event, this)">
+        <div id="mini-progress" class="progress-fill"></div>
     </div>
 </div>
 
-        <div id="lyrics-tab" style="display:none; position:absolute; inset:0; z-index:200; background: rgba(0,0,0,0.9); backdrop-filter: blur(40px); flex-direction: column; padding: 60px 40px;">
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h2 style="color: white; margin:0; font-weight: 900;">Lyrics</h2>
-                <span class="material-icons" onclick="closeLyricsTab()" style="font-size: 32px; color: white; cursor: pointer;">close</span>
-            </div>
-            <div id="fp-lyrics-full" style="flex: 1; overflow-y: auto; font-size: 28px; font-weight: 900; line-height: 1.5; color: white; white-space: pre-wrap; padding-bottom: 100px;"></div>
+<div id="full-player" style="display:none; flex-direction:column; background:#000; height:100vh; width:100vw; position:fixed; top:0; left:0; z-index:9999; overflow:hidden;">
+    <div id="fp-bg-visual"></div>
+    <div class="bg-glow" id="fp-glow"></div>
+
+    <div class="fp-header" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; z-index: 100;">
+        <div class="back-btn" onclick="closeFullPlayer()">
+            <span class="material-icons" style="font-size:32px; color: white;">expand_more</span>
+        </div>
+        <span style="font-size:10px; font-weight:800; letter-spacing:2px; opacity: 0.5; color: white;">NOW PLAYING</span>
+        <span class="material-icons" id="fp-heart-icon" onclick="handleLikeClick()" style="font-size:26px; color: white;">favorite_border</span>
+    </div>
+
+    <div id="fp-scroll-container" style="flex: 1; overflow-y: auto; padding: 0 30px; scrollbar-width: none; z-index: 10;">
+        <div style="padding: 5px 0; display: flex; justify-content: center;">
+            <img id="fp-art" src="" style="width: 100%; aspect-ratio:1; object-fit: cover; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
         </div>
 
-        <div id="fp-bottom-controls" style="padding: 20px 40px 60px 40px; background: linear-gradient(to top, #000 90%, transparent); z-index: 150;">
-            <div class="progress-container" onclick="seek(event, this)" style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;">
-                <div id="fp-progress" class="progress-fill" style="background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.6);"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); margin-top: 12px;">
-                <span id="time-cur">0:00</span>
-                <span id="time-dur">0:00</span>
-            </div>
+        <div class="fp-meta" style="margin: 20px 0;">
+            <h1 id="fp-title" style="margin:0; font-size:28px; font-weight: 800; color: white; line-height: 1.1;"></h1>
+            <p id="fp-artist" style="margin: 8px 0 0 0; font-size: 18px; font-weight: 500; color: var(--accent-green);"></p>
+        </div>
 
-            <div class="fp-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
-                <span class="material-icons" id="ctrl-shuffle" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleShuffle()">shuffle</span>
-                <span class="material-icons" style="font-size:48px; color: white;" onclick="prevTrack()">skip_previous</span>
-                <div class="play-btn-lg" onclick="togglePlay()" style="background: white; color: black; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(255,255,255,0.2);">
-                    <span class="material-icons" id="fp-play-btn" style="font-size:45px;">play_arrow</span>
+        <div id="fp-lyrics-wrapper" onclick="openLyricsTab()" style="padding: 15px; background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">LYRICS</div>
+                    <div id="genius-badge-cont"></div> 
                 </div>
-                <span class="material-icons" style="font-size:48px; color: white;" onclick="nextTrack()">skip_next</span>
-                <span class="material-icons" id="ctrl-repeat" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleLoop()">repeat</span>
+                <div style="font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.4); letter-spacing: 1px;">TAP TO EXPAND</div>
             </div>
+            <div id="fp-lyrics-text" style="font-size: 20px; font-weight: 700; color: white; white-space: pre-wrap; line-height: 1.4; max-height: 150px; overflow: hidden;"></div>
         </div>
+    </div> <div id="lyrics-tab" style="display:none; position:absolute; inset:0; z-index:200; background: rgba(0,0,0,0.95); backdrop-filter: blur(40px); flex-direction: column; padding: 60px 40px;">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h2 style="color: white; margin:0; font-weight: 900;">Lyrics</h2>
+            <span class="material-icons" onclick="closeLyricsTab()" style="font-size: 32px; color: white; cursor: pointer;">close</span>
+        </div>
+        <div id="fp-lyrics-full" style="flex: 1; overflow-y: auto; font-size: 26px; font-weight: 900; line-height: 1.5; color: white; white-space: pre-wrap; padding-bottom: 100px;"></div>
     </div>
 
+    <div id="fp-bottom-controls" style="padding: 20px 40px 60px 40px; background: linear-gradient(to top, #000 90%, transparent); z-index: 150;">
+        <div class="progress-container" onclick="seek(event, this)" style="height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;">
+            <div id="fp-progress" class="progress-fill" style="background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.6);"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.4); margin-top: 12px;">
+            <span id="time-cur">0:00</span>
+            <span id="time-dur">0:00</span>
+        </div>
+
+        <div class="fp-controls" style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px;">
+            <span class="material-icons" id="ctrl-shuffle" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleShuffle()">shuffle</span>
+            <span class="material-icons" style="font-size:48px; color: white;" onclick="prevTrack()">skip_previous</span>
+            <div class="play-btn-lg" onclick="togglePlay()" style="background: white; color: black; width: 75px; height: 75px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(255,255,255,0.2);">
+                <span class="material-icons" id="fp-play-btn" style="font-size:45px;">play_arrow</span>
+            </div>
+            <span class="material-icons" style="font-size:48px; color: white;" onclick="nextTrack()">skip_next</span>
+            <span class="material-icons" id="ctrl-repeat" style="font-size:24px; color: white; opacity:0.6;" onclick="toggleLoop()">repeat</span>
+        </div>
+    </div>
+</div> <div id="app-container">
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-home" onclick="window.viewHome()">
             <span class="material-icons">home</span>Home
@@ -574,74 +603,84 @@ overflow: hidden; /* This is necessary for the squircle shape */
         <div class="nav-item" id="nav-search" onclick="window.viewSearch()">
             <span class="material-icons">search</span>Search
         </div>
-        <div class="nav-item" id="nav-lib" onclick="window.openPatchNotes()">
+        <div class="nav-item" id="nav-lib" onclick="window.viewLibrary()">
+            <span class="material-icons">favorite</span>Library
+        </div>
+        <div class="nav-item" id="nav-patch" onclick="window.openPatchNotes()">
             <span class="material-icons">new_releases</span>Patch Notes
         </div>
+        <div class="nav-item" id="nav-acc" onclick="window.viewAccount()">
+            <span class="material-icons">person</span>Account
+        </div>
     </nav>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
-        const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
-        const supabaseClient = supabase.createClient(S_URL, S_KEY);
+// 1. Initialize Client
+const S_URL = 'https://sxagulxljpzftqfnllhv.supabase.co';
+const S_KEY = 'sb_publishable_GG1VzWph8ZCK2hCyZugMfA_qR6LZcRn';
+window.supabaseClient = supabase.createClient(S_URL, S_KEY);
 
-        window.ALBUMS = [];
-        window.TRACKS = {};
-        window.ARTISTS = {};
-        window.SPOTLIGHTS = []; // Added this
-        let currentTrackId = null;
-        let currentArtistId = null;
-        let isShuffle = false;
-        let isRepeat = false;
-        const audio = new Audio();
-        const contentView = document.getElementById('content-view');
+// Ensure the global object exists immediately so fetchUserLikes doesn't crash
+window.USER_LIKES = { songs: [] }; 
+window.INIT_COMPLETE = false;
 
-        // UPDATED STORAGE: Added try/catch for iPhone Private Mode safety
-        window.STORAGE = {
-    getLikes: () => {
-        try {
-            const data = localStorage.getItem('trm_likes');
-            return (data && data !== "undefined") ? JSON.parse(data) : [];
-        } catch(e) { 
-            console.error("Storage Get Error", e);
-            return window._likesFallback || []; 
-        }
-    },
-    getRecent: () => {
-        try {
-            const data = localStorage.getItem('trm_recent');
-            return (data && data !== "undefined") ? JSON.parse(data) : [];
-        } catch(e) { 
-            return window._recentFallback || []; 
-        }
-    },
-    toggleLike: (id) => {
-        let likes = window.STORAGE.getLikes();
-        likes = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id];
-        try { 
-            localStorage.setItem('trm_likes', JSON.stringify(likes)); 
-            window._likesFallback = likes; // Always sync fallback
-        } catch(e) { 
-            window._likesFallback = likes; 
-            console.warn("Local Storage Full or Restricted");
-        }
-        return likes.includes(id);
-    },
-    addRecent: (id) => {
-        let recent = window.STORAGE.getRecent().filter(x => x !== id);
-        recent.unshift(id);
-        const sliced = recent.slice(0, 20);
-        try { 
-            localStorage.setItem('trm_recent', JSON.stringify(sliced)); 
-            window._recentFallback = sliced;
-        } catch(e) { 
-            window._recentFallback = sliced; 
+const getCV = () => document.getElementById('content-view') || document.getElementById('contentView');
+
+// 2. DEFINE THIS IMMEDIATELY
+window.fetchUserLikes = async function() {
+    console.log("Fetching user data...");
+    const client = window.supabaseClient;
+    if (!client) return;
+
+    // Ensure the object exists here as a second layer of defense
+    if (!window.USER_LIKES) window.USER_LIKES = { songs: [] };
+
+    try {
+        const { data: { session } } = await client.auth.getSession();
+        if (!session) return;
+
+        const { data, error } = await client
+            .from('users')
+            .select('liked_songs')
+            .eq('id', session.user.id)
+            .single();
+
+        if (error) throw error;
+
+        // Success: Update the array
+        window.USER_LIKES.songs = data?.liked_songs || [];
+        console.log("Sync Complete:", window.USER_LIKES.songs.length, "songs found.");
+
+    } catch (err) {
+        console.warn("User data sync failed, proceeding with empty library:", err.message);
+        // Safely reset to empty array
+        window.USER_LIKES.songs = []; 
+    } finally {
+        // UI Refresh logic
+        if (window.currentViewId === 'account' && window.viewAccount) window.viewAccount();
+        if (window.currentViewId === 'library' && window.viewLibrary) window.viewLibrary();
+        
+        // Hide loader if the rest of the app is also ready
+        const loader = document.getElementById('loading-screen');
+        if (loader && window.INIT_COMPLETE) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 300);
         }
     }
 };
 
+// Run this in your init() function
+// Add this at the VERY top of your script
+window.audio = new Audio();
+
 async function init() {
+    console.log("Starting TRM MUSIC PLAYER Initializing...");
+    const loader = document.getElementById('loading-screen');
+
     try {
+        // Core Data Fetch
         const [
             { data: artists },
             { data: albumsData },
@@ -656,70 +695,101 @@ async function init() {
             supabaseClient.from('videos').select('*') 
         ]);
 
-        // 2. PROCESS ARTISTS
+        // 1. Setup Artists
+        window.ARTISTS = {};
         artists?.forEach(a => window.ARTISTS[a.id] = a);
 
-        // 3. PROCESS SPOTLIGHTS
+        // 2. Setup Spotlights
         window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
-            type: row.type,
-            orderId: row.id,
-            targetId: row.target_id,
+            type: row.type, 
+            orderId: row.id, 
+            targetId: row.target_id, 
             url: row.url,
-            customTitle: row.custom_title,
+            customTitle: row.custom_title, 
             customSub: row.custom_sub
         }));
 
-        // 4. PROCESS ALBUMS
-        const parseDate = (str) => {
-            if (!str || str === 'RELEASED') return 0;
-            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
-            const timestamp = Date.parse(cleanDate);
-            return isNaN(timestamp) ? 0 : timestamp;
-        };
-        
-        // 4.5 AUTO-RELEASE PATCH (The Critical Step)
-        window.ALBUMS = (albumsData || []).map(alb => ({
-            ...alb,
-            coming_soon: window.isAlbumComingSoon ? window.isAlbumComingSoon(alb) : alb.coming_soon
-        })).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+        // 3. Setup Albums (Corrected Parentheses for .map and .sort)
+        window.ALBUMS = (albumsData || [])
+            .map(alb => ({
+                ...alb,
+                coming_soon: typeof window.isAlbumComingSoon === 'function' ? window.isAlbumComingSoon(alb) : alb.coming_soon
+            }))
+            .sort((a, b) => (Date.parse(b.full_release_date) || 0) - (Date.parse(a.full_release_date) || 0));
 
-        // 5. PROCESS TRACKS & VIDEOS
+// 4. Setup Tracks & Track Lookup
         const trackLookup = {};
         tracksData?.forEach(t => { trackLookup[t.id] = t; });
-        
-        videosData?.forEach(v => { 
-            trackLookup[v.id] = {
-                ...v,
-                isVideo: true,
-                videoUrl: v.url 
-            }; 
-        });
+        videosData?.forEach(v => { trackLookup[v.id] = { ...v, isVideo: true, videoUrl: v.url }; });
 
-        window.TRACKS = {};
+        // This is what the UI is looking for!
+        window.TRACKS = trackLookup; 
+
+        // If you need the album-specific arrays for something else, 
+        // store them in a different variable, like window.ALBUM_TRACKS
+        window.ALBUM_TRACKS = {};
         window.ALBUMS.forEach(alb => {
             const manualOrder = alb.track_ids || []; 
-            window.TRACKS[alb.id] = manualOrder.map(item => {
-                if (typeof item === 'string' && item.startsWith('DISC_')) return item;
-                return trackLookup[item];
-            }).filter(Boolean); 
+            window.ALBUM_TRACKS[alb.id] = manualOrder.map(id => trackLookup[id]).filter(Boolean); 
         });
 
-        setTimeout(() => {
-            window.viewHome();
-            console.log("Loaded TRM MUSIC PLAYER (Mobile) v1.4.0 - Auto-Release Active");
-            if (typeof handleDeepLinking === 'function') handleDeepLinking();
-            const loader = document.getElementById('loading-screen');
-            if (loader) loader.style.display = 'none';
-        }, 100);
+        // 5. User Sync
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            const { data: userData } = await supabaseClient
+                .from('users')
+                .select('liked_songs')
+                .eq('id', session.user.id)
+                .single();
+            window.USER_LIKES = { songs: userData?.liked_songs || [] };
+        } else {
+            window.USER_LIKES = { songs: [] };
+        }
 
     } catch (err) { 
         console.error("Init Error:", err);
+    } finally {
+        window.INIT_COMPLETE = true;
+        setTimeout(() => {
+            if (typeof window.viewHome === 'function') {
+                window.viewHome();
+            }
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 300);
+            }
+            console.log("TRM MUSIC PLAYER finished loading.");
+        }, 100);
     }
 }
-        function resetScroll() { contentView.scrollTo(0, 0); }
+
+window.parseLyrics = (lyricsRaw) => {
+    if (!lyricsRaw) return { html: "(No lyrics available)", hasGenius: false };
+
+    const geniusMatch = lyricsRaw.match(/genius_(https?:\/\/[^\s\n]+)/i);
+
+    if (geniusMatch) {
+        const geniusUrl = geniusMatch[1];
+        const cleanLyrics = lyricsRaw.replace(geniusMatch[0], '').trim();
+
+        // We return an object now so the UI knows where to put the link
+        const badgeHTML = `
+            <div onclick="window.open('${geniusUrl}', '_blank'); event.stopPropagation();" 
+                 style="display: flex; align-items: center; gap: 5px; background: rgba(255,255,100,0.1); padding: 4px 8px; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,100,0.2);">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5b/Genius_logo_2014.svg" style="width: 12px; height: 12px;">
+                <span style="color: #ffff64; font-size: 9px; font-weight: 900; letter-spacing: 0.5px;">GENIUS</span>
+            </div>
+        `;
+
+        return { html: cleanLyrics, badge: badgeHTML };
+    }
+
+    return { html: lyricsRaw, badge: null };
+};
 
 window.viewHome = function() {
-    window.currentViewId = 'home';
+window.currentViewId = 'home';
+    if (typeof window.updateNavUI === 'function') window.updateNavUI('nav-home');
     if (typeof resetScroll === 'function') resetScroll();
     if (typeof setNav === 'function') setNav(0);
 
@@ -740,78 +810,95 @@ window.viewHome = function() {
     if (!target) return;
 
     // 2. DYNAMIC RENDERER
-    const renderMobileSlide = (index) => {
-        const s = spotlights[index];
-        if (!s) return '';
+const renderMobileSlide = (index) => {
+    const s = spotlights[index];
+    if (!s) return '';
 
-        let displayImg = "";
-        let displayTitle = s.customTitle || "";
-        let tagText = "FEATURED";
-        let action = "";
+    let displayImg = "";
+    let displayTitle = s.customTitle || "";
+    let tagText = "FEATURED";
+    let action = "";
 
-        if (s.type === "Release") {
-            const alb = publicCatalogue.find(a => a.id === s.targetId);
-            if (alb) {
-                displayImg = alb.art_url;
-                displayTitle = s.customTitle || alb.name;
-                tagText = alb.coming_soon ? "COMING SOON" : "RELEASE";
-                action = `viewAlbum('${s.targetId}')`;
+    if (s.type === "Release") {
+        const alb = publicCatalogue.find(a => a.id === s.targetId);
+        if (alb) {
+            displayImg = alb.art_url;
+            displayTitle = s.customTitle || alb.name;
+            tagText = alb.coming_soon ? "COMING SOON" : "RELEASE";
+            action = `viewAlbum('${s.targetId}')`;
+        }
+    } 
+else if (s.type === "Artist") {
+        let art = null;
+        if (window.ARTISTS) {
+            // 1. Try direct lookup first
+            art = window.ARTISTS[s.targetId];
+
+            // 2. Flexible lookup if direct hit fails (ignores hyphens/case)
+            if (!art) {
+                const cleanTarget = String(s.targetId).replace(/-/g, '').toLowerCase();
+                art = Object.values(window.ARTISTS).find(a => 
+                    String(a.id).replace(/-/g, '').toLowerCase() === cleanTarget
+                );
             }
-        } 
-        else if (s.type === "Artist") {
-            const art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
-            displayImg = art ? (art.banner_url || art.img_url) : ""; 
-            displayTitle = s.customTitle || (art ? art.name : "Artist");
-            tagText = "ARTIST SPOTLIGHT";
-            action = `viewArtist('${s.targetId}')`;
-        } 
-        else if (s.type === "Track") {
-            const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
+        }
+
+        displayImg = art ? (art.banner_url || art.img_url) : ""; 
+        displayTitle = s.customTitle || (art ? art.name : "Artist");
+        tagText = "ARTIST SPOTLIGHT";
+        // Use the found artist ID if available, otherwise fallback to the targetId
+        action = `viewArtist('${art ? art.id : s.targetId}')`;
+    }
+    else if (s.type === "Track") {
+        // 1. Get the track directly from the dictionary
+        const trackData = window.TRACKS ? window.TRACKS[s.targetId] : null;
+
+        if (trackData) {
+            // 2. Find the correct album using the track's album_id string
+            const parentIds = trackData.album_id ? trackData.album_id.split(',').map(id => id.trim()) : [];
+            
+            // Look for a public album first
+            const parentAlbums = publicCatalogue.filter(a => parentIds.includes(a.id));
             const publicOnly = parentAlbums.filter(a => !a.coming_soon);
             
-            const latestAlb = (publicOnly.length > 0) 
-                ? publicOnly.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0]
-                : parentAlbums.sort((a, b) => new Date(b.full_release_date) - new Date(a.full_release_date))[0];
+            const latestAlb = (publicOnly.length > 0) ? publicOnly[0] : parentAlbums[0];
 
-            let trackData = null;
-            if (latestAlb && window.TRACKS && window.TRACKS[latestAlb.id]) {
-                const bucket = window.TRACKS[latestAlb.id];
-                trackData = Array.isArray(bucket) ? bucket.find(t => t.id === s.targetId) : bucket[s.targetId];
-            }
-
-            if (trackData && latestAlb) {
+            if (latestAlb) {
                 displayImg = trackData.art_url || latestAlb.art_url;
                 displayTitle = s.customTitle || trackData.title;
                 tagText = "TRACK HIGHLIGHT"; 
+                // Pass the album ID so playTrack knows which art context to use
                 action = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}', true, '${latestAlb.id}'); }, 500);`;
             }
-        } 
-        else if (s.type === "Video") {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = s.url ? s.url.match(regExp) : null;
-            const vidId = (match && match[2].length == 11) ? match[2] : null;
-            displayImg = vidId ? `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg` : "";
-            tagText = "FEATURED VIDEO";
-            action = `window.open('${s.url}', '_blank')`;
         }
+    } 
+    else if (s.type === "Video") {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = s.url ? s.url.match(regExp) : null;
+        const vidId = (match && match[2].length == 11) ? match[2] : null;
+        displayImg = vidId ? `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg` : "";
+        tagText = "FEATURED VIDEO";
+        action = `window.open('${s.url}', '_blank')`;
+    }
 
-        if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
+    // Final fallback
+    if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
 
-        return `
-        <div class="mobile-spotlight-card spotlight-anim" onclick="${action}">
-            <div class="mobile-spotlight-bg" style="background-image: url('${displayImg}')"></div>
-            <div class="mobile-spotlight-content">
-                <span class="mobile-tag">${tagText}</span>
-                <h1 class="mobile-title">${displayTitle.toUpperCase()}</h1>
-                ${spotlights.length > 1 ? `
-                <div class="mobile-pill-container">
-                    ${spotlights.map((_, i) => `
-                        <div class="mobile-pill ${i === index ? 'active' : ''}"></div>
-                    `).join('')}
-                </div>` : ''}
-            </div>
-        </div>`;
-    };
+    return `
+    <div class="mobile-spotlight-card spotlight-anim" onclick="${action}">
+        <div class="mobile-spotlight-bg" style="background-image: url('${displayImg}')"></div>
+        <div class="mobile-spotlight-content">
+            <span class="mobile-tag">${tagText}</span>
+            <h1 class="mobile-title">${displayTitle.toUpperCase()}</h1>
+            ${spotlights.length > 1 ? `
+            <div class="mobile-pill-container">
+                ${spotlights.map((_, i) => `
+                    <div class="mobile-pill ${i === index ? 'active' : ''}"></div>
+                `).join('')}
+            </div>` : ''}
+        </div>
+    </div>`;
+};
 
     // 2. NAVIGATION
     window.moveSpotlight = (dir) => {
@@ -948,11 +1035,324 @@ window.toggleNavUI = (show) => {
     }
 };
 
+window.updateNavUI = (activeId) => {
+    const navIds = ['nav-home', 'nav-search', 'nav-lib', 'nav-patch', 'nav-acc']; 
+    
+    // Clear any search-specific layout shifts
+    document.body.classList.remove('is-searching', 'search-mode'); 
+
+    navIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        // Reset all positioning properties to ensure alignment
+        el.style.marginTop = "0px";
+        el.style.display = "flex";
+        el.style.flexDirection = "column";
+        el.style.alignItems = "center";
+        el.style.justifyContent = "center";
+
+        if (id === activeId) {
+            el.style.color = '#00ff88'; 
+            el.style.opacity = '1';
+            // Increase weight instead of scale to keep dimensions stable
+            el.style.fontWeight = "900"; 
+            // If you still want a scale, keep it tiny so it doesn't push the box
+            el.style.transform = 'scale(1.05)'; 
+        } else {
+            el.style.color = 'white';
+            el.style.opacity = '0.5';
+            el.style.fontWeight = "normal";
+            el.style.transform = 'scale(1)';
+        }
+    });
+};
+
+window.viewAccount = async function() {
+    window.currentViewId = 'account';
+    if (typeof window.updateNavUI === 'function') window.updateNavUI('nav-acc');
+    
+    const target = document.getElementById('content-view');
+    const client = supabaseClient;
+    const { data: { session } } = await client.auth.getSession();
+
+if (typeof window.closeFullPlayer === 'function') {
+        window.closeFullPlayer();
+    }
+
+    if (typeof window.toggleNavUI === 'function') {
+        window.toggleNavUI(true);
+    }
+
+    if (typeof window.updateNavUI === 'function') {
+        window.updateNavUI('nav-acc');
+    }
+    
+    // Reset scroll so the login page starts at the top
+    target.scrollTo(0, 0);
+
+    // 1. GUEST STATE
+    if (!session) {
+        target.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:80vh; padding:40px; text-align:center;">
+                <div style="width:120px; height:120px; background:#111; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:30px; border: 2px dashed #333;">
+                    <span class="material-icons" style="font-size:60px; color:#333;">person_outline</span>
+                </div>
+                <h1 style="color:white; font-weight:900; margin-bottom:10px; font-size:32px; letter-spacing:-1px;">YOUR PROFILE</h1>
+                <p style="color:#666; margin-bottom:40px; font-weight:600;">Sign in to sync your library across devices.</p>
+                
+                <div style="display:flex; flex-direction:column; gap:15px; width:100%; max-width:300px;">
+                    <button onclick="window.openAuthModal('login')" style="background:white; color:black; border:none; padding:18px; border-radius:40px; font-weight:900; cursor:pointer;">LOG IN</button>
+                    <button onclick="window.openAuthModal('signup')" style="background:transparent; color:white; border:2px solid #333; padding:18px; border-radius:40px; font-weight:900; cursor:pointer;">CREATE ACCOUNT</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // 2. AUTHENTICATED STATE
+    // Fetch both display_name and username from the users table
+    const { data: profile } = await client
+        .from('users')
+        .select('display_name, username')
+        .eq('id', session.user.id)
+        .single();
+
+    // Fallbacks if fields are empty
+    const finalDisplayName = profile?.display_name || session.user.email.split('@')[0];
+    const finalUsername = profile?.username ? `@${profile.username}` : session.user.email;
+    
+    const likedCount = window.USER_LIKES?.songs?.length || 0;
+
+    target.innerHTML = `
+        <div style="padding:60px 20px; animation: fadeIn 0.3s ease; max-width: 600px; margin: 0 auto;">
+            
+            <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:50px;">
+                <div style="width:110px; height:110px; background:linear-gradient(135deg, #00ff88, #00bdff); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:25px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position:relative;">
+                    <span class="material-icons" style="font-size:55px; color:black;">person</span>
+                    <div style="position:absolute; bottom:0; right:5px; background:#00ff88; width:25px; height:25px; border-radius:50%; border:3px solid black; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-icons" style="font-size:12px; color:black; font-weight:900;">check</span>
+                    </div>
+                </div>
+                <h1 style="color:white; font-weight:900; margin:0; font-size:36px; letter-spacing:-1px; text-transform: uppercase;">${finalDisplayName}</h1>
+                <p style="color:#00ff88; font-weight:800; font-size:14px; margin-top:5px; letter-spacing:0.5px; opacity:0.8;">${finalUsername.toLowerCase()}</p>
+            </div>
+
+            <div style="background:#111; padding:25px; border-radius:24px; text-align:center; border:1px solid #222; margin-bottom:30px;">
+                <div style="color:white; font-size:32px; font-weight:900;">${likedCount}</div>
+                <div style="color:#444; font-size:11px; font-weight:900; letter-spacing:2px; margin-top:5px;">LIKED SONGS</div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div onclick="window.handleLogout()" style="display:flex; align-items:center; gap:20px; padding:22px; background:rgba(255,50,50,0.05); border:1px solid rgba(255,50,50,0.1); border-radius:20px; color:#ff4444; cursor:pointer; transition: transform 0.1s ease;" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+                    <span class="material-icons" style="font-size:28px;">logout</span>
+                    <span style="flex:1; font-weight:900; font-size:16px;">LOGOUT</span>
+                </div>
+            </div>
+
+            <div style="margin-top:80px; text-align:center; opacity:0.2;">
+                <p style="color:white; font-size:10px; font-weight:900; letter-spacing:3px;">TRM MUSIC PLAYER v1.5.0</p>
+            </div>
+        </div>
+    `;
+};
+
+window.openAuthModal = function(mode = 'login') {
+    if (document.getElementById('auth-modal-root')) return;
+
+    window.isSignUpMode = (mode === 'signup');
+
+    const root = document.createElement('div');
+    root.id = 'auth-modal-root';
+    Object.assign(root.style, {
+        position: 'fixed',
+        inset: '0',
+        zIndex: '10000',
+        background: '#000', // Solid black for mobile focus
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'sans-serif'
+    });
+
+    const updateModalContent = () => {
+        const title = window.isSignUpMode ? "CREATE ACCOUNT" : "WELCOME BACK";
+        const subtitle = window.isSignUpMode ? "Join the community today." : "Log in to your account to continue.";
+        const submitText = window.isSignUpMode ? "GET STARTED" : "LOG IN";
+        const toggleText = window.isSignUpMode ? "Already have an account?" : "Don't have an account?";
+        const toggleLink = window.isSignUpMode ? "Login" : "Sign Up";
+
+        root.innerHTML = `
+            <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between;">
+                <button onclick="window.closeAuthModal()" style="background:none; border:none; color:white; padding:10px;">
+                    <span class="material-icons" style="font-size:32px;">close</span>
+                </button>
+                <span style="font-size:10px; font-weight:900; letter-spacing:2px; color:#444;">TRM MUSIC PLAYER</span>
+                <div style="width:52px;"></div> </div>
+
+            <div style="flex:1; padding:40px 30px; display:flex; flex-direction:column; justify-content: center;">
+                <h2 style="color:white; font-size:42px; font-weight:900; margin:0; letter-spacing:-2px; line-height:0.9;">${title}</h2>
+                <p style="color: #666; font-size: 16px; margin: 15px 0 40px 0; font-weight: 500;">${subtitle}</p>
+                
+                <div id="auth-form" style="display:flex; flex-direction:column; gap:12px;">
+                    ${window.isSignUpMode ? `
+                        <input type="text" id="modal-auth-username" placeholder="Username" style="background:#111; border:1px solid #222; padding:20px; border-radius:16px; color:white; outline:none; font-size:16px;">
+                        <input type="text" id="modal-auth-display-name" placeholder="Display Name" style="background:#111; border:1px solid #222; padding:20px; border-radius:16px; color:white; outline:none; font-size:16px;">
+                    ` : ''}
+                    <input type="email" id="modal-auth-email" placeholder="Email Address" style="background:#111; border:1px solid #222; padding:20px; border-radius:16px; color:white; outline:none; font-size:16px;">
+                    <input type="password" id="modal-auth-password" placeholder="Password" style="background:#111; border:1px solid #222; padding:20px; border-radius:16px; color:white; outline:none; font-size:16px;">
+                    
+                    <button id="auth-submit-btn" onclick="window.handleAuthSubmit()" style="background:#00ff88; color:black; font-weight:900; padding:20px; border-radius:16px; border:none; cursor:pointer; margin-top:10px; font-size:16px; letter-spacing:1px;">
+                        ${submitText}
+                    </button>
+                    
+                    <div id="auth-notification" style="font-size: 13px; text-align: center; min-height: 20px; margin-top: 10px; font-weight: 700;"></div>
+                </div>
+
+                <p style="text-align:center; margin-top:auto; padding-bottom:40px; font-size:14px; color:#444;">
+                    ${toggleText} <span onclick="window.toggleAuthMode()" style="color:#00ff88; cursor:pointer; font-weight:900; text-decoration: underline;">${toggleLink}</span>
+                </p>
+            </div>
+        `;
+    };
+
+    window.toggleAuthMode = () => {
+        window.isSignUpMode = !window.isSignUpMode;
+        updateModalContent();
+    };
+
+    updateModalContent();
+    document.body.appendChild(root);
+};
+
+window.closeAuthModal = () => {
+    const root = document.getElementById('auth-modal-root');
+    if (root) root.remove();
+};
+
+window.handleAuthSubmit = async () => {
+    // Ensure we are using the correct variable name defined in your setup
+    const client = window.supabaseClient;
+
+    const notification = document.getElementById('auth-notification');
+    const submitBtn = document.getElementById('auth-submit-btn');
+
+    // 1. Safety Check: If the client didn't initialize, stop the crash
+    if (!client) {
+        console.error("Supabase client not found.");
+        notification.innerHTML = "SYSTEM ERROR: CLIENT MISSING";
+        notification.style.color = "#ff4444";
+        return;
+    }
+
+    // 2. Mobile UX: Blur inputs to hide the keyboard
+    const inputs = document.querySelectorAll('#auth-modal-root input');
+    inputs.forEach(input => input.blur());
+
+    const email = document.getElementById('modal-auth-email').value.trim();
+    const password = document.getElementById('modal-auth-password').value;
+
+    const showMsg = (text, isError = true) => {
+        notification.innerHTML = text.toUpperCase(); 
+        notification.style.color = isError ? "#ff4444" : "#00ff88";
+        submitBtn.style.opacity = "1";
+        submitBtn.disabled = false;
+        submitBtn.innerText = window.isSignUpMode ? "GET STARTED" : "LOG IN";
+    };
+
+    if (!email || password.length < 6) return showMsg("Valid email and 6+ chars required.");
+
+    // 3. Prevent Double Taps
+    submitBtn.style.opacity = "0.5";
+    submitBtn.innerText = "WAIT...";
+    submitBtn.disabled = true;
+
+    try {
+        if (window.isSignUpMode) {
+            const username = document.getElementById('modal-auth-username').value.trim();
+            const displayName = document.getElementById('modal-auth-display-name').value.trim();
+
+            const { error } = await client.auth.signUp({
+                email, 
+                password,
+                options: { 
+                    data: { 
+                        username: username, 
+                        display_name: displayName 
+                    } 
+                }
+            });
+            
+            if (error) throw error;
+            showMsg("Check your email for a link!", false);
+        } else {
+            // Login Logic
+            const { error } = await client.auth.signInWithPassword({ 
+                email, 
+                password 
+            });
+            
+            if (error) throw error;
+            
+            // 4. Cleanup and Refresh
+            window.closeAuthModal();
+            
+            // Immediately refresh the Account view to show the new profile
+            if (window.viewAccount) {
+                await window.viewAccount();
+            }
+            
+            window.showToast("Logged in successfully");
+        }
+    } catch (err) {
+        showMsg(err.message);
+    }
+};
+
+window.supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log("Auth Event:", event);
+    
+    if (session?.user) {
+        // DO NOT use 'await' here. Let it run in the background.
+        if (typeof window.fetchUserLikes === 'function') {
+            window.fetchUserLikes(); 
+        }
+    } else if (event === 'SIGNED_OUT') {
+        window.USER_LIKES = { songs: [] };
+        if (window.viewHome) window.viewHome();
+    }
+});
+
+setTimeout(() => {
+    const loader = document.getElementById('loading-screen');
+    if (loader && loader.style.display !== 'none') {
+        console.error("App stuck in loading state. Forcing UI...");
+        loader.style.opacity = '0';
+        setTimeout(() => {
+            loader.style.display = 'none';
+            // Try to render something so the screen isn't empty
+            if (typeof window.viewHome === 'function') window.viewHome();
+        }, 300);
+    }
+}, 4000);
+
+window.handleLogout = async function() {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        window.showToast("Error logging out", "info");
+    } else {
+        window.USER_LIKES = { songs: [] }; // Clear local state
+        window.showToast("Logged out successfully");
+        window.viewHome(); // Redirect to home
+    }
+};
 
 window.viewArtist = (id) => {
-    window.currentViewId = 'artist';
+window.currentViewId = 'artist';
+    const target = document.getElementById('content-view') || document.getElementById('contentView');
+    if (!target) return;
+
     if (typeof toggleNavUI === 'function') toggleNavUI(false); 
-    contentView.scrollTo(0, 0);
+    target.scrollTo(0, 0);
 
     const artist = window.ARTISTS[id] || { 
         name: "therichmusic", 
@@ -997,9 +1397,7 @@ const renderSocials = () => {
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? `https://www.youtube-nocookie.com/embed/${match[2]}?rel=0` : null;
     };
-    const embedUrl = getEmbedUrl(artist.featured_video_url);
-
-    // --- 2. CATEGORIZATION LOGIC ---
+const embedUrl = getEmbedUrl(artist.featured_video_url);
     const albums = artistAlbs.filter(a => ['ALBUM', 'MIXTAPE'].includes((a.type || '').toUpperCase()));
     const singles = artistAlbs.filter(a => ['SINGLE', 'EP'].includes((a.type || '').toUpperCase()));
     const compilations = artistAlbs.filter(a => (a.type || '').toUpperCase() === 'COMPILATION');
@@ -1079,7 +1477,7 @@ const renderSocials = () => {
         </div>
     </div>`;
 
-    contentView.innerHTML = html;
+target.innerHTML = html; // Use the 'target' variable here
 };
 
 // Listen for when a song finishes naturally
@@ -1156,195 +1554,111 @@ window.openVideoPlayer = function(input) {
     document.body.appendChild(modal);
 };
 
-window.viewAlbum = (id, scrollToTop = true) => {
-    window.currentViewId = 'album';
-    if (typeof toggleNavUI === 'function') toggleNavUI(false); 
+window.viewAlbum = function(id, scrollToTop = true) {
+    const contentView = document.getElementById('content-view') || document.getElementById('contentView');
+    if (!contentView) return;
 
     const alb = window.ALBUMS.find(a => a.id == id);
     if (!alb) return window.viewHome();
+    
+    window.currentViewId = 'album';
+    window.viewingAlbumId = id;
+    if (typeof toggleNavUI === 'function') toggleNavUI(false); 
 
     const artist = window.ARTISTS[alb.artist_id] || { name: "therichmusic", id: "" };
-    const tks = alb.track_list || window.TRACKS[id] || [];
-
-    // --- 1. DATA VALIDATION (Uses the patched window.ALBUMS status) ---
-    const isReleased = !alb.coming_soon;
-    const trailerUrl = alb.trailer_url || null;
-    const releaseDateRaw = alb.full_release_date || null;
-
-    // --- 2. RELEASE DATE FORMATTING ---
-    const dateLabel = !isReleased ? "RELEASING" : "RELEASED";
-    let finalDateDisplay = "";
     
-    if (releaseDateRaw) {
-        const rawDate = String(releaseDateRaw).trim();
-        if (/^\d{4}$/.test(rawDate)) {
-            finalDateDisplay = rawDate;
-        } else {
-            const cleanedDate = rawDate.replace(/(\d+)(st|nd|rd|th)/, "$1");
-            const dateObj = new Date(cleanedDate);
-            if (!isNaN(dateObj)) {
-                finalDateDisplay = dateObj.toLocaleDateString(undefined, {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
-            } else {
-                finalDateDisplay = rawDate;
-            }
-        }
-    }
+    // 1. Get ALL tracks + DISC headers from the album data
+    const tks = (alb.track_ids || []).map(tid => {
+        if (typeof tid === 'string' && tid.startsWith('DISC_')) return tid;
+        return window.TRACKS[tid] || null;
+    }).filter(item => item !== null);
 
-    // --- 3. SMART RUNTIME CALCULATION ---
-    const totalSeconds = tks.reduce((acc, t) => {
-        if (typeof t === 'string' || !t.duration) return acc;
-        
+    // 2. Runtime Calculation (Playable tracks only)
+    let totalSeconds = 0;
+    let playableCount = 0;
+    tks.forEach(t => {
+        if (typeof t === 'string' || !t.duration) return;
         const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
         const isReleasedElsewhere = parentIds.some(aid => {
-            const other = window.ALBUMS.find(a => a.id == aid);
-            return other && !other.coming_soon; // Check updated status
+            const other = window.ALBUMS.find(a => a.id === aid);
+            return other && !other.coming_soon;
         });
-        const isPlayable = isReleasedElsewhere || isReleased;
+        if (!alb.coming_soon || isReleasedElsewhere) {
+            const parts = t.duration.split(':').map(Number);
+            totalSeconds += (parts[0] * 60) + (parts[1] || 0);
+            playableCount++;
+        }
+    });
 
-        if (!isPlayable && !t.isVideo) return acc;
-
-        const parts = t.duration.split(':').map(Number);
-        if (parts.length === 2) return acc + (parts[0] * 60) + parts[1];
-        if (parts.length === 3) return acc + (parts[0] * 3600) + (parts[1] * 60) + parts[2];
-        return acc;
-    }, 0);
-
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const runtimeDisplay = hrs > 0 ? `${hrs} HR ${mins} MIN` : `${mins} MIN ${totalSeconds % 60} SEC`;
-
-    const formatMetadataText = (text) => {
-        if (!text) return "";
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-            .replace(/\*(.*?)\*/g, '<i>$1</i>')
-            .replace(/~~(.*?)~~/g, '<strike>$1</strike>');
-    };
-
+    const runtimeDisplay = `${Math.floor(totalSeconds / 60)} MIN ${totalSeconds % 60} SEC`;
     const isThisAlbumActive = (window.currentAlbumId === id);
-    const isCurrentlyPlaying = isThisAlbumActive && window.isPlaying;
-    const playIcon = isCurrentlyPlaying ? 'pause' : 'play_arrow';
+    const playIcon = (isThisAlbumActive && !audio.paused) ? 'pause' : 'play_arrow';
 
     let html = `
     <div class="${scrollToTop ? 'view-animate' : ''}" style="padding-bottom: 140px; color: white;">
         <div style="padding: 60px 20px 30px; text-align:center; position: relative;">
-            <div onclick="viewHome(); toggleNavUI(true);" 
-                  style="position: absolute; left: 20px; top: 40px; width: 42px; height: 42px; background: rgba(0,0,0,0.7); backdrop-filter: blur(15px); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); z-index: 10;">
-                <span class="material-icons" style="font-size: 24px;">chevron_left</span>
+            <div onclick="viewHome(); toggleNavUI(true);" style="position: absolute; left: 20px; top: 40px; width: 42px; height: 42px; background: rgba(0,0,0,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); z-index:10;">
+                <span class="material-icons">chevron_left</span>
             </div>
 
-            <div style="position:relative; display: inline-block;">
-                <img src="${alb.art_url}" style="width:240px; aspect-ratio:1; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.8); object-fit: cover;">
-                ${trailerUrl ? `
-                    <div onclick="window.openVideoPlayer('${trailerUrl}')" 
-                          style="position:absolute; bottom: -10px; right: -10px; background:#ff0000; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 6px 20px rgba(255,0,0,0.5); border: 4px solid #000; cursor: pointer; z-index: 5;">
-                        <span class="material-icons" style="color:white; font-size:28px;">smart_display</span>
-                    </div>
-                ` : ''}
-            </div>
+            <img src="${alb.art_url}" style="width:240px; aspect-ratio:1; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);">
             
-            <h1 style="margin: 35px 0 12px; font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 0.85; text-transform: uppercase;">${alb.name}</h1>
+            <h1 style="margin: 35px 0 12px; font-size: 38px; font-weight: 900; text-transform: uppercase;">${alb.name}</h1>
+            <p style="color:var(--accent-green); font-weight: 900; font-size: 19px;" onclick="viewArtist('${alb.artist_id}')">${artist.name}</p>
             
-            <div style="display:flex; flex-direction: column; align-items:center; gap:14px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <p style="color:var(--accent-green); font-weight: 900; margin:0; font-size: 19px; letter-spacing: 1px; text-transform: uppercase;" onclick="viewArtist('${alb.artist_id}')">
-                        ${artist.name}
-                    </p>
-                    <div onclick="copyAlbumLink('${alb.id}')" style="background:rgba(255,255,255,0.1); width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor: pointer;">
-                         <span class="material-icons" style="font-size:18px;">ios_share</span>
-                    </div>
-                </div>
-
-                <button onclick="window.playAlbum('${alb.id}')" 
-                        style="margin: 10px 0; background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor:pointer;">
-                    <span class="material-icons" id="main-album-icon" style="font-size:44px; color:black;">${playIcon}</span>
+            <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin: 25px 0;">
+                <button onclick="window.playAlbum('${alb.id}')" style="background:white; border:none; width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                    <span id="main-album-icon" class="material-icons" style="font-size:44px; color:black;">${playIcon}</span>
                 </button>
-
-                <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                    ${alb.genre ? `
-                        <div style="font-size: 10px; font-weight: 900; color: var(--accent-green); letter-spacing: 2px; text-transform: uppercase;">
-                            ${alb.genre} • ${runtimeDisplay}
-                        </div>
-                    ` : ''}
-
-                    ${finalDateDisplay ? `
-                    <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); letter-spacing: 1.2px; text-transform: uppercase;">
-                        ${tks.filter(t => typeof t !== 'string').length} SONGS • ${dateLabel} ${finalDateDisplay}
-                    </div>
-                    ` : ''}
-                </div>
-
-                ${alb.description ? `
-                    <p style="margin: 10px 20px 0; font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; font-weight: 600; text-align: center; max-width: 400px;">
-                        ${formatMetadataText(alb.description)}
-                    </p>
-                ` : ''}
+                ${alb.trailer_url ? `<button onclick="window.openVideoPlayer('${alb.trailer_url}')" style="background:#ff0000; border:none; color:white; width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><span class="material-icons" style="font-size:30px;">smart_display</span></button>` : ''}
+            </div>
+            
+            <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase;">
+                ${playableCount} SONGS • ${runtimeDisplay} • ${alb.full_release_date || ''}
             </div>
         </div>
 
         <div style="padding: 0 20px;">`;
 
     let discTrackCounter = 0;
-    const hasMultipleDiscs = tks.some(item => typeof item === 'string' && item.startsWith('DISC_'));
-
-    html += tks.map((t, i) => {
+    html += tks.map((t) => {
         if (typeof t === 'string' && t.startsWith('DISC_')) {
-            discTrackCounter = 0;
-            const discNum = t.split('_')[1] || "";
-            return hasMultipleDiscs ? `
-                <div style="padding: 30px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
-                    <h3 style="font-size: 12px; color: var(--accent-green); letter-spacing: 2px; font-weight: 900; text-transform: uppercase; display: flex; align-items: center; gap: 8px;">
-                        <span class="material-icons" style="font-size: 16px;">album</span> Disc ${discNum}
-                    </h3>
-                </div>` : '';
+            discTrackCounter = 0; 
+            const label = t.replace('DISC_', '').replace(/_/g, ' ');
+            return `<div style="padding: 30px 0 10px; color: var(--accent-green); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;"><span class="material-icons" style="font-size: 16px; vertical-align: middle;">album</span> ${label}</div>`;
         }
 
-        if (t.hidden_name) return ''; 
+        // Increment for EVERY track entry, regardless of playability
+        discTrackCounter++;
 
         const isVideo = t.isVideo || (t.id && t.id.startsWith('video_'));
-        if (!isVideo) discTrackCounter++;
-
-        // Track level release check
         const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
         const isReleasedElsewhere = parentIds.some(aid => {
-            const other = window.ALBUMS.find(a => a.id == aid);
+            const other = window.ALBUMS.find(a => a.id === aid);
             return other && !other.coming_soon;
         });
-        const isPlayable = isReleasedElsewhere || isReleased;
 
-        const displayTitle = (isPlayable || isVideo) ? t.title : `TRACK ${discTrackCounter}`;
-        const isActive = (window.currentTrackId === t.id && window.currentAlbumId === id);
-        const isBonus = t.bonus_track === true;
-
-        const clickAction = isVideo 
-            ? `onclick="window.openVideoPlayer('${t.videoUrl}')"`
-            : isPlayable ? `onclick="playTrack('${t.id}', true, '${alb.id}')"` : `onclick="showToast('COMING SOON')"` ;
+        const isPlayable = !alb.coming_soon || isReleasedElsewhere || isVideo;
+        const isActive = (window.currentTrackId === t.id); 
 
         return `
-        <div class="track-row ${isActive ? 'active-track' : ''}" 
-             style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); ${(!isPlayable && !isVideo) ? 'opacity:0.3;' : 'cursor:pointer;'}" 
-             ${clickAction}>
+        <div class="track-row" data-id="${t.id}" 
+             style="display:flex; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); opacity: ${isPlayable ? '1' : '0.3'};" 
+             onclick="${isPlayable ? (isVideo ? `window.openVideoPlayer('${t.videoUrl}')` : `playTrack('${t.id}', true, '${alb.id}')`) : `showTRMToast('Coming Soon', '#ffcc00')`}">
             
-            <div class="track-number" style="width: 38px; font-size: 14px; font-weight: 900; color: ${isActive ? 'var(--accent-green)' : 'inherit'}">
-                ${isActive && window.isPlaying ? '<span class="material-icons" style="font-size: 18px;">volume_up</span>' : (isVideo ? '<span class="material-icons" style="font-size:18px;">play_circle</span>' : discTrackCounter)}
+            <div class="m-track-number" data-num="${discTrackCounter}" style="width: 38px; font-weight: 900; color: ${isActive ? 'var(--accent-green)' : 'inherit'}">
+                ${isActive ? `<span class="material-icons" style="font-size:18px;">${!audio.paused ? 'volume_up' : 'pause'}</span>` : (isVideo ? '<span class="material-icons">play_circle</span>' : discTrackCounter)}
             </div>
             
-            <div style="flex:1; overflow: hidden; display: flex; flex-direction: column; gap: 2px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="track-title" style="font-weight:800; font-size: 16px; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; color: ${isActive ? 'var(--accent-green)' : 'white'}">
-                        ${displayTitle}
-                    </div>
-                    ${isBonus ? `<span style="background: rgba(0, 255, 135, 0.15); color: var(--accent-green); font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0, 255, 135, 0.3); white-space: nowrap;">BONUS</span>` : ''}
+            <div style="flex:1;">
+                <div class="track-title-text" style="font-weight:800; text-transform: uppercase; color: ${isActive ? 'var(--accent-green)' : 'white'}">
+                    ${isPlayable ? t.title : `TRACK ${discTrackCounter}`}
                 </div>
-                <div class="track-artist" style="font-size:11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5);">
-                    ${(isPlayable || isVideo) ? artist.name : 'COMING SOON'}
-                </div>
+                <div style="font-size:11px; opacity:0.5;">${isPlayable ? artist.name : 'COMING SOON'}</div>
             </div>
             
-            <div class="track-duration" style="font-size: 12px; font-weight: 800; font-family: monospace; color: rgba(255,255,255,0.4);">
-                ${isVideo ? '<span class="material-icons" style="font-size: 18px; color: var(--accent-green);">videocam</span>' : (isPlayable ? (t.duration || '0:00') : '--:--')}
+            <div style="font-size: 12px; opacity:0.4; color: ${isActive ? 'var(--accent-green)' : 'inherit'}">
+                ${isPlayable ? (t.duration || '--:--') : '--:--'}
             </div>
         </div>`;
     }).join('');
@@ -1352,212 +1666,172 @@ window.viewAlbum = (id, scrollToTop = true) => {
     html += `</div></div>`;
     contentView.innerHTML = html;
     if (scrollToTop) contentView.scrollTop = 0;
+    if (window.updatePlayIcons) window.updatePlayIcons(!audio.paused);
 };
 
 window.isAlbumComingSoon = (alb) => {
-    if (!alb) return false;
-    
-    // 1. MANUAL OVERRIDE (Boolean Power)
-    // If you manually set it to false in the database, it's live immediately.
-    if (alb.coming_soon === false || alb.coming_soon === "false") return false;
+    if (alb.coming_soon === false) return false; 
+    if (!alb.full_release_date) return true;
 
-    // 2. FALLBACK IF NO DATE
-    if (!alb.full_release_date) return alb.coming_soon;
+    const now = new Date();
+    const dateStr = String(alb.full_release_date).trim();
 
-    // 3. ET DATE COMPARISON
-    try {
-        // Clean and parse the release date (e.g., "March 17th, 2026")
-        const cleanDateStr = alb.full_release_date.replace(/(\d+)(st|nd|rd|th)/, "$1");
-        const releaseDate = new Date(cleanDateStr);
-
-        // Get the current time specifically in Eastern Time
-        const nowET = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-
-        // If 'now' in ET is past the release date, it is NOT coming soon (returns false)
-        return nowET < releaseDate;
-    } catch (e) {
-        console.error("Date parsing error for album:", alb.id, e);
-        // If the date is formatted weird, fall back to the boolean for safety
-        return alb.coming_soon;
+    // Check if it's ONLY a year (e.g., "2026")
+    if (/^\d{4}$/.test(dateStr)) {
+        const releaseYear = parseInt(dateStr);
+        const currentYear = now.getFullYear();
+        
+        // LOCK: If the releaseYear is 2026, it stays locked until 2027.
+        // It only becomes public if the current year is strictly GREATER than the release year.
+        return currentYear <= releaseYear;
     }
+
+    // Otherwise, parse as a full date (e.g., "October 24, 2025")
+    const cleanDate = dateStr.replace(/(\d+)(st|nd|rd|th)/, "$1");
+    const releaseDate = new Date(cleanDate);
+    
+    if (isNaN(releaseDate.getTime())) return true; 
+    return releaseDate > now;
 };
 
 window.updatePlayIcons = (playing) => {
-    // 1. Mini & Full Player buttons
+    const iconText = playing ? 'pause' : 'play_arrow';
+
+    // 1. Bottom Nav & Fullscreen Player Buttons
     ['m-play-btn', 'fp-play-btn'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerText = playing ? 'pause' : 'play_arrow';
+        if (el) el.innerText = iconText;
     });
 
-    // 2. The Big Album Circle (using your specific viewAlbum icon ID)
+    // 2. Main Album Play Button (THE FIX FOR THE ALBUM PAGE)
     const mainIcon = document.getElementById('main-album-icon');
     if (mainIcon) {
-        mainIcon.innerText = playing ? 'pause' : 'play_arrow';
+        mainIcon.innerText = iconText;
     }
 
-    // 3. Force Mini-Player Visibility immediately
-    const miniPlayer = document.getElementById('mini-player');
-    if (miniPlayer && playing) {
-        miniPlayer.style.display = 'flex';
-        miniPlayer.classList.remove('paused');
-        miniPlayer.classList.add('mini-active');
-    }
+    // 3. Track List Highlighting (THE FIX FOR THE GREEN HIGHLIGHT)
+    const trackRows = document.querySelectorAll('.track-row');
+    trackRows.forEach(row => {
+        const rowTrackId = row.getAttribute('data-id');
+        const isCurrent = (rowTrackId === window.currentTrackId);
+        
+        // Find elements within the row
+        const numContainer = row.querySelector('.m-track-number');
+        const titleText = row.querySelector('.track-title-text');
+
+        if (isCurrent) {
+            // Apply CSS class for green color
+            row.classList.add('active-track');
+            
+            // Force green for title/number (overriding inline styles)
+            if (titleText) titleText.style.color = 'var(--accent-green)';
+            if (numContainer) {
+                numContainer.style.color = 'var(--accent-green)';
+                // Change number to Volume/Pause icon
+                numContainer.innerHTML = `<span class="material-icons" style="font-size:18px;">${playing ? 'volume_up' : 'pause'}</span>`;
+            }
+        } else {
+            row.classList.remove('active-track');
+            if (titleText) titleText.style.color = 'white';
+            if (numContainer) {
+                numContainer.style.color = 'inherit';
+                // Restore the original number from the data-num attribute
+                numContainer.innerText = numContainer.getAttribute('data-num') || '';
+            }
+        }
+    });
 };
 
 window.playTrack = (trackId, autoPlay = true, explicitAlbumId = null) => {
-    const allTracks = Object.values(window.TRACKS).flat();
-    const track = allTracks.find(t => t.id === trackId);
+    // Lookup track
+    const track = window.TRACKS[trackId];
     if (!track) return;
 
-    // --- 1. GLOBAL UI HELPERS (Defined here so they are ready) ---
-    window.updatePlayIcons = (playing) => {
-        // Mini & Full Player
-        ['m-play-btn', 'fp-play-btn'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = playing ? 'pause' : 'play_arrow';
-        });
-
-        // The Big Album Circle Icon
-        const mainIcon = document.getElementById('main-album-icon');
-        if (mainIcon) mainIcon.innerText = playing ? 'pause' : 'play_arrow';
-
-        // Track Row Highlighting
-        const trackRows = document.querySelectorAll('.track-row, .mobile-track-row');
-        trackRows.forEach(row => {
-            const rowTrackId = row.getAttribute('data-id') || row.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-            if (rowTrackId === window.currentTrackId) {
-                row.classList.add('active-track');
-                const icon = row.querySelector('.track-play-icon, .m-track-icon');
-                if (icon) icon.innerText = playing ? 'pause' : 'play_arrow';
-            } else {
-                row.classList.remove('active-track');
-                const icon = row.querySelector('.track-play-icon, .m-track-icon');
-                if (icon) icon.innerText = 'play_arrow';
-            }
-        });
-    };
-
-    // --- 2. SECURITY & IDENTITY ---
-    const parentIds = track.album_id.split(',').map(s => s.trim());
-    const isReleasedSomewhere = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
-    if (!isReleasedSomewhere) {
-        if (window.showTRMToast) window.showTRMToast("Coming Soon", "#ffcc00");
-        return; 
-    }
-
-    const albId = explicitAlbumId || window.currentAlbumId || parentIds[0];
+    // Determine Album Context for Art
+    const parentIds = track.album_id ? track.album_id.split(',').map(s => s.trim()) : [];
+    const albId = explicitAlbumId || parentIds[0];
     const targetAlbum = window.ALBUMS.find(a => a.id == albId);
-    if (!targetAlbum) return;
-    const artistName = window.ARTISTS[targetAlbum.artist_id]?.name || "TRM";
+    
+    // Resolve Art URL
+    const finalArt = targetAlbum ? targetAlbum.art_url : 'https://via.placeholder.com/150';
+    const artistName = window.ARTISTS[track.artist_id]?.name || "therichmusic";
 
-    // --- 3. STATE SYNC ---
+    // Update States
     window.currentTrackId = trackId;
     window.currentAlbumId = albId;
-    window.currentArtistId = targetAlbum.artist_id;
-    window.isPlaying = autoPlay;
+    window.currentArtistId = track.artist_id; // Keep artist ID in sync for "View Artist" from player
 
-    // --- 4. AUDIO SOURCE ---
+    // Audio Logic
     if (audio.src !== track.url) {
         audio.src = track.url;
         audio.load();
     }
-
-    // --- 5. EXECUTION & MEDIA SESSION ---
     if (autoPlay) {
-        // Resume context for mobile
-        if (window.AudioContext || window.webkitAudioContext) {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            if (ctx.state === 'suspended') ctx.resume();
-        }
-
         audio.play().then(() => {
             window.updatePlayIcons(true);
-            if (window.updatePlayerUI) window.updatePlayerUI(); // START PROGRESS BAR
-            
-            // Sync Lockscreen Position
-            if ('mediaSession' in navigator && !isNaN(audio.duration)) {
-                navigator.mediaSession.setPositionState({
-                    duration: audio.duration,
-                    playbackRate: audio.playbackRate,
-                    position: audio.currentTime
-                });
-            }
-        }).catch(e => {
-            console.error("Playback Blocked:", e);
-            window.updatePlayIcons(false);
-        });
+            if (window.updatePlayerUI) window.updatePlayerUI(); 
+        }).catch(e => console.error("Playback Blocked", e));
     }
 
-    // --- 6. UI CONTENT UPDATES ---
-    const uiUpdates = {
-        'm-title': track.title, 'fp-title': track.title,
-        'm-artist': artistName, 'fp-artist': artistName
-    };
-    for (const [id, val] of Object.entries(uiUpdates)) {
+    // --- CRITICAL UI UPDATES ---
+    
+    // 1. Art Update
+    ['m-art', 'fp-art', 'mini-art', 'm-art-bg'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = finalArt;
+    });
+
+    // 2. Text Update
+    const texts = { 'm-title': track.title, 'fp-title': track.title, 'm-artist': artistName, 'fp-artist': artistName };
+    for (const [id, val] of Object.entries(texts)) {
         const el = document.getElementById(id);
         if (el) el.innerText = val;
     }
 
-    ['m-art', 'fp-art'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.src = targetAlbum.art_url;
-    });
+    // 3. Lyrics & Genius Badge Update (THE FIX)
+    const rawLyrics = track.lyrics || "(No lyrics available)";
+    const lyricsData = (typeof window.parseLyrics === 'function') 
+        ? window.parseLyrics(rawLyrics) 
+        : { html: rawLyrics.replace(/\n/g, '<br>'), badge: '' };
 
+    const lText = document.getElementById('fp-lyrics-text');
+    const lFull = document.getElementById('fp-lyrics-full');
+    const badgeCont = document.getElementById('genius-badge-cont');
+
+    if (lText) lText.innerHTML = lyricsData.html;
+    if (lFull) lFull.innerHTML = lyricsData.html;
+    if (badgeCont) badgeCont.innerHTML = lyricsData.badge || '';
+
+    // 4. Reset scroll for full player lyrics
+    const scrollCont = document.getElementById('fp-scroll-container');
+    if (scrollCont) scrollCont.scrollTop = 0;
+
+    // 5. Mini-Player Visibility
     const miniPlayer = document.getElementById('mini-player');
     if (miniPlayer) {
-        miniPlayer.style.display = 'flex';
-        miniPlayer.classList.toggle('paused', !autoPlay);
+        miniPlayer.style.setProperty('display', 'flex', 'important');
+        miniPlayer.style.opacity = '1';
         miniPlayer.classList.add('mini-active');
+        miniPlayer.classList.toggle('paused', !autoPlay);
     }
 
-    // --- 7. MEDIA SESSION HANDLERS (Seeking Enable) ---
+    // 6. Media Session
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
-            title: track.title, artist: artistName, album: targetAlbum.name,
-            artwork: [{ src: targetAlbum.art_url, sizes: '512x512', type: 'image/png' }]
-        });
-
-        // ENABLE SEEKING ON LOCKSCREEN
-        navigator.mediaSession.setActionHandler('seekto', (details) => {
-            audio.currentTime = details.seekTime;
+            title: track.title,
+            artist: artistName,
+            album: targetAlbum ? targetAlbum.name : '',
+            artwork: [{ src: finalArt, sizes: '512x512', type: 'image/png' }]
         });
     }
 
-    // --- 8. PERSISTENCE ---
+    // 7. Recent Plays Persistence
     const recent = JSON.parse(localStorage.getItem('trm_recent') || '[]');
     const newRecent = [trackId, ...recent.filter(x => x !== trackId)].slice(0, 20);
     localStorage.setItem('trm_recent', JSON.stringify(newRecent));
-    localStorage.setItem('trm_last_track', trackId);
 
     window.updatePlayIcons(autoPlay);
-    if (window.currentViewId === 'library' && window.lastActiveTab === 'recent') viewLibrary('recent');
 };
-
-let startY = 0;
-const fp = document.getElementById('full-player');
-
-fp.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    fp.style.transition = 'none'; // Disable transitions during drag
-}, {passive: true});
-
-fp.addEventListener('touchmove', (e) => {
-    let deltaY = e.touches[0].clientY - startY;
-    if (deltaY > 0) {
-        fp.style.transform = `translateY(${deltaY}px)`;
-    }
-}, {passive: true});
-
-fp.addEventListener('touchend', (e) => {
-    let deltaY = e.touches[0].clientY - startY;
-    fp.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
-    
-    if (deltaY > 150) {
-        closeFullPlayer(); // Your existing function to hide the UI
-    } else {
-        fp.style.transform = 'translateY(0)'; // Snap back
-    }
-});
 
 // --- v1.4.0 DRAGGING SEEK (PROTECTED) ---
 const initSeekListeners = () => {
@@ -1666,11 +1940,16 @@ function formatTime(secs) {
         };
 
 window.viewSearch = () => {
+if (window.currentViewId !== 'search')
     window.currentViewId = 'search';
-    contentView.scrollTo(0, 0);
-    setNav(1); // Assuming 1 is Search index
+    if (typeof window.updateNavUI === 'function') window.updateNavUI('nav-search');
+    const target = document.getElementById('content-view') || document.getElementById('contentView');
+    if (!target) return;
+
+    target.scrollTo(0, 0);
+    if (typeof setNav === 'function') setNav(1); 
     
-    contentView.innerHTML = `
+    target.innerHTML = `
         <div class="standard-padding view-animate">
             <h1 style="font-size: 34px; font-weight: 800; margin-bottom: 20px; letter-spacing: -1px;">Search</h1>
             <div style="position: sticky; top: 0; background: var(--bg-black); padding: 10px 0; z-index: 10;">
@@ -1680,12 +1959,14 @@ window.viewSearch = () => {
             <div id="mResults"></div>
         </div>`;
     
-    // Focus search bar automatically
-    setTimeout(() => document.getElementById('mSearch').focus(), 100);
+    setTimeout(() => {
+        const input = document.getElementById('mSearch');
+        if (input) input.focus();
+    }, 100);
 };
 
 window.runSearch = (q) => {
-    const res = document.getElementById('mResults');
+const res = document.getElementById('mResults');
     if (!q || q.trim().length < 1) { res.innerHTML = ''; return; }
     
     const query = q.toLowerCase();
@@ -1702,26 +1983,26 @@ window.runSearch = (q) => {
 
     // 3. Tracks: Inherited Hiding Logic
     const trkMatch = [];
-    Object.keys(window.TRACKS).forEach(albumId => {
-        const album = window.ALBUMS.find(a => a.id === albumId);
+    // Convert dictionary to array for searching
+    Object.values(window.TRACKS).forEach(t => {
+        if (!t || t.hidden_name === true) return;
         
-        // Skip this entire album's tracks if the album itself is hidden
-        if (album && album.hidden === true) return; 
-
-        window.TRACKS[albumId].forEach(t => {
-            const matchesQuery = t.title.toLowerCase().includes(query);
+        const matchesQuery = t.title.toLowerCase().includes(query);
+        if (matchesQuery) {
+            // Find parent album for art and visibility check
+            const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
+            const album = window.ALBUMS.find(a => parentIds.includes(a.id));
             
-            // Track is only visible if it's NOT hidden AND its album is NOT hidden
-            // (The album check is handled by the 'return' above, but we keep t.hidden_name here)
-            if (matchesQuery && t.hidden_name !== true) {
-                trkMatch.push({
-                    ...t,
-                    albumArt: album ? album.art_url : 'https://via.placeholder.com/150',
-                    albumId: albumId,
-                    artistName: window.ARTISTS[album?.artist_id]?.name || 'Unknown Artist'
-                });
-            }
-        });
+            // Skip if the primary album is hidden
+            if (album && album.hidden === true) return;
+
+            trkMatch.push({
+                ...t,
+                albumArt: album ? album.art_url : 'https://via.placeholder.com/150',
+                albumId: album ? album.id : parentIds[0],
+                artistName: window.ARTISTS[t.artist_id]?.name || 'Unknown Artist'
+            });
+        }
     });
 
     let html = '';
@@ -1756,7 +2037,7 @@ window.runSearch = (q) => {
         });
     }
 
-    // Render Tracks
+// Render Tracks
     if (trkMatch.length > 0) {
         html += `<div class="search-section-label">Songs</div>`;
         trkMatch.forEach(t => {
@@ -1767,7 +2048,6 @@ window.runSearch = (q) => {
                     <div style="font-weight:bold; font-size:17px;">${t.title}</div>
                     <div style="font-size:12px; color:var(--text-dim);">SONG • ${t.artistName}</div>
                 </div>
-                <span class="material-icons" style="color:var(--text-dim); font-size:20px;">more_horiz</span>
             </div>`;
         });
     }
@@ -1875,17 +2155,16 @@ function copyToClipboardFallback(text) {
 }
 
 window.playAlbum = function(albumId) {
-    // Toggle logic: if already playing this album, just pause/unpause
     if (window.currentAlbumId === albumId && window.currentTrackId) {
         window.togglePlay();
         return;
     }
 
     const album = window.ALBUMS.find(a => a.id === albumId);
-    const albumTracks = window.TRACKS[albumId] || [];
+    // Use the ALBUM_TRACKS we set up in INIT
+    const albumTracks = window.ALBUM_TRACKS?.[albumId] || [];
 
     if (albumTracks.length > 0) {
-        // Find first playable (not coming soon)
         const firstPlayable = albumTracks.find(t => {
             const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
             const isElsewhere = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
@@ -1893,9 +2172,9 @@ window.playAlbum = function(albumId) {
         });
 
         if (firstPlayable) {
-            // Force UI update BEFORE the track starts to prevent lag
-            window.updatePlayIcons(true);
             window.playTrack(firstPlayable.id, true, albumId);
+            // Force icons to update for the whole album context
+            setTimeout(() => window.updatePlayIcons(true), 50);
         }
     }
 };
@@ -1943,24 +2222,17 @@ function showTRMToast(msg, color = "var(--accent-green)") {
 }
 
 window.togglePlay = () => {
-    // 1. If no song is loaded, do nothing
     if (!audio.src || audio.src === "" || audio.src.includes('null')) return;
 
-    const mBtn = document.getElementById('m-play-btn');
-    const fBtn = document.getElementById('fp-play-btn');
-    const miniPlayer = document.getElementById('mini-player');
-
-    // 2. The actual toggle logic
     if (audio.paused) {
-        audio.play().catch(e => console.log("Play failed"));
-        if (mBtn) mBtn.innerText = 'pause';
-        if (fBtn) fBtn.innerText = 'pause';
-        if (miniPlayer) miniPlayer.classList.remove('paused'); // Expands art
+        audio.play().then(() => {
+            window.isPlaying = true;
+            window.updatePlayIcons(true);
+        }).catch(e => console.log("Play failed"));
     } else {
         audio.pause();
-        if (mBtn) mBtn.innerText = 'play_arrow';
-        if (fBtn) fBtn.innerText = 'play_arrow';
-        if (miniPlayer) miniPlayer.classList.add('paused'); // Shrinks art
+        window.isPlaying = false;
+        window.updatePlayIcons(false);
     }
 };
 
@@ -2015,20 +2287,6 @@ window.seek = (e, el) => {
 };
 
 // --- CONTROLS & UTILS ---
-window.handleLikeClick = () => { 
-    if(!currentTrackId) return; 
-    STORAGE.toggleLike(currentTrackId); 
-    updateFpFavIcon(); 
-};
-
-function updateFpFavIcon() { 
-    const isLiked = STORAGE.getLikes().includes(currentTrackId); 
-    const icon = document.getElementById('m-fav-btn'); 
-    if (icon) {
-        icon.innerText = isLiked ? 'favorite' : 'favorite_border'; 
-        icon.classList.toggle('glow-active', isLiked);
-    }
-}
 
 window.toggleShuffle = () => { 
     isShuffle = !isShuffle; 
@@ -2056,41 +2314,31 @@ window.openFullPlayer = function() {
     
     let targetTrack = null;
     let albumArtFallback = "";
-
-   let albumArtistId = ""; // Initialize this at the top
+    let albumArtistId = ""; 
     
     if (window.ALBUMS) {
         for (const album of window.ALBUMS) {
             if (album.track_ids && album.track_ids.includes(window.currentTrackId)) {
                 albumArtFallback = album.art_url;
-                albumArtistId = album.artist_id; // Store this here!
-                
-                // Navigate the nested structure: window.TRACKS[album_id]
+                albumArtistId = album.artist_id; 
                 const albumBucket = window.TRACKS ? window.TRACKS[album.id] : null; 
-                
                 if (albumBucket) {
-                    if (Array.isArray(albumBucket)) {
-                        targetTrack = albumBucket.find(t => t.id === window.currentTrackId);
-                    } else {
-                        targetTrack = albumBucket[window.currentTrackId];
-                    }
+                    targetTrack = Array.isArray(albumBucket) 
+                        ? albumBucket.find(t => t.id === window.currentTrackId)
+                        : albumBucket[window.currentTrackId];
                 }
                 break;
             }
         }
     }
 
-// 2. UI INJECTION
     if (targetTrack) {
         document.getElementById('fp-title').innerText = targetTrack.title || "Unknown Track";
-        
         const artistEl = document.getElementById('fp-artist');
-        artistEl.innerText = targetTrack.artist || "therichmusic";
+        const artistName = targetTrack.artist || (window.ARTISTS[albumArtistId]?.name) || "therichmusic";
+        artistEl.innerText = artistName;
         
-        // Restore Artist View functionality
-        // We pull the artist_id from the targetTrack or the album we found
-        const artistId = targetTrack.artist_id || albumArtistId; // Ensure you capture album.artist_id in step 1
-        
+        const artistId = targetTrack.artist_id || albumArtistId; 
         artistEl.onclick = () => {
             if (typeof window.viewArtist === 'function' && artistId) {
                 closeFullPlayer();
@@ -2100,20 +2348,21 @@ window.openFullPlayer = function() {
 
         document.getElementById('fp-art').src = targetTrack.art_url || albumArtFallback || document.getElementById('m-art').src;
 
-        const lyrics = targetTrack.lyrics || "Instrumental\n(No lyrics available)";
-document.getElementById('fp-lyrics-text').innerHTML = lyrics;
-document.getElementById('fp-lyrics-full').innerHTML = lyrics;
+        // Unified Lyrics & Badge Injection
+        const rawLyrics = targetTrack.lyrics || "(No lyrics available)";
+        const lyricsData = window.parseLyrics(rawLyrics);
+        
+        const lText = document.getElementById('fp-lyrics-text');
+        const lFull = document.getElementById('fp-lyrics-full');
+        const badgeCont = document.getElementById('genius-badge-cont');
+        
+        if (lText) lText.innerHTML = lyricsData.html;
+        if (lFull) lFull.innerHTML = lyricsData.html;
+        if (badgeCont) badgeCont.innerHTML = lyricsData.badge || '';
     }
 
-    // 3. HEART SYNC
-    const isLiked = window.STORAGE?.getLikes().includes(window.currentTrackId);
-    const fpHeart = document.getElementById('fp-heart-icon');
-    if (fpHeart) {
-        fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
-        fpHeart.style.color = isLiked ? 'var(--accent-green)' : 'white';
-    }
+    window.updateFullPlayerLikeUI();
 
-    // 4. SHOW & ANIMATE
     if (scrollCont) scrollCont.scrollTop = 0;
     fp.style.display = 'flex';
     requestAnimationFrame(() => {
@@ -2132,7 +2381,9 @@ window.openLyricsTab = () => {
     const tab = document.getElementById('lyrics-tab');
     if (tab) {
         tab.style.display = 'flex';
-        document.getElementById('fp-lyrics-full').scrollTop = 0;
+        // Ensure we target the correct scrollable container
+        const fullLyricsCont = document.getElementById('fp-lyrics-full');
+        if (fullLyricsCont) fullLyricsCont.scrollTop = 0;
     }
 };
 
@@ -2165,21 +2416,22 @@ window.nextTrack = () => {
     const trackList = window.TRACKS[album.id];
     let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
 
-    // Look for the next playable track (skipping 'Coming Soon' ones)
     for (let i = currentIndex + 1; i < trackList.length; i++) {
         const t = trackList[i];
         
-        // Parity Security Check
         const parentIds = t.album_id.split(',').map(s => s.trim());
         const isReleased = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
 
         if (isReleased) {
             window.playTrack(t.id, true, album.id);
-            return true; // Found a song!
+            
+            // --- ADD THIS LINE ---
+            if (window.updateLyricsView) window.updateLyricsView(t.id); 
+            
+            return true;
         }
     }
-
-    return false; // Reached the end of the line
+    return false;
 };
 
 window.prevTrack = () => {
@@ -2195,133 +2447,216 @@ window.prevTrack = () => {
     let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
 
     if (currentIndex > 0) {
-        const prevTrack = trackList[currentIndex - 1];
-        window.playTrack(prevTrack.id, true, album.id);
+        const prevT = trackList[currentIndex - 1];
+        window.playTrack(prevT.id, true, album.id);
+        
+        // --- ADD THIS LINE ---
+        if (window.updateLyricsView) window.updateLyricsView(prevT.id);
+        
     } else {
-        audio.currentTime = 0; // First track in album, just restart
+        audio.currentTime = 0;
     }
 };
 
-window.STORAGE = {
-    // Helper to safely get data
-    get: (key) => {
-        try {
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : [];
-        } catch (e) {
-            console.error("Storage Read Error:", e);
-            return [];
-        }
-    },
-    // Helper to safely set data
-    set: (key, value) => {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) {
-            console.error("Storage Write Error (Quota exceeded?):", e);
-        }
-    },
-    getLikes: function() { return this.get('trm_likes'); },
-    getRecent: function() { return this.get('trm_recent'); },
-    
-    toggleLike: function(id) {
-        let likes = this.getLikes();
-        if (likes.includes(id)) {
-            likes = likes.filter(itemId => itemId !== id);
-        } else {
-            likes.unshift(id);
-        }
-        this.set('trm_likes', likes);
-        return likes.includes(id);
-    },
-    
-    addRecent: function(id) {
-        let recent = this.getRecent();
-        recent = [id, ...recent.filter(itemId => itemId !== id)].slice(0, 50);
-        this.set('trm_recent', recent);
-    }
-};
+window.toggleLike = async function(trackId) {
+    if (!trackId) return;
 
-window.viewLibrary = (activeTab = 'liked') => {
-    window.currentViewId = 'library';
-    window.lastActiveTab = activeTab; 
-    if (typeof resetScroll === 'function') resetScroll();
-    if (typeof setNav === 'function') setNav(2); 
-
-    // Guard against missing data
-    if (!window.TRACKS || !window.ALBUMS) {
-        contentView.innerHTML = `<div style="text-align:center; padding-top:100px; opacity:0.5;">Syncing Library...</div>`;
-        setTimeout(() => viewLibrary(activeTab), 300);
+    // 1. CHECK AUTH FIRST
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    
+    if (!session) {
+        window.showAuthModal("Log in to like songs", "Build your personal collection by signing in to your account.");
         return;
     }
 
-    // Safely get IDs from our new STORAGE helper
-    const ids = (activeTab === 'liked') ? STORAGE.getLikes() : STORAGE.getRecent();
+    const isCurrentlyLiked = window.USER_LIKES?.songs?.includes(trackId);
+    let updatedLikes;
     
-    // Flatten all tracks into one searchable list
-    const allTracks = Object.values(window.TRACKS).flat();
+    if (isCurrentlyLiked) {
+        updatedLikes = window.USER_LIKES.songs.filter(id => id !== trackId);
+        window.showToast("Removed from Library", "undo", () => window.toggleLike(trackId));
+    } else {
+        updatedLikes = [...new Set([...(window.USER_LIKES?.songs || []), trackId])];
+        window.showToast("Added to Liked Songs");
+    }
 
-    // Filter logic
-    const displayTracks = ids.map(id => allTracks.find(t => t.id === id))
-        .filter(t => {
-            if (!t) return false;
-            // Check parent album status
-            const parentAlbumIds = t.album_id.split(',').map(s => s.trim());
-            const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
-            // Only show if the album exists and is NOT coming soon
-            return alb && !alb.coming_soon;
+    window.USER_LIKES.songs = updatedLikes;
+    if (window.updateFullPlayerLikeUI) window.updateFullPlayerLikeUI();
+    if (window.currentViewId === 'library') window.viewLibrary();
+
+    try {
+        await supabaseClient.from('users')
+            .update({ liked_songs: updatedLikes })
+            .eq('id', session.user.id);
+    } catch (err) {
+        console.error("Supabase Sync Error:", err);
+    }
+};
+
+// Helper for the Auth Modal
+window.showAuthModal = (title, message) => {
+    // Check if modal already exists to prevent stacking
+    if (document.getElementById('auth-modal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'auth-modal';
+    modal.style = `
+        position: fixed; inset: 0; background: rgba(0,0,0,0.85); 
+        backdrop-filter: blur(10px); z-index: 10000; 
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px; animation: fadeIn 0.2s ease;
+    `;
+
+modal.innerHTML = `
+    <div style="background: #111; border: 1px solid #222; padding: 30px; border-radius: 24px; width: 100%; max-width: 320px; text-align: center;">
+        <span class="material-icons" style="font-size: 48px; color: #00ff88; margin-bottom: 15px;">lock</span>
+        <h2 style="color: white; font-weight: 900; margin-bottom: 10px; font-size: 20px; text-transform: uppercase;">${title}</h2>
+        <p style="color: #888; font-size: 14px; line-height: 1.4; margin-bottom: 25px;">${message}</p>
+        
+        <button onclick="window.viewAccount(); document.getElementById('auth-modal').remove();" 
+                style="width: 100%; background: white; color: black; border: none; padding: 15px; border-radius: 12px; font-weight: 900; margin-bottom: 10px; cursor: pointer;">
+            LOGIN
+        </button>
+        
+        <button onclick="document.getElementById('auth-modal').remove();" 
+                style="width: 100%; background: transparent; color: #666; border: none; padding: 10px; border-radius: 12px; font-weight: 700; font-size: 12px; cursor: pointer;">
+            NOT NOW
+        </button>
+    </div>
+`;
+
+    document.body.appendChild(modal);
+};
+
+window.viewLibrary = async function() {
+    window.currentViewId = 'library';
+    if (typeof window.updateNavUI === 'function') window.updateNavUI('nav-lib');
+    
+    const target = document.getElementById('content-view') || document.getElementById('contentView');
+    if (!target) return;
+    if (typeof resetScroll === 'function') resetScroll();
+
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        if (!session) {
+            target.innerHTML = `<div style="height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;">
+                <span class="material-icons" style="font-size: 64px; color: #222; margin-bottom: 20px;">favorite_border</span>
+                <h2 style="color: white; font-weight: 900;">YOUR COLLECTION</h2>
+                <p style="color: #666; margin-bottom: 30px;">Login to like your favorite songs.</p>
+                <button onclick="window.viewAccount()" style="background: white; color: black; border: none; padding: 15px 40px; border-radius: 30px; font-weight: 900;">LOGIN</button>
+            </div>`;
+            return;
+        }
+
+        // Newest First Logic
+        const likedTrackIds = (window.USER_LIKES && window.USER_LIKES.songs) ? [...new Set(window.USER_LIKES.songs)].reverse() : [];
+        
+        const likedTracks = [];
+        likedTrackIds.forEach(id => {
+            const foundTrack = window.TRACKS[id];
+            if (foundTrack) {
+                const firstAlbumId = foundTrack.album_id?.split(',')[0].trim();
+                const parentAlbum = window.ALBUMS.find(a => a.id == firstAlbumId);
+                likedTracks.push({ ...foundTrack, displayArt: parentAlbum?.art_url || '' });
+            }
         });
 
-    let html = `
-    <div class="standard-padding view-animate" style="padding-bottom: 150px;">
-        <h1 style="font-size: 34px; font-weight: 900; margin-bottom: 5px; color: #fff;">Library</h1>
-        
-        <div class="library-tabs ${activeTab === 'recent' ? 'tab-2-active' : ''}" style="margin-bottom: 25px;">
-            <div class="tab-indicator"></div>
-            <div class="lib-tab ${activeTab === 'liked' ? 'active' : ''}" onclick="viewLibrary('liked')">
-                <span class="material-icons">favorite</span> Liked
-            </div>
-            <div class="lib-tab ${activeTab === 'recent' ? 'active' : ''}" onclick="viewLibrary('recent')">
-                <span class="material-icons">history</span> Recent
-            </div>
-        </div>
-
-        <div id="library-list">
-            ${displayTracks.length > 0 ? displayTracks.map(t => {
-                const parentAlbumIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
-                const alb = window.ALBUMS.find(a => parentAlbumIds.includes(a.id));
-                const art = alb ? alb.art_url : 'https://thumbs2.imgbox.com/14/a7/fI8ktNrC_t.png';
-                const isLiked = STORAGE.getLikes().includes(t.id);
-
-                return `
-                <div class="result-item" 
-                     onclick="playTrack('${t.id}')"
-                     style="display: flex; align-items: center; cursor: pointer; padding: 12px; border-radius: 18px; background: rgba(255,255,255,0.04); margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.02);">
-                    
-                    <img src="${art}" style="width: 55px; height: 55px; border-radius: 12px; margin-right: 15px; object-fit: cover;">
-                    
-                    <div style="flex: 1; overflow: hidden;">
-                        <div style="font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">${t.title}</div>
-                        <div style="font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 600;">${window.ARTISTS[alb?.artist_id]?.name || 'Artist'}</div>
+        target.innerHTML = `
+            <div style="max-width: 800px; margin: 0 auto; padding: 40px 20px; animation: fadeIn 0.3s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+                    <div>
+                        <span style="color: #00ff88; font-size: 10px; font-weight: 900; letter-spacing: 2px;">COLLECTION</span>
+                        <h1 style="font-size: 48px; font-weight: 900; margin: 0; letter-spacing: -2px; color: white;">LIKED SONGS</h1>
                     </div>
-                    
-                    <div style="padding-left: 10px;" onclick="event.stopPropagation(); handleLikeToggle('${t.id}')">
-                        <span class="material-icons" style="color: ${isLiked ? 'var(--accent-green)' : 'rgba(255,255,255,0.1)'}; font-size: 24px;">
-                            ${isLiked ? 'favorite' : 'favorite_border'}
-                        </span>
-                    </div>
-                </div>`;
-            }).join('') : `
-                <div style="text-align:center; margin-top:100px; opacity: 0.3;">
-                    <span class="material-icons" style="font-size: 80px; color: #fff;">inventory_2</span>
-                    <p style="margin-top: 20px; font-weight: 700; font-size: 18px;">Empty Library</p>
-                    <p style="font-size: 14px;">Songs you like will appear here.</p>
+                    ${likedTracks.length > 0 ? `
+                        <button onclick="window.shuffleLibrary()" style="background: #00ff88; color: black; border: none; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,255,136,0.2);">
+                            <span class="material-icons" style="font-size: 30px;">shuffle</span>
+                        </button>
+                    ` : ''}
                 </div>
-            `}
-        </div>
-    </div>`;
+
+                <div id="library-list">
+                    ${likedTracks.length > 0 ? likedTracks.map(t => `
+                        <div class="track-row" data-id="${t.id}" style="display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 8px;" onclick="playTrack('${t.id}')">
+                            <img src="${t.displayArt}" style="width: 50px; height: 50px; border-radius: 6px; object-fit: cover;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 800; color: white; font-size: 14px;">${t.title}</div>
+                                <div style="color: rgba(255,255,255,0.5); font-size: 11px;">${window.ARTISTS[t.artist_id]?.name || 'Artist'}</div>
+                            </div>
+                            <span class="material-icons" onclick="event.stopPropagation(); window.toggleLike('${t.id}')" style="color: #00ff88;">favorite</span>
+                        </div>
+                    `).join('') : `<div style="text-align: center; padding: 80px 0; opacity: 0.3;"><h2 style="font-size: 32px; font-weight: 900;">EMPTY</h2></div>`}
+                </div>
+            </div>`;
+    } catch (e) { console.error("Library Load Error:", e); }
+};
+
+// Global Shuffle Helper
+window.shuffleLibrary = () => {
+    const ids = window.USER_LIKES.songs;
+    if (!ids || ids.length === 0) return;
+    const randomId = ids[Math.floor(Math.random() * ids.length)];
+    window.playTrack(randomId, true);
+};
+
+window.handleLikeClick = async function() {
+    const trackId = window.currentTrackId;
+    if (!trackId) return;
     
-    contentView.innerHTML = html;
+    // We only call this ONCE. No extra logic here.
+    if (typeof window.toggleLike === 'function') {
+        await window.toggleLike(trackId);
+    }
+};
+
+// Helper to keep the Full Player UI in sync
+window.updateFullPlayerLikeUI = function() {
+    const isLiked = window.USER_LIKES?.songs?.includes(window.currentTrackId);
+    const fpHeart = document.getElementById('fp-heart-icon');
+    if (fpHeart) {
+        fpHeart.innerText = isLiked ? 'favorite' : 'favorite_border';
+        fpHeart.style.color = isLiked ? '#00ff88' : 'white';
+    }
+};
+
+// Make sure to call this whenever a track starts playing
+// (Add this inside your playTrack function or transition logic)
+window.updateFullPlayerLikeUI();
+
+window.showToast = function(message, type = "info", undoAction = null) {
+    // Remove existing toast if present
+    const existing = document.getElementById('toast-container');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'toast-container';
+    
+    let html = `<span>${message.toUpperCase()}</span>`;
+    
+    if (type === "undo" && undoAction) {
+        const undoBtn = document.createElement('button');
+        undoBtn.innerText = "UNDO";
+        undoBtn.style = "background:none; border:none; font-weight:900; color:black; text-decoration:underline; cursor:pointer; padding:0;";
+        undoBtn.onclick = () => {
+            undoAction();
+            toast.remove();
+        };
+        toast.appendChild(undoBtn);
+    }
+
+    toast.innerHTML = html;
+    if (type === "undo" && undoAction) {
+        // Re-append the button logic if using innerHTML
+        const btn = document.createElement('span');
+        btn.innerHTML = "UNDO";
+        btn.style = "margin-left:10px; text-decoration:underline; cursor:pointer;";
+        btn.onclick = () => { undoAction(); toast.remove(); };
+        toast.appendChild(btn);
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => { if(toast) toast.remove(); }, 4000);
 };
 
 // Add this helper to refresh the view immediately when liking/unliking inside the library
@@ -2349,6 +2684,21 @@ window.handleLikeToggle = (id) => {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+        {
+            version: "v1.0.5",
+            date: "February 14, 2026",
+            notes: [
+                "👤 Accounts are here!",
+                "🩷 The library has returned, and now they're account-based, which means you can go on your Desktop and your likes are right there!",
+                "🛠️ Note that we're also working on a bunch of other new features that will take time to set up! Go support us on Ko-Fi (Link Below)",
+                "<a href='https://trm-brand-shop.fourthwall.com/music-player#rich-album' target='_blank' rel='noopener noreferrer' style='color:#00ff88; text-decoration:none;'>💿 I heard that something weird IS happening...</a>",
+                "<a href='https://trm-brand-shop.fourthwall.com/blog' target='_blank' rel='noopener noreferrer' style='color:#00ff88; text-decoration:none;'>📰 Want to know more about your privacy (regarding accounts)? Well, we just pushed an article regarding on this very topic.</a>"
+            ],
+            actionButton: {
+                text: "Support Us via Ko-Fi (WE are a one man team!)",
+                url: "https://ko-fi.com/mybudshadow"
+            }
+        },
         {
             version: "v1.0.3.4",
             date: "February 12, 2026",
@@ -2508,25 +2858,47 @@ window.handleLongPressEnd = () => {
 };
 
 // Attach scroll listener to the ONLY scrollable container
-contentView.addEventListener('scroll', () => {
-    // LOCK: If we are on an album or artist page, keep the UI hidden regardless of scroll
-    if (window.currentViewId === 'album' || window.currentViewId === 'artist') {
-        toggleNavUI(false);
+// 1. Initialize the tracker variable if it doesn't exist
+let lastScrollTop = 0;
+
+// 2. Wrap the listener in a function or a check
+const setupScrollListener = () => {
+    // Safely find the element
+    const cv = document.getElementById('content-view') || document.getElementById('contentView');
+    
+    if (!cv) {
+        console.warn("Scroll Setup: contentView not found yet. Retrying...");
         return;
     }
 
-    let scrollTop = contentView.scrollTop;
-    if (scrollTop > 100) {
-        if (scrollTop > lastScrollTop) {
-            toggleNavUI(false); // Hide on Scroll Down
-        } else {
-            toggleNavUI(true);  // Show on Scroll Up
+    cv.addEventListener('scroll', () => {
+        // LOCK: If we are on an album or artist page, keep the UI hidden
+        if (window.currentViewId === 'album' || window.currentViewId === 'artist') {
+            if (typeof toggleNavUI === 'function') toggleNavUI(false);
+            return;
         }
-    } else {
-        toggleNavUI(true); // Always show at top of main pages
-    }
-    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; 
-}, { passive: true });
+
+        let scrollTop = cv.scrollTop;
+        
+        // Only trigger UI changes if we've moved significantly (better for mobile performance)
+        if (Math.abs(lastScrollTop - scrollTop) <= 5) return;
+
+        if (scrollTop > 100) {
+            if (scrollTop > lastScrollTop) {
+                if (typeof toggleNavUI === 'function') toggleNavUI(false); // Hide on Scroll Down
+            } else {
+                if (typeof toggleNavUI === 'function') toggleNavUI(true);  // Show on Scroll Up
+            }
+        } else {
+            if (typeof toggleNavUI === 'function') toggleNavUI(true); // Always show at top
+        }
+        
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; 
+    }, { passive: true });
+};
+
+// 3. Execute the setup
+setupScrollListener();
 
         init();
     </script>
