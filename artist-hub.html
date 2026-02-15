@@ -420,10 +420,13 @@ function renderHomeView() {
                 </span>
                 <h3 style="font-size: 32px; margin: 15px 0 5px 0; font-weight: 900;">${featured.name}</h3>
                 <p style="color: #666; margin: 0;">${featured.full_release_date || featured.release_date}</p>
-                <div style="margin-top: 25px; display: flex; gap: 15px;">
-                    <button class="btn-primary">ANALYTICS</button>
-                    <button class="btn-primary" style="background: transparent; border: 1px solid #333; color: #fff;">EDIT PROJECT</button>
-                </div>
+<div style="margin-top: 25px; display: flex; gap: 15px;">
+    <button class="btn-primary" 
+            onclick="window.openEditModal('${featured.id}')" 
+            style="background: transparent; border: 1px solid #333; color: #fff; cursor: pointer;">
+        EDIT PROJECT
+    </button>
+</div>
             </div>
         </div>
     `;
@@ -686,27 +689,48 @@ window.openEditModal = async (input) => {
         }
 
         // 4. FETCH AND RENDER CONTENT (Tracks/Videos/Discs)
-        const trackIds = Array.isArray(albumData.track_ids) ? albumData.track_ids : [];
-        window.trackItems = []; 
-
         try {
-            const { data: liveTracks } = await window.db.from('tracks').select('*').eq('album_id', albumData.id);
-            const videoIds = trackIds.filter(id => id.startsWith('video_'));
-            
+            // Get the list of IDs we need for THIS specific view
+            const trackIds = Array.isArray(albumData.track_ids) ? albumData.track_ids : [];
+
+            // MULTI-ALBUM PARITY FIX: Fetch tracks where ID is in our list, regardless of album_id
+            const { data: liveTracks } = await window.db
+                .from('tracks')
+                .select('*')
+                .in('id', trackIds); 
+
+            const videoIds = trackIds.filter(id => typeof id === 'string' && id.startsWith('video_'));
             let liveVideos = [];
             if (videoIds.length > 0) {
                 const { data: vData } = await window.db.from('videos').select('*').in('id', videoIds);
                 liveVideos = vData || [];
             }
 
+            // 5. Rebuild the internal list
+            window.trackItems = [];
             trackIds.forEach(id => {
+                if (typeof id !== 'string') return;
+
                 if (id.startsWith('DISC_')) {
-                    window.trackItems.push({ type: 'disc', title: id.replace('DISC_', '').replace(/_/g, ' ') });
+                    window.trackItems.push({ 
+                        type: 'disc', 
+                        title: id.replace('DISC_', '').replace(/_/g, ' ') 
+                    });
                 } else if (id.startsWith('video_')) {
                     const vid = liveVideos.find(v => v.id === id);
-                    window.trackItems.push({ type: 'video', title: vid?.title || "Video", reviewLink: vid?.url || "" });
+                    window.trackItems.push({ 
+                        type: 'video', 
+                        title: vid?.title || "Video", 
+                        reviewLink: vid?.url || "" 
+                    });
                 } else {
-                    const trk = liveTracks?.find(t => t.id === id);
+                    // Track Logic with fuzzy repair for single/album suffix issues
+                    let trk = liveTracks?.find(t => t.id === id);
+                    if (!trk) {
+                        const altId = id.endsWith('-single') ? id.replace('-single', '') : `${id}-single`;
+                        trk = liveTracks?.find(t => t.id === altId);
+                    }
+
                     if (trk) {
                         window.trackItems.push({ 
                             type: 'track', 
@@ -715,6 +739,8 @@ window.openEditModal = async (input) => {
                             isBonus: trk.bonus_track, 
                             reviewLink: trk.review_link || "" 
                         });
+                    } else {
+                        console.warn(`Could not find track data for ID: ${id}`);
                     }
                 }
             });
@@ -722,6 +748,7 @@ window.openEditModal = async (input) => {
             renderTracklist();
         } catch (err) {
             console.error("Content Hydration Error:", err);
+            renderTracklist(); // Render empty list so the UI doesn't hang
         }
     }, 150); 
 };

@@ -996,22 +996,12 @@ window.togglePlay = function() {
     if (audio.paused) {
         audio.play().then(() => { 
             window.isPlaying = true; 
-            updatePlayerUI(); 
-            
-            // 🎨 Refresh album view AFTER play starts
-            if (window.currentView === 'album' && window.viewingAlbumId) {
-                window.viewAlbum(window.viewingAlbumId, false); 
-            }
+            window.updatePlayerUI(); 
         }).catch(e => console.error("Playback failed:", e));
     } else {
         audio.pause();
         window.isPlaying = false;
-        updatePlayerUI();
-
-        // 🎨 Refresh album view immediately on pause
-        if (window.currentView === 'album' && window.viewingAlbumId) {
-            window.viewAlbum(window.viewingAlbumId, false); 
-        }
+        window.updatePlayerUI();
     }
 };
 
@@ -1073,98 +1063,102 @@ window.updateInfoPanel = function(track, album) {
 // Global variable to track the current playback promise
 window.activePlayPromise = null;
 
-window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
+window.resolveYouTubeAudio = async (url) => {
+    // 1. Clean the URL (handle shorts, mobile links, etc)
+    const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v(?:\/|=)|(?:.*shorts\/)))([^?&"'>]+)/);
+    if (!videoIdMatch) return url; // Not a YT link, return as is
 
+    const videoId = videoIdMatch[1];
+    console.log(`Resolving YT Audio for: ${videoId}`);
+
+    try {
+        // Using a public Cobalt instance (free, no-key API for developers)
+        // Note: In a production app, you'd want your own instance.
+        const response = await fetch('https://api.cobalt.tools/api/json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                url: `https://www.youtube.com/watch?v=${videoId}`,
+                downloadMode: 'audio',
+                audioFormat: 'mp3',
+                isAudioOnly: true
+            })
+        });
+
+        const data = await response.json();
+        if (data.url) return data.url;
+        
+        throw new Error("No stream URL returned");
+    } catch (err) {
+        console.error("YouTube Conversion Failed:", err);
+        // Fallback: If conversion fails, just return original (though it likely won't play)
+        return url; 
+    }
+};
+
+window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
     const track = window.TRACKS?.[id];
     if (!track) return;
 
-    window.CURRENT_TRACK = track;
+    // 1. IMMEDIATE UI RESET
+    window.currentTrackId = id;
+    window.isPlaying = autoPlay;
 
-    const albId =
-        explicitAlbumId ||
-        window.currentAlbumId ||
-        (track.album_id ? track.album_id.split(',')[0].trim() : null);
-
-    const album = window.ALBUMS?.find(a => a.id === albId);
-
-    const artistId = track.artist_id || album?.artist_id;
-
-    let artist = null;
-
-    if (window.ARTISTS && artistId) {
-        artist = window.ARTISTS[artistId];
-
-        if (!artist) {
-            const cleanTarget = String(artistId)
-                .replace(/-/g, '')
-                .toLowerCase();
-
-            artist = Object.values(window.ARTISTS).find(a =>
-                String(a.id).replace(/-/g, '').toLowerCase() === cleanTarget
-            );
+    // 2. MANUALLY FLIP THE SVG ICON (No external function needed)
+    const playIcon = document.getElementById('play-icon');
+    if (playIcon) {
+        if (window.isPlaying) {
+            // Force Pause Bars
+            playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        } else {
+            // Force Play Triangle
+            playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
         }
     }
 
-    if (!artist) {
-        artist = { name: "therichmusic", id: "therichmusic" };
-    }
-
-    window.currentTrackId = id;
-    window.currentAlbumId = albId;
-
-    if (audio.src !== track.url) {
-        audio.src = track.url;
-        audio.load();
-    }
-
-    // 🎵 Media Session
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: track.title,
-            artist: artist.name,
-            album: album?.name || '',
-            artwork: album?.art_url
-                ? [{ src: album.art_url, sizes: '512x512', type: 'image/png' }]
-                : []
-        });
-    }
-
-    // 🎨 UI Updates
-    const artImg = document.getElementById('player-art');
-    if (artImg) artImg.src = album?.art_url || '';
-
+    // 3. UPDATE MINI-PLAYER TEXT
     const titleEl = document.getElementById('player-title');
-    if (titleEl) titleEl.innerText = track.title;
-
     const pArtist = document.getElementById('player-artist');
-    if (pArtist) {
-        pArtist.innerText = artist.name;
-        pArtist.onclick = () => viewArtist(artist.id);
-    }
+    if (titleEl) titleEl.innerText = track.title;
+    if (pArtist) pArtist.innerText = window.ARTISTS?.[track.artist_id]?.name || "therichmusic";
 
-    if (typeof window.updateInfoPanel === 'function') {
-        window.updateInfoPanel(track, album);
-    }
+    // 4. HANDLE THE AUDIO LOADING IN THE BACKGROUND
+    const loadAudio = async () => {
+        // Ensure 'audio' refers to your global HTML5 Audio object
+        if (typeof audio !== 'undefined') {
+            audio.pause();
+            let finalUrl = track.url;
 
-    if (typeof saveRecent === 'function') {
-        saveRecent(id);
-    }
-
-    localStorage.setItem('trm_last_track', id);
-
-if (autoPlay) {
-        audio.play().then(() => {
-            window.isPlaying = true;
-            window.currentAlbumId = albId; 
-            if (typeof updatePlayerUI === 'function') updatePlayerUI();
-            
-            // Re-render album view
-            if (window.currentView === 'album' && window.viewingAlbumId) {
-                window.viewAlbum(window.viewingAlbumId, false);
+            // YouTube Resolution
+            if (finalUrl && (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be'))) {
+                try {
+                    // This must be defined globally from our previous steps
+                    const converted = await window.resolveYouTubeAudio(finalUrl);
+                    if (converted) finalUrl = converted;
+                } catch (e) { console.error("YT API Error", e); }
             }
-        });
+
+            audio.src = finalUrl;
+            if (autoPlay) {
+                audio.play().catch(err => {
+                    console.error("Playback Blocked", err);
+                    window.isPlaying = false;
+                });
+            }
+        }
+    };
+
+    // 5. TRIGGER RE-RENDER OF LIST (To show the green highlight/speaker)
+    if (window.currentView === 'album' && typeof window.viewAlbum === 'function') {
+        window.viewAlbum(window.viewingAlbumId, false);
     }
+
+    loadAudio();
 };
+
 // Global state
 window.USER_LIKES = { songs: [], albums: [] };
 
@@ -1792,13 +1786,24 @@ window.toggleSidebar = function() {
 const originalUpdateUI = window.updatePlayerUI;
 
 window.updatePlayerUI = function() {
-    // Run the original desktop/bottom player UI updates first
+    const playIcon = document.getElementById('play-icon');
+    
+    if (playIcon) {
+        if (window.isPlaying) {
+            // Inject the PAUSE icon (two vertical bars)
+            playIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+        } else {
+            // Inject the PLAY icon (the triangle)
+            playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
+        }
+    }
+
+    // This handles the original UI updates (like the progress bar logic)
     if (typeof originalUpdateUI === 'function') originalUpdateUI();
 
-    // NEW: If the user is currently looking at an album, refresh the view
-    // This ensures the Play/Pause icon and track highlights update instantly
+    // This refreshes the album tracklist so the green speaker icon moves
     if (window.currentView === 'album' && window.viewingAlbumId) {
-        window.viewAlbum(window.viewingAlbumId, false); // false = don't scroll to top
+        window.viewAlbum(window.viewingAlbumId, false);
     }
 };
 
@@ -2445,19 +2450,21 @@ window.togglePanel = function() {
 };
 
 window.updatePlayerUI = function() {
-    if (typeof originalUpdateUI === 'function') originalUpdateUI();
-
-    // Only refresh if the view is actually visible and something changed
-    if (window.currentView === 'album' && window.viewingAlbumId) {
-        // We only want to refresh the album view if the playing status 
-        // or the track ID actually changed, otherwise it's a waste of resources.
-        if (window.lastUiTrackId !== window.currentTrackId || window.lastUiPlaying !== window.isPlaying) {
-            window.viewAlbum(window.viewingAlbumId, false);
-            
-            // Cache the state so we don't loop infinitely
-            window.lastUiTrackId = window.currentTrackId;
-            window.lastUiPlaying = window.isPlaying;
+    // 1. Swap the Mini-Player SVG Icon
+    const playIcon = document.getElementById('play-icon');
+    if (playIcon) {
+        if (window.isPlaying) {
+            // Pause Bars
+            playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        } else {
+            // Play Triangle
+            playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
         }
+    }
+
+    // 2. Sync the Album Tracklist (Green text / Speaker icons)
+    if (window.currentView === 'album' && window.viewingAlbumId) {
+        window.viewAlbum(window.viewingAlbumId, false); 
     }
 };
 

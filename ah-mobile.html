@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop Required | Artist Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --accent-green: #00ff88;
+            --bg-black: #050505;
+            --card-bg: #0a0a0a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-black);
+            color: white;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .container {
+            padding: 40px;
+            max-width: 85%;
+            background: var(--card-bg);
+            border: 1px solid #111;
+            border-radius: 32px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #888;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #111;
+            color: var(--accent-green);
+            font-size: 10px;
+            font-weight: 900;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .btn-back {
+            background: white;
+            color: black;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        .btn-back:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="icon-box">
+            <i class="fa-solid fa-desktop fa-2xl" style="color: var(--accent-green);"></i>
+        </div>
+        
+        <div class="badge">Desktop Only</div>
+        
+        <h1>Switch to Desktop</h1>
+        
+        <p>The Artist Dashboard requires a larger screen to handle tracklist building and metadata editing. We're working on a mobile version!</p>
+        
+        <a href="https://trm-brand-shop.fourthwall.com" class="btn-back">Go to Store</a>
+        <a href="https://trm-brand-shop.fourthwall.com/music-player" class="btn-back">Go to Music Player</a>
+        <a href="https://trm-brand-shop.fourthwall.com/blog" class="btn-back">Go to Blogs</a>
+    </div>
+
+</body>
+</html>
