@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRM BRAND | Official</title>
+    <style>
+        :root {
+            --blurple: #7268ff;
+            --blurple-glow: rgba(114, 104, 255, 0.6);
+            --bg-dark: #050505;
+            --bg-card: #111;
+            --header-bg: rgba(5, 5, 5, 0.9);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { 
+            background: var(--bg-dark); 
+            color: #fff; 
+            font-family: 'Inter', -apple-system, sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- HEADER & GLOW HOVERS --- */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 80px;
+            background: var(--header-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            z-index: 1000;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #fff;
+        }
+
+        /* GLOW EFFECT ON LOGO */
+        .logo-container:hover {
+            filter: drop-shadow(0 0 12px var(--blurple-glow));
+            transform: scale(1.02);
+        }
+
+        nav { display: flex; gap: 2rem; }
+
+        nav a {
+            color: #999;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+            text-transform: uppercase;
+        }
+
+        /* GLOW EFFECT ON NAV */
+        nav a:hover {
+            color: #fff;
+            text-shadow: 0 0 15px var(--blurple);
+        }
+
+        /* --- HERO BANNER (UNTCHED) --- */
+        .hero {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 20px;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.8)), 
+                        url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=2070') no-repeat center center/cover;
+        }
+
+        .hero-content h1 { font-size: clamp(3rem, 10vw, 6rem); font-weight: 900; margin-bottom: 10px; }
+
+        /* --- BUTTONS WITH GLOW --- */
+        .btn-group { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 16px 40px; border-radius: 100px; text-decoration: none; font-weight: 700; transition: var(--transition); }
+        
+        .btn-primary { background: var(--blurple); color: #fff; }
+        .btn-primary:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px var(--blurple-glow), 0 0 10px var(--blurple);
+        }
+
+        .btn-secondary { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-secondary:hover { background: #fff; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+        /* --- NEW CONTENT SECTIONS --- */
+        section { padding: 100px 5%; max-width: 1400px; margin: 0 auto; }
+        h2 { font-size: 2.5rem; margin-bottom: 40px; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* Grid for Releases */
+        .release-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .release-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: var(--transition);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .release-card:hover { transform: translateY(-10px); border-color: var(--blurple); }
+
+        .release-art { width: 100%; aspect-ratio: 1; background: #222; }
+
+        .release-info { padding: 20px; }
+        .release-info h3 { font-size: 1.2rem; margin-bottom: 5px; }
+        .release-info p { color: #888; font-size: 0.9rem; }
+
+        /* Featured Artist Section */
+        .featured-artist {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+            background: linear-gradient(90deg, #111 0%, #050505 100%);
+            padding: 60px;
+            border-radius: 30px;
+            margin-top: 50px;
+        }
+
+        .artist-img { width: 40%; border-radius: 20px; filter: grayscale(100%); transition: 0.5s; }
+        .featured-artist:hover .artist-img { filter: grayscale(0%); }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 900px) {
+            .featured-artist { flex-direction: column; text-align: center; padding: 30px; }
+            .artist-img { width: 100%; }
+            nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="#" class="logo-container">
+            <span class="logo-text">TRM BRAND</span>
+        </a>
+        <nav>
+            <a href="dashboard.html">Player</a>
+            <a href="https://trm-brand-shop.fourthwall.com">Store</a>
+            <a href="#releases">Releases</a>
+            <a href="#contact">Join</a>
+            <a href="blog.html">Blog</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>TRM BRAND</h1>
+            <p style="margin-bottom: 40px; color: #ccc;">The intersection of independent music and modern technology.</p>
+            <div class="btn-group">
+                <a href="dashboard.html" class="btn btn-primary">TRM MUSIC PLAYER</a>
+                <a href="https://trm-brand-shop.fourthwall.com" class="btn btn-secondary">TRM BRAND Store</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="releases">
+        <h2>Featured Releases</h2>
+        <div class="release-grid">
+            <div class="release-card">
+                <div class="release-art"></div>
+                <div class="release-info">
+                    <h3>Project Alpha</h3>
+                    <p>TRM Records • 2026</p>
+                </div>
+            </div>
+            <div class="release-card">
+                <div class="release-art"></div>
+                <div class="release-info">
+                    <h3>Blurple Dreams</h3>
+                    <p>TRM Records • 2026</p>
+                </div>
+            </div>
+            <div class="release-card">
+                <div class="release-art"></div>
+                <div class="release-info">
+                    <h3>Flux State</h3>
+                    <p>TRM Records • 2026</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="featured-artist">
+            <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=1000" class="artist-img" alt="Artist">
+            <div>
+                <h4 style="color: var(--blurple); text-transform: uppercase; margin-bottom: 10px;">Artist Spotlight</h4>
+                <h2 style="text-align: left; margin-bottom: 20px;">The Next Wave</h2>
+                <p style="color: #aaa; margin-bottom: 30px;">Pushing the boundaries of independent production. Join the collective and get your music heard on the TRM Player.</p>
+                <a href="#" class="btn btn-secondary">Read Bio</a>
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>
