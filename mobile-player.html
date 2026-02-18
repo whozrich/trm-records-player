@@ -12,7 +12,7 @@
     --ios-glass: rgba(20, 20, 20, 0.75);
 --ios-blur: blur(15px) saturate(160%); /* Reduced blur depth for performance */
     --ios-border: 0.5px solid rgba(255, 255, 255, 0.15);
---accent-green: #00ff88;
+            --accent-green: #7268ff;
     --text-main: #ffffff;
     --text-dim: rgba(255, 255, 255, 0.5);
     --squircle: 22%;
@@ -42,7 +42,7 @@ body, html {
     bottom: 120px;
     left: 50%;
     transform: translateX(-50%);
-    background: #1ed760;
+    background: var(--accent-green);
     color: black;
     padding: 12px 24px;
     border-radius: 50px;
@@ -1053,7 +1053,7 @@ window.updateNavUI = (activeId) => {
         el.style.justifyContent = "center";
 
         if (id === activeId) {
-            el.style.color = '#00ff88'; 
+            el.style.color = 'var(--accent-green)'; 
             el.style.opacity = '1';
             // Increase weight instead of scale to keep dimensions stable
             el.style.fontWeight = "900"; 
@@ -1128,14 +1128,14 @@ if (typeof window.closeFullPlayer === 'function') {
         <div style="padding:60px 20px; animation: fadeIn 0.3s ease; max-width: 600px; margin: 0 auto;">
             
             <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:50px;">
-                <div style="width:110px; height:110px; background:linear-gradient(135deg, #00ff88, #00bdff); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:25px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position:relative;">
+                <div style="width:110px; height:110px; background:linear-gradient(135deg, var(--accent-green), #00bdff); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:25px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position:relative;">
                     <span class="material-icons" style="font-size:55px; color:black;">person</span>
-                    <div style="position:absolute; bottom:0; right:5px; background:#00ff88; width:25px; height:25px; border-radius:50%; border:3px solid black; display:flex; align-items:center; justify-content:center;">
+                    <div style="position:absolute; bottom:0; right:5px; background:var(--accent-green); width:25px; height:25px; border-radius:50%; border:3px solid black; display:flex; align-items:center; justify-content:center;">
                         <span class="material-icons" style="font-size:12px; color:black; font-weight:900;">check</span>
                     </div>
                 </div>
                 <h1 style="color:white; font-weight:900; margin:0; font-size:36px; letter-spacing:-1px; text-transform: uppercase;">${finalDisplayName}</h1>
-                <p style="color:#00ff88; font-weight:800; font-size:14px; margin-top:5px; letter-spacing:0.5px; opacity:0.8;">${finalUsername.toLowerCase()}</p>
+                <p style="color:var(--accent-green); font-weight:800; font-size:14px; margin-top:5px; letter-spacing:0.5px; opacity:0.8;">${finalUsername.toLowerCase()}</p>
             </div>
 
             <div style="background:#111; padding:25px; border-radius:24px; text-align:center; border:1px solid #222; margin-bottom:30px;">
@@ -1151,7 +1151,7 @@ if (typeof window.closeFullPlayer === 'function') {
             </div>
 
             <div style="margin-top:80px; text-align:center; opacity:0.2;">
-                <p style="color:white; font-size:10px; font-weight:900; letter-spacing:3px;">TRM MUSIC PLAYER v1.5.0</p>
+                <p style="color:white; font-size:10px; font-weight:900; letter-spacing:3px;">TRM MUSIC PLAYER v1.5.0.1</p>
             </div>
         </div>
     `;
@@ -2288,15 +2288,27 @@ window.seek = (e, el) => {
 
 // --- CONTROLS & UTILS ---
 
-window.toggleShuffle = () => { 
-    isShuffle = !isShuffle; 
-    document.getElementById('ctrl-shuffle').classList.toggle('glow-active', isShuffle); 
+window.toggleShuffle = () => {
+    window.isShuffle = !window.isShuffle;
+    console.log("Shuffle is now:", window.isShuffle);
+    
+    // Target by ID, then find the material-icons span inside it
+    const btn = document.getElementById('ctrl-shuffle');
+    if (btn) {
+        const icon = btn.querySelector('.material-icons') || btn;
+        icon.style.color = window.isShuffle ? 'var(--accent-green)' : 'white';
+    }
 };
 
-window.toggleLoop = () => { 
-    isRepeat = !isRepeat; 
-    audio.loop = isRepeat; 
-    document.getElementById('ctrl-repeat').classList.toggle('glow-active', isRepeat); 
+window.toggleLoop = () => {
+    window.isRepeat = !window.isRepeat;
+    console.log("Repeat is now:", window.isRepeat);
+    
+    const btn = document.getElementById('ctrl-repeat'); // Ensure this ID matches your HTML
+    if (btn) {
+        const icon = btn.querySelector('.material-icons') || btn;
+        icon.style.color = window.isRepeat ? 'var(--accent-green)' : 'white';
+    }
 };
 
 function setNav(idx) { 
@@ -2409,53 +2421,161 @@ function closeFullPlayer() {
     }, 500);
 }
 
+window.isTrackPlayable = (track) => {
+    if (!track) return false;
+    
+    // Convert comma-separated string to array
+    const parentAlbumIds = track.album_id ? String(track.album_id).split(',').map(s => s.trim()) : [];
+    
+    // Check if at least one parent album is NOT coming_soon
+    return parentAlbumIds.some(aid => {
+        const alb = (window.ALBUMS || []).find(a => a.id === aid);
+        // An album is playable if it exists and is NOT coming_soon
+        return alb && !alb.coming_soon;
+    });
+};
+
+window.isShuffle = false;
+window.isRepeat = false;
+
 window.nextTrack = () => {
-    const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
-    if (!album || !window.TRACKS[album.id]) return false;
+    const albumIndex = window.ALBUMS.findIndex(a => a.id === window.currentAlbumId);
+    if (albumIndex === -1) return false;
 
-    const trackList = window.TRACKS[album.id];
-    let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
+    const currentAlbum = window.ALBUMS[albumIndex];
+    const albumTrackIds = currentAlbum.track_ids || [];
+    let currentIndex = albumTrackIds.indexOf(window.currentTrackId);
 
-    for (let i = currentIndex + 1; i < trackList.length; i++) {
-        const t = trackList[i];
-        
-        const parentIds = t.album_id.split(',').map(s => s.trim());
-        const isReleased = window.ALBUMS.some(a => parentIds.includes(a.id) && !a.coming_soon);
+    // --- 1. REPEAT LOGIC ---
+    if (window.isRepeat) {
+        console.log("Repeating current track...");
+        window.playTrack(window.currentTrackId, true, currentAlbum.id);
+        return true;
+    }
 
-        if (isReleased) {
-            window.playTrack(t.id, true, album.id);
-            
-            // --- ADD THIS LINE ---
-            if (window.updateLyricsView) window.updateLyricsView(t.id); 
-            
+    // --- 2. SHUFFLE WITHIN ALBUM ---
+    if (window.isShuffle) {
+        // Filter to ensure we only pick playable tracks from the current album
+        const playableIds = albumTrackIds.filter(tId => {
+            const t = window.TRACKS[tId];
+            return t && window.isTrackPlayable(t);
+        });
+
+        if (playableIds.length > 1) {
+            // Pick a random track that ISN'T the one currently playing
+            let nextId;
+            do {
+                nextId = playableIds[Math.floor(Math.random() * playableIds.length)];
+            } while (nextId === window.currentTrackId && playableIds.length > 1);
+
+            console.log("Shuffling within album to:", nextId);
+            window.playTrack(nextId, true, currentAlbum.id);
             return true;
         }
     }
+
+    // --- 3. NORMAL LINEAR PLAY ---
+    for (let i = currentIndex + 1; i < albumTrackIds.length; i++) {
+        const tId = albumTrackIds[i];
+        const trackData = window.TRACKS[tId];
+        if (trackData && window.isTrackPlayable(trackData)) {
+            window.playTrack(tId, true, currentAlbum.id);
+            return true;
+        }
+    }
+
+    // --- 4. JUMP TO NEXT ALBUM (If linear play finished current album) ---
+    for (let i = albumIndex + 1; i < window.ALBUMS.length; i++) {
+        const nextAlb = window.ALBUMS[i];
+        if (nextAlb.coming_soon) continue;
+        const nextIds = nextAlb.track_ids || [];
+        for (const tId of nextIds) {
+            const trackData = window.TRACKS[tId];
+            if (trackData && window.isTrackPlayable(trackData)) {
+                if (window.viewAlbum) window.viewAlbum(nextAlb.id);
+                window.playTrack(tId, true, nextAlb.id);
+                return true;
+            }
+        }
+    }
+
     return false;
 };
 
 window.prevTrack = () => {
-    if (audio.currentTime > 3) {
-        audio.currentTime = 0;
+    // 1. Standard "Restart track" behavior if more than 3 seconds have passed
+    if (window.audio && window.audio.currentTime > 3) {
+        window.audio.currentTime = 0;
         return;
     }
 
-    const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
-    if (!album || !window.TRACKS[album.id]) return;
+    const albumIndex = window.ALBUMS.findIndex(a => a.id === window.currentAlbumId);
+    if (albumIndex === -1) return;
 
-    const trackList = window.TRACKS[album.id];
-    let currentIndex = trackList.findIndex(t => t.id === window.currentTrackId);
+    const currentAlbum = window.ALBUMS[albumIndex];
+    const albumTrackIds = currentAlbum.track_ids || [];
+    let currentIndex = albumTrackIds.indexOf(window.currentTrackId);
 
-    if (currentIndex > 0) {
-        const prevT = trackList[currentIndex - 1];
-        window.playTrack(prevT.id, true, album.id);
-        
-        // --- ADD THIS LINE ---
-        if (window.updateLyricsView) window.updateLyricsView(prevT.id);
-        
-    } else {
-        audio.currentTime = 0;
+    // 2. REPEAT LOGIC: If repeat is on, just restart the song regardless of time
+    if (window.isRepeat) {
+        window.audio.currentTime = 0;
+        window.playTrack(window.currentTrackId, true, currentAlbum.id);
+        return;
     }
+
+    // 3. SHUFFLE WITHIN ALBUM: Pick a random song from the same album
+    if (window.isShuffle) {
+        const playableIds = albumTrackIds.filter(tId => {
+            const t = window.TRACKS[tId];
+            return t && window.isTrackPlayable(t);
+        });
+
+        if (playableIds.length > 1) {
+            let prevId;
+            do {
+                prevId = playableIds[Math.floor(Math.random() * playableIds.length)];
+            } while (prevId === window.currentTrackId && playableIds.length > 1);
+
+            window.playTrack(prevId, true, currentAlbum.id);
+            return;
+        }
+    }
+
+    // 4. NORMAL BACKWARDS NAVIGATION
+    // Look for the previous playable track in the current album
+    for (let i = currentIndex - 1; i >= 0; i--) {
+        const tId = albumTrackIds[i];
+        const trackData = window.TRACKS[tId];
+        if (trackData && window.isTrackPlayable(trackData)) {
+            window.playTrack(tId, true, currentAlbum.id);
+            if (window.updateLyricsView) window.updateLyricsView(tId);
+            return;
+        }
+    }
+
+    // 5. JUMP TO PREVIOUS ALBUM
+    // If we are at the first track of the current album, find the last playable track of the previous album
+    for (let i = albumIndex - 1; i >= 0; i--) {
+        const prevAlb = window.ALBUMS[i];
+        if (prevAlb.coming_soon) continue;
+
+        const prevTrackIds = prevAlb.track_ids || [];
+        // Search the previous album from the end to the beginning
+        for (let j = prevTrackIds.length - 1; j >= 0; j--) {
+            const tId = prevTrackIds[j];
+            const trackData = window.TRACKS[tId];
+
+            if (trackData && window.isTrackPlayable(trackData)) {
+                if (window.viewAlbum) window.viewAlbum(prevAlb.id);
+                window.playTrack(tId, true, prevAlb.id);
+                if (window.updateLyricsView) window.updateLyricsView(tId);
+                return;
+            }
+        }
+    }
+
+    // Fallback: If absolutely nothing is behind us, just restart the current song
+    window.audio.currentTime = 0;
 };
 
 window.toggleLike = async function(trackId) {
@@ -2570,7 +2690,7 @@ window.viewLibrary = async function() {
                         <h1 style="font-size: 48px; font-weight: 900; margin: 0; letter-spacing: -2px; color: white;">LIKED SONGS</h1>
                     </div>
                     ${likedTracks.length > 0 ? `
-                        <button onclick="window.shuffleLibrary()" style="background: #00ff88; color: black; border: none; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,255,136,0.2);">
+                        <button onclick="window.shuffleLibrary()" style="background: var(--accent-green); color: black; border: none; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(114, 104, 255,0.2);">
                             <span class="material-icons" style="font-size: 30px;">shuffle</span>
                         </button>
                     ` : ''}
@@ -2584,7 +2704,7 @@ window.viewLibrary = async function() {
                                 <div style="font-weight: 800; color: white; font-size: 14px;">${t.title}</div>
                                 <div style="color: rgba(255,255,255,0.5); font-size: 11px;">${window.ARTISTS[t.artist_id]?.name || 'Artist'}</div>
                             </div>
-                            <span class="material-icons" onclick="event.stopPropagation(); window.toggleLike('${t.id}')" style="color: #00ff88;">favorite</span>
+                            <span class="material-icons" onclick="event.stopPropagation(); window.toggleLike('${t.id}')" style="color: var(--accent-green);">favorite</span>
                         </div>
                     `).join('') : `<div style="text-align: center; padding: 80px 0; opacity: 0.3;"><h2 style="font-size: 32px; font-weight: 900;">EMPTY</h2></div>`}
                 </div>
@@ -2685,14 +2805,28 @@ window.handleLikeToggle = (id) => {
 window.openPatchNotes = function() {
     const versionHistory = [
         {
+            version: "v1.0.5.1",
+            date: "February 14, 2026",
+            notes: [
+                "✨ Woah! We got some new colors flowing in.",
+                "🎨 Threw a fresh coat of paint onto the icons as well!",
+                "▶️ Fixed a bug where you couldn't go to the next track, or previous track",
+                "🔁 Repeat and Shuffle are also fixed!",
+            ],
+            actionButton: {
+                text: "Support TRM BRAND via Ko-Fi",
+                url: "https://ko-fi.com/mybudshadow"
+            }
+        },
+        {
             version: "v1.0.5",
             date: "February 14, 2026",
             notes: [
                 "👤 Accounts are here!",
                 "🩷 The library has returned, and now they're account-based, which means you can go on your Desktop and your likes are right there!",
                 "🛠️ Note that we're also working on a bunch of other new features that will take time to set up! Go support us on Ko-Fi (Link Below)",
-                "<a href='https://trm-brand-shop.fourthwall.com/music-player#rich-album' target='_blank' rel='noopener noreferrer' style='color:#00ff88; text-decoration:none;'>💿 I heard that something weird IS happening...</a>",
-                "<a href='https://trm-brand-shop.fourthwall.com/blog' target='_blank' rel='noopener noreferrer' style='color:#00ff88; text-decoration:none;'>📰 Want to know more about your privacy (regarding accounts)? Well, we just pushed an article regarding on this very topic.</a>"
+                "<a href='https://trm-brand-shop.fourthwall.com/music-player#rich-album' target='_blank' rel='noopener noreferrer' style='color:var(--accent-green); text-decoration:none;'>💿 I heard that something weird IS happening...</a>",
+                "<a href='https://trm-brand-shop.fourthwall.com/blog' target='_blank' rel='noopener noreferrer' style='color:var(--accent-green); text-decoration:none;'>📰 Want to know more about your privacy (regarding accounts)? Well, we just pushed an article regarding on this very topic.</a>"
             ],
             actionButton: {
                 text: "Support Us via Ko-Fi (WE are a one man team!)",
