@@ -688,7 +688,7 @@
 
         <div id="info-panel">
             <div style="display:flex; justify-content: space-between; align-items: center; padding: 30px 30px 10px 30px;">
-                <h3 id="panel-type" style="margin:0; font-weight:900; color:#00ff88; font-size:12px; letter-spacing:2px;">LYRICS & INFO</h3>
+                <h3 id="panel-type" style="margin:0; font-weight:900; color:var(--accent-green); font-size:12px; letter-spacing:2px;">LYRICS & INFO</h3>
                 <button onclick="togglePanel()" style="background:none; border:none; color:#666; cursor:pointer; font-size:24px;">&times;</button>
             </div>
             <div id="panel-content" style="flex: 1; overflow-y: auto; padding: 0 30px 30px 30px;"></div>
@@ -1054,49 +1054,151 @@ window.resolveYouTubeAudio = async (url) => {
     }
 };
 
+window.logArtistListen = async function(artistId) {
+    const client = window.sbc; 
+    if (!client) return;
+
+    const { data: { session } } = await client.auth.getSession();
+    const user = session?.user;
+    if (!user) return;
+
+    // Ensure we are working with a clean string ID
+    const cleanId = String(artistId);
+
+    try {
+        const { data: profile, error: fetchError } = await client
+            .from('users')
+            .select('listened_artists')
+            .eq('id', user.id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        // Ensure we definitely have an array
+        let listened = Array.isArray(profile?.listened_artists) ? profile.listened_artists : [];
+        
+        // Use a more robust check for the ID
+        if (!listened.some(id => String(id) === cleanId)) {
+            listened.push(cleanId);
+            
+            const { error: updateError } = await client
+                .from('users')
+                .update({ listened_artists: listened })
+                .eq('id', user.id);
+                
+            if (updateError) throw updateError;
+            console.log("Registered as monthly listener for:", cleanId);
+        }
+    } catch (err) {
+        console.error("Listener Log Error:", err.message);
+    }
+};
+
 window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
     const track = window.TRACKS?.[id];
     if (!track) return;
 
-    // 1. IMMEDIATE UI RESET
-    window.currentTrackId = id;
-    window.isPlaying = autoPlay;
+    // 1. FIND THE ALBUM BY SCANNING THE TRACK_IDS ARRAYS
+    // We look for the album that contains this specific track ID in its array
+    let album = explicitAlbumId 
+        ? window.ALBUMS.find(a => a.id === explicitAlbumId)
+        : window.ALBUMS.find(a => Array.isArray(a.track_ids) && a.track_ids.includes(id));
+    
+    const currentContextId = album ? album.id : null;
 
-    // 2. MANUALLY FLIP THE SVG ICON (No external function needed)
-    const playIcon = document.getElementById('play-icon');
-    if (playIcon) {
-        if (window.isPlaying) {
-            // Force Pause Bars
-            playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-        } else {
-            // Force Play Triangle
-            playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-        }
+    // --- ANALYTICS LOGIC ---
+    if (window.listenTimer) clearTimeout(window.listenTimer);
+    if (autoPlay) {
+        window.listenTimer = setTimeout(() => {
+            if (window.currentTrackId === id && window.isPlaying) {
+                window.logListen(id, currentContextId);
+                if (album?.artist_id) {
+                    window.logArtistListen(album.artist_id);
+                }
+            }
+        }, 3000); 
     }
 
-    // 3. UPDATE MINI-PLAYER TEXT
+    // --- TRACK STATE & PANEL SYNC ---
+    window.currentTrackId = id;
+    window.isPlaying = autoPlay;
+    window.CURRENT_TRACK = track; 
+
+    // UI Updates
+    const playIcon = document.getElementById('play-icon');
+    if (playIcon) {
+        playIcon.innerHTML = window.isPlaying 
+            ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' 
+            : '<path d="M8 5v14l11-7z"/>';
+    }
+
     const titleEl = document.getElementById('player-title');
     const pArtist = document.getElementById('player-artist');
-    if (titleEl) titleEl.innerText = track.title;
-    if (pArtist) pArtist.innerText = window.ARTISTS?.[track.artist_id]?.name || "therichmusic";
+    
+    // Find Artist via the Album owner
+    const artistData = album ? window.ARTISTS?.[album.artist_id] : null;
 
-    // 4. HANDLE THE AUDIO LOADING IN THE BACKGROUND
+    if (titleEl) titleEl.innerText = track.title;
+    if (pArtist) pArtist.innerText = artistData?.name || "therichmusic";
+
+    // Trigger Panel Refresh
+    const panel = document.getElementById('info-panel');
+    if (panel && panel.classList.contains('open') && typeof window.updatePanelContent === 'function') {
+        window.updatePanelContent();
+    }
+
     const loadAudio = async () => {
-        // Ensure 'audio' refers to your global HTML5 Audio object
         if (typeof audio !== 'undefined') {
             audio.pause();
             let finalUrl = track.url;
 
-            // YouTube Resolution
             if (finalUrl && (finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be'))) {
                 try {
-                    // This must be defined globally from our previous steps
                     const converted = await window.resolveYouTubeAudio(finalUrl);
                     if (converted) finalUrl = converted;
                 } catch (e) { console.error("YT API Error", e); }
             }
 
             audio.src = finalUrl;
+
+            // --- AUTOPLAY LOGIC (Array Boundary Safe) ---
+            audio.onended = () => {
+                if (!album || !Array.isArray(album.track_ids)) {
+                    window.isPlaying = false;
+                    return;
+                }
+
+                const ids = album.track_ids;
+                const currentIndex = ids.indexOf(id);
+                
+                // If there's a next index available in the array
+                if (currentIndex !== -1 && currentIndex < ids.length - 1) {
+                    // Start checking from the next item
+                    for (let i = currentIndex + 1; i < ids.length; i++) {
+                        const nextId = ids[i];
+                        const nextTrackData = window.TRACKS[nextId];
+                        
+                        if (!nextTrackData) continue;
+
+                        // Check if track is available in ANY released album
+                        const isAvailable = window.ALBUMS.some(a => 
+                            Array.isArray(a.track_ids) && 
+                            a.track_ids.includes(nextId) && 
+                            !window.isAlbumComingSoon(a)
+                        );
+
+                        if (!window.isAlbumComingSoon(album) || isAvailable) {
+                            window.playTrack(nextId, true, currentContextId);
+                            return;
+                        }
+                    }
+                }
+                
+                // If we reach the end of the array or no playable tracks found
+                window.isPlaying = false;
+                if (playIcon) playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            };
+
             if (autoPlay) {
                 audio.play().catch(err => {
                     console.error("Playback Blocked", err);
@@ -1106,12 +1208,37 @@ window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
         }
     };
 
-    // 5. TRIGGER RE-RENDER OF LIST (To show the green highlight/speaker)
     if (window.currentView === 'album' && typeof window.viewAlbum === 'function') {
         window.viewAlbum(window.viewingAlbumId, false);
     }
 
     loadAudio();
+};
+
+window.logListen = async (trackId, albumId) => {
+    // Use the specific instance you initialized
+    const client = window.sbc || window.supabaseClient;
+
+    if (!client) {
+        console.error("Analytics Error: Supabase client (sbc) not found.");
+        return;
+    }
+
+    console.log(`Log: 3s threshold met for track ${trackId}`);
+
+    try {
+        // Update Track Listens
+        const { error: tErr } = await client.rpc('increment_track_listens', { row_id: trackId });
+        
+        // Update Album Listens
+        if (albumId) {
+            await client.rpc('increment_album_listens', { row_id: albumId });
+        }
+
+        if (tErr) console.error("Database RPC Error:", tErr);
+    } catch (err) {
+        console.error("Critical Analytics Failure:", err);
+    }
 };
 
 // Global state
@@ -1356,58 +1483,241 @@ audio.addEventListener('ended', () => {
 });
 
 window.viewArtist = function(artistId) {
-    let artist = window.ARTISTS?.[artistId];
+    let artist = window.ARTISTS[artistId];
+    
+    // 1. Artist Detection Logic
     if (!artist && window.ARTISTS) {
         const cleanTarget = String(artistId).replace(/-/g,'').toLowerCase();
-        artist = Object.values(window.ARTISTS)
-            .find(a => String(a.id).replace(/-/g,'').toLowerCase() === cleanTarget);
+        artist = Object.values(window.ARTISTS).find(a => String(a.id).replace(/-/g,'').toLowerCase() === cleanTarget);
     }
-
     if (!artist) {
-        artist = { name: "Artist", bio:"", verified:false, banner_url:"", featured_video_url:"", socials:[], id: artistId };
+        artist = { id: artistId, name: "Artist", bio: "", verified: false, banner_url: "", featured_video_url: "", socials: [], followers: 0, listeners: 0 };
+    }
+    
+    const isFollowing = (window.USER_LIKES?.artists || []).includes(artist.id);
+
+    // --- HELPERS FOR SORTING & COUNTDOWN ---
+    const parseSmartDate = (dateStr) => {
+        if (!dateStr) return new Date(0);
+        // If it's just a 4-digit year (e.g., "2026"), treat as year-end so it doesn't jump ahead of Dec 2025
+        if (/^\d{4}$/.test(String(dateStr))) {
+            return new Date(`${dateStr}-12-31T23:59:59`);
+        }
+        return new Date(dateStr);
+    };
+
+    const getDaysUntil = (dateStr) => {
+        const target = parseSmartDate(dateStr);
+        const diff = target - new Date();
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        return days > 0 ? days : 0;
+    };
+
+    // 2. Advanced Sorting Logic
+    const rawReleases = window.ALBUMS.filter(a => a.artist_id === artist.id || a.artist_id === artistId);
+    
+    const getSortPriority = (alb) => {
+        const isSoon = typeof isAlbumComingSoon === 'function' && isAlbumComingSoon(alb);
+        const time = parseSmartDate(alb.full_release_date || alb.release_date || alb.year).getTime();
+        // Give Coming Soon albums a massive 10-year boost in the milliseconds sort
+        return isSoon ? time + 315360000000 : time;
+    };
+
+    // Identify the absolute newest "Coming Soon" for the spotlight banner
+    const comingSoonReleases = rawReleases
+        .filter(a => typeof isAlbumComingSoon === 'function' && isAlbumComingSoon(a))
+        .sort((a, b) => getSortPriority(b) - getSortPriority(a));
+    
+    const spotlightRelease = comingSoonReleases[0] || null;
+
+    // Logic for "Newest Releases" section
+    const sortedByDate = [...rawReleases].sort((a, b) => getSortPriority(b) - getSortPriority(a));
+    
+    let topFour = [];
+    if (sortedByDate.length > 0) {
+        const latest = sortedByDate[0];
+        const others = sortedByDate.slice(1).sort((a, b) => {
+            const listensA = a.listens || 0;
+            const listensB = b.listens || 0;
+            if (listensB !== listensA) return listensB - listensA;
+            return 0.5 - Math.random(); 
+        });
+        topFour = [latest, ...others].slice(0, 4);
     }
 
-    const isFollowing = window.USER_LIKES?.artists?.includes(artist.id);
+    // 3. Categorization
+    const categories = {
+        "Albums & Mixtapes": rawReleases.filter(a => ['album', 'mixtape'].includes((a.type || 'album').toLowerCase())),
+        "Singles & EPs": rawReleases.filter(a => ['single', 'ep'].includes((a.type || 'album').toLowerCase())),
+        "Compilations": rawReleases.filter(a => (a.type || '').toLowerCase() === 'compilation')
+    };
 
-    const artistAlbums = window.ALBUMS.filter(a => a.artist_id === artist.id || a.artist_id === artistId);
+    // 4. Social & Video Helpers
+    const socialConfig = [
+        { name: 'YouTube',    match: 'youtube.com',    icon: 'fab fa-youtube',    color: '#FF0000' },
+        { name: 'Instagram',  match: 'instagram.com',  icon: 'fab fa-instagram',  color: '#E1306C' },
+        { name: 'Twitter',    match: 'twitter.com',    icon: 'fab fa-x-twitter',  color: '#ffffff' },
+        { name: 'Twitter',    match: 'x.com',          icon: 'fab fa-x-twitter',  color: '#ffffff' },
+        { name: 'TikTok',     match: 'tiktok.com',     icon: 'fab fa-tiktok',     color: '#ffffff' },
+        { name: 'SoundCloud', match: 'soundcloud.com', icon: 'fab fa-soundcloud', color: '#f76700' },
+        { name: 'Website',    match: '',               icon: 'fa-solid fa-globe', color: '#ffffff' }
+    ];
 
-    // Build the HTML
+    const renderSocials = () => {
+        if (!Array.isArray(artist.socials)) return '';
+        return artist.socials.map(socialObj => {
+            const url = typeof socialObj === 'string' ? socialObj : socialObj.url;
+            if (!url) return '';
+            let platform = socialConfig.find(c => c.match !== '' && url.toLowerCase().includes(c.match)) || socialConfig.find(c => c.name === 'Website');
+            return `
+                <a href="${url}" target="_blank" title="${platform.name}" 
+                   style="text-decoration:none; color:${platform.color}; background:rgba(255,255,255,0.05); width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1); transition:0.2s;" 
+                   onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.transform='scale(1.05)';" 
+                   onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='scale(1)';">
+                    <i class="${platform.icon}" style="font-size: 20px;"></i>
+                </a>`;
+        }).join('');
+    };
+
+    const getEmbedUrl = (url) => {
+        if(!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? `https://www.youtube-nocookie.com/embed/${match[2]}?rel=0` : null;
+    };
+
+    const embedUrl = getEmbedUrl(artist.featured_video_url);
+
+    // 5. Build the UI
     document.getElementById('content-view').innerHTML = `
     <div class="view-animate">
-        <div style="position: relative; height: 450px; width: 100%; display: flex; align-items: flex-end; padding: 50px; box-sizing: border-box; overflow: hidden;">
+        <div style="position: relative; height: 520px; width: 100%; display: flex; align-items: flex-end; padding: 60px 80px; box-sizing: border-box; overflow: hidden;">
             <div style="position: absolute; inset: 0; background: url('${artist.banner_url || ''}') center/cover no-repeat; z-index: 1;"></div>
             <div style="position: absolute; inset: 0; background: linear-gradient(to top, #000 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%); z-index: 2;"></div>
+            
             <div style="position: relative; z-index: 3; width: 100%;">
-                ${artist.verified ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#0070f3;color:white;padding:6px 14px;border-radius:4px;font-size:11px;font-weight:900;letter-spacing:1px;margin-bottom:15px;">
-                    <span class="material-icons" style="font-size:14px;">verified</span> VERIFIED ARTIST
-                </div>` : ''}
-                <div style="display:flex;align-items:center;gap:30px;">
-                    <h1 style="font-size:96px;font-weight:900;margin:0;letter-spacing:-5px;line-height:0.9;text-transform:uppercase;">${artist.name}</h1>
-                    <button id="follow-btn" onclick="toggleFollowArtist('${artist.id}')" style="
-                        margin-top:10px; 
-                        background: ${isFollowing ? 'var(--accent-green)' : 'transparent'}; 
-                        color: ${isFollowing ? 'black' : 'white'};
-                        border: 1px solid ${isFollowing ? 'var(--accent-green)' : 'rgba(255,255,255,0.3)'};
-                        padding: 12px 24px; border-radius: 30px; font-weight:900; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
-                        <span class="material-icons" style="font-size:18px;">${isFollowing ? 'favorite' : 'favorite_border'}</span>
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px;">
+                    ${artist.verified ? `<div style="display: inline-flex; align-items: center; gap: 6px; background: #0070f3; color: white; padding: 6px 14px; border-radius: 4px; font-size: 11px; font-weight: 900; letter-spacing: 1px;"><span class="material-icons" style="font-size: 14px;">verified</span> VERIFIED</div>` : ''}
+                    <div style="display: flex; gap: 25px; color: rgba(255,255,255,0.8); font-size: 13px; font-weight: 800; letter-spacing: 0.5px;">
+                        <span>${(artist.listeners || 0).toLocaleString()} MONTHLY LISTENERS</span>
+                        <span>${(artist.followers || 0).toLocaleString()} FOLLOWERS</span>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                    <h1 style="font-size: 120px; font-weight: 900; margin: 0; letter-spacing: -7px; line-height: 0.8; text-transform: uppercase;">${artist.name}</h1>
+                    <button onclick="toggleFollowArtist('${artist.id}')" id="follow-btn" 
+                        style="background: ${isFollowing ? 'var(--accent-green, #1db954)' : 'transparent'}; color: ${isFollowing ? 'black' : 'white'}; border: ${isFollowing ? 'none' : '1px solid rgba(255,255,255,0.4)'}; padding: 16px 40px; border-radius: 50px; font-weight: 900; font-size: 12px; letter-spacing: 1.5px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px;">
+                        <span class="material-icons" style="font-size: 18px;">${isFollowing ? 'favorite' : 'favorite_border'}</span>
                         ${isFollowing ? 'FOLLOWING' : 'FOLLOW'}
                     </button>
                 </div>
             </div>
         </div>
-        <div style="padding:40px 50px;">
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:25px;">
-                ${artistAlbums.map(alb => `
-                    <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer;background: rgba(255,255,255,0.02);padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
-                        <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px;">
-                        <div style="font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${alb.name}</div>
-                        <div style="color:#666; font-size:11px; margin-top:4px; font-weight:800; letter-spacing:0.5px;">${(alb.type||'Album').toUpperCase()}</div>
-                    </div>`).join('')}
+
+        <div style="padding: 60px 80px;">
+            <div style="display: flex; gap: 70px; align-items: flex-start;">
+                
+                <div style="flex: 2;">
+                    ${spotlightRelease ? `
+                        <div style="background: linear-gradient(90deg, rgba(58, 29, 185,0.15) 0%, rgba(0,0,0,0) 100%); border: 1px solid rgba(58, 29, 185,0.3); border-radius: 20px; padding: 30px; margin-bottom: 50px; display: flex; align-items: center; gap: 30px; cursor: pointer;" onclick="viewAlbum('${spotlightRelease.id}')">
+                            <img src="${spotlightRelease.art_url}" style="width: 120px; height: 120px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                            <div>
+                                <div style="color: var(--accent-green, #441db9); font-size: 11px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">
+                                    Coming Soon • ${getDaysUntil(spotlightRelease.full_release_date)} Days Left
+                                </div>
+                                <div style="font-size: 32px; font-weight: 900; margin-bottom: 5px;">${spotlightRelease.name}</div>
+                                <div style="color: #888; font-size: 14px; font-weight: 600;">Releasing ${spotlightRelease.full_release_date || spotlightRelease.year}</div>
+                            </div>
+                            <span class="material-icons" style="margin-left: auto; color: var(--accent-green); font-size: 40px;">timer</span>
+                        </div>
+                    ` : ''}
+
+                    <div id="discography-default">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #1a1a1a; padding-bottom: 15px;">
+                            <h2 style="font-size: 11px; color: #555; letter-spacing: 3px; text-transform: uppercase; font-weight: 900; margin: 0;">Newest Releases</h2>
+                            ${rawReleases.length > 4 ? `<button onclick="document.getElementById('discography-default').style.display='none'; document.getElementById('discography-full').style.display='block';" style="background:none; border:none; color:var(--accent-green, #1db954); font-size:11px; font-weight:900; cursor:pointer; letter-spacing:1px;">SHOW ALL</button>` : ''}
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 30px;">
+                            ${topFour.map((alb, index) => {
+                                const isSoon = typeof isAlbumComingSoon === 'function' && isAlbumComingSoon(alb);
+                                return `
+                                <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer; background: rgba(255,255,255,0.02); padding:18px; border-radius:16px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;">
+                                    <div style="position:relative;">
+                                        <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:10px; margin-bottom:15px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);">
+                                        ${index === 0 ? `<div style="position:absolute; top:10px; right:10px; background:${isSoon ? '#0070f3' : 'var(--accent-green, #1db954)'}; color:${isSoon ? 'white' : 'black'}; font-size:9px; font-weight:900; padding:4px 8px; border-radius:4px;">${isSoon ? 'SOON' : 'LATEST'}</div>` : ''}
+                                    </div>
+                                    <div style="font-weight:700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${alb.name}</div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 6px;">
+                                        <div style="color: #666; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">${(alb.type || 'Album').toUpperCase()}</div>
+                                        <div style="color: #444; font-size: 10px; font-weight: 600;">${isSoon ? 'COMING SOON' : (alb.listens || 0).toLocaleString()}</div>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <div id="discography-full" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                            <h2 style="font-size: 11px; color: #555; letter-spacing: 3px; text-transform: uppercase; font-weight: 900; margin: 0;">Full Discography</h2>
+                            <button onclick="document.getElementById('discography-full').style.display='none'; document.getElementById('discography-default').style.display='block';" style="background:none; border:none; color:#666; font-size:11px; font-weight:900; cursor:pointer; letter-spacing:1px;">SHOW LESS</button>
+                        </div>
+                        
+                        ${Object.entries(categories).map(([title, albums]) => {
+                            if (albums.length === 0) return '';
+                            return `
+                                <div style="margin-bottom: 40px;">
+                                    <h3 style="font-size: 10px; color: #333; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px;">${title}</h3>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px;">
+                                        ${albums.map(alb => `
+                                            <div class="glow-card" onclick="viewAlbum('${alb.id}')" style="cursor:pointer; background: rgba(255,255,255,0.01); padding:15px; border-radius:12px; border: 1px solid rgba(255,255,255,0.03); transition: 0.3s;">
+                                                <img src="${alb.art_url}" style="width:100%; aspect-ratio:1; border-radius:8px; margin-bottom:12px;">
+                                                <div style="font-weight:700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${alb.name}</div>
+                                                <div style="color: #555; font-size: 10px; margin-top: 4px; font-weight: 800;">${alb.year || ''}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 45px;">
+                    <div>
+                        <h3 style="font-size: 11px; color: #555; letter-spacing: 2px; margin-bottom: 18px; font-weight: 900;">CONNECT</h3>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">${renderSocials()}</div>
+                    </div>
+
+                    ${embedUrl ? `
+                        <div>
+                            <h3 style="font-size: 11px; color: #555; letter-spacing: 2px; margin-bottom: 18px; font-weight: 900;">FEATURED VIDEO</h3>
+                            <div style="position: relative; width: 100%; padding-top: 56.25%; border-radius: 20px; overflow: hidden; background:#000; border: 1px solid #1a1a1a;">
+                                <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+                            </div>
+                        </div>` : ''}
+
+                    <div style="background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%); padding: 40px; border-radius: 30px; border: 1px solid #111;">
+                        <h3 style="font-size: 11px; color: #555; letter-spacing: 2px; margin-bottom: 20px; font-weight: 900;">ARTIST BIO</h3>
+                        <p style="color: #999; line-height: 1.8; font-size: 14px; margin: 0; font-weight: 400;">${artist.bio || 'This artist hasn\'t shared a story yet.'}</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>`;
 };
 
+window.handleToggleFollow = async function(artistId) {
+    // 1. Run your existing toggle logic
+    await window.toggleFollowArtist(artistId);
+    
+    // 2. Refresh the count in the UI
+    const followerEl = document.getElementById('follower-display');
+    if (followerEl && window.sbc) {
+        const { data: newCount } = await window.sbc.rpc('get_artist_follower_count', { 
+            target_artist_id: artistId 
+        });
+        followerEl.innerText = `${(newCount || 0).toLocaleString()} FOLLOWERS`;
+    }
+};
 
 // --- 3. VOLUME & NAVIGATION ---
 
@@ -2326,7 +2636,6 @@ window.toggleFollowArtist = async function(artistId) {
     if (!user) return alert("Log in to follow your favorite artists!");
 
     const btn = document.getElementById('follow-btn');
-    if (!btn) console.warn("Follow button not found.");
 
     try {
         const { data: profile, error: fetchError } = await client
@@ -2361,22 +2670,21 @@ window.toggleFollowArtist = async function(artistId) {
 
         // --- UPDATE UI ---
         if (btn) {
-            const heart = isFollowing ? 'favorite_border' : 'favorite';
-            btn.style.background = isFollowing ? 'transparent' : 'var(--accent-green)';
-            btn.style.color = isFollowing ? 'white' : 'black';
-            btn.innerHTML = `<span class="material-icons" style="font-size: 18px;">${heart}</span> ${isFollowing ? 'FOLLOW' : 'FOLLOWING'}`;
+            const nowFollowing = currentFollows.includes(artistId);
+            const heart = nowFollowing ? 'favorite' : 'favorite_border';
+            
+            btn.style.background = nowFollowing ? 'var(--accent-green)' : 'transparent';
+            btn.style.color = nowFollowing ? 'black' : 'white';
+            btn.style.border = nowFollowing ? 'none' : '1px solid rgba(255,255,255,0.3)';
+            btn.innerHTML = `<span class="material-icons" style="font-size: 18px;">${heart}</span> ${nowFollowing ? 'FOLLOWING' : 'FOLLOW'}`;
         }
 
-        // Refresh sidebar if present
         if (window.renderSidebarLibrary) await window.renderSidebarLibrary();
 
     } catch (err) {
         console.error("Follow Error:", err.message);
-        alert("Check your RLS policies or database column name.");
     }
 };
-
-
 
 window.toggleShuffle = () => { window.isShuffle = !window.isShuffle; document.getElementById('shuffle-btn').classList.toggle('active', window.isShuffle); };
 window.toggleLoop = () => {
@@ -2407,7 +2715,64 @@ window.toggleLoop = () => {
 
 window.togglePanel = function() {
     const panel = document.getElementById('info-panel');
-    if (panel) panel.classList.toggle('open');
+    if (!panel) return;
+    
+    // Toggle the class
+    panel.classList.toggle('open');
+    
+    // Always refresh content when opening
+    if (panel.classList.contains('open')) {
+        window.updatePanelContent();
+    }
+};
+
+window.updatePanelContent = function() {
+    const content = document.getElementById('panel-content');
+    const track = window.CURRENT_TRACK;
+    if (!track || !content) return;
+
+    // 1. Find Album & Artist
+    const album = window.ALBUMS.find(a => Array.isArray(a.track_ids) && a.track_ids.includes(track.id));
+    const artist = album ? window.ARTISTS?.[album.artist_id] : null;
+
+    // 2. Format Credits
+    let creditsRaw = Array.isArray(track.credits) ? track.credits.join(', ') : String(track.credits || "");
+    const formattedCredits = creditsRaw
+        .replace(/,\s*(Produced|Written|Mixed|Engineered|Mastered)/gi, '<br>$1')
+        .trim();
+
+    const cleanLyrics = (track.lyrics || "Lyrics aren't available for this track yet.").trim();
+
+    content.innerHTML = `
+        <div style="margin-top: 20px; width: 100%; display: block; text-align: left;">
+            <img src="${album?.art_url || ''}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; margin-bottom:25px; display: block;">
+            
+            <div style="text-align: left; margin-bottom: 30px;">
+                <h2 style="font-size: 26px; font-weight: 900; color:#fff; margin: 0 0 5px 0; display: block;">${track.title || 'Unknown Track'}</h2>
+                
+                <p 
+                    onclick="if(typeof window.viewArtist === 'function') { window.viewArtist('${album?.artist_id}'); window.togglePanel(); }"
+                    style="color: var(--accent-green); font-weight: 700; margin: 0; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; cursor: pointer; display: inline-block;"
+                    onmouseover="this.style.textDecoration='underline'" 
+                    onmouseout="this.style.textDecoration='none'"
+                >
+                    ${artist?.name || 'therichmusic'}
+                </p>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.03); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); display: block; width: 100%; box-sizing: border-box;">
+                <h4 style="margin: 0 0 15px 0; font-size: 10px; color: #555; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; text-align: left;">Lyrics</h4>
+                <div style="display: block; text-align: left; margin: 0; padding: 0; white-space: pre-wrap; line-height: 1.8; color: #d1d1d1; font-size: 16px; font-weight: 500; width: 100%;">${cleanLyrics}</div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 0 0 0 15px; text-align: left; border-left: 2px solid rgba(255,255,255,0.05); display: block;">
+                <h4 style="margin: 0 0 10px 0; font-size: 10px; color: #555; letter-spacing: 2px; text-transform: uppercase; font-weight: 800;">Credits</h4>
+                <p style="color: #888; font-size: 13px; line-height: 1.7; font-weight: 500; margin: 0; text-align: left;">
+                    ${formattedCredits || 'Written & Produced by therichmusic'}
+                </p>
+            </div>
+        </div>
+    `;
 };
 
 window.updatePlayerUI = function() {
@@ -2433,7 +2798,6 @@ window.initApp = async function() {
     try {
         console.log("TRM MUSIC PLAYER: Initializing Safe Mode...");
 
-        // Use window.sbc to ensure we are using the initialized client
         const [
             { data: artists },
             { data: albums },
@@ -2467,13 +2831,27 @@ window.initApp = async function() {
         }
         window.TRACKS = trackLookup; 
 
-        const parseDate = (str) => {
-            if (!str || str === 'RELEASED') return 0;
-            const cleanDate = str.replace(/(\d+)(st|nd|rd|th)/, "$1");
+        // --- UPDATED SMART DATE PARSER ---
+        const parseSmartDate = (dateStr) => {
+            if (!dateStr || dateStr === 'RELEASED') return 0;
+            
+            // Handle ordinal suffixes (1st, 2nd, etc)
+            const cleanDate = String(dateStr).replace(/(\d+)(st|nd|rd|th)/, "$1");
+            
+            // Check if it's just a 4-digit year (e.g., "2026")
+            if (/^\d{4}$/.test(cleanDate)) {
+                // Set to end of year for sorting purposes
+                return new Date(`${cleanDate}-12-31T23:59:59`).getTime();
+            }
+            
             return Date.parse(cleanDate) || 0;
         };
 
-        window.ALBUMS = (albums || []).sort((a, b) => parseDate(b.full_release_date) - parseDate(a.full_release_date));
+        // Apply smart sorting to the global ALBUMS list
+        window.ALBUMS = (albums || []).sort((a, b) => {
+            return parseSmartDate(b.full_release_date || b.release_date || b.year) - 
+                   parseSmartDate(a.full_release_date || a.release_date || a.year);
+        });
 
         window.ALBUMS.forEach(alb => {
             let ids = [];
@@ -2502,7 +2880,6 @@ window.initApp = async function() {
         if (directAlbumId) window.viewAlbum(directAlbumId);
         else window.viewHome();
 
-        // AFTER APP IS READY: Run background auth check
         window.fetchUserLikes();
 
     } catch (e) { 
@@ -2622,9 +2999,26 @@ async function toggleDesktopPiP() {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+                        {
+            version: "v1.0.5.2",
+            date: "February 18, 2026",
+            notes: [
+                "🤔 A ton of new features was introduced with this update to level up artists! Let's go through them all (As well as your UX!)",
+                "🐜 We squashed a ton of bugs with the big v1.0.5 update, such as the removal of Artist Bios, Featured Videos & Socials.",
+                "🔗 We don't discriminate! We've added three new social links (Including websites!)",
+                "⏳ Time is ticking... for countdowns! Check them out on your favorite artist's profile.",
+                "🔢 We've introduced statistics, such as: Followers, Monthly Listeners, and Plays! Plays aren't shown on Release Pages or Singles, just the Artist's Page for the release.",
+                "⚙️ Update on Light Mode: We've decided to scrap light mode as a coming soon feature. While we love the idea of allowing users to use more than one theme, we're trying to also get the player to a stable position first.",
+                "🎶 Fixed a bug relating to the lyrics & info panel.",
+            ],
+            actionButton: {
+                text: "Support TRM BRAND via Ko-Fi",
+                url: "https://ko-fi.com/mybudshadow"
+            }
+        },
                 {
             version: "v1.0.5.1",
-            date: "February 14, 2026",
+            date: "February 17, 2026",
             notes: [
                 "✨ Woah! We got some new colors flowing in.",
                 "🎨 Threw a fresh coat of paint onto the icons as well!",
