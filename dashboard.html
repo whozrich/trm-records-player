@@ -361,15 +361,23 @@
             transition: 0.2s ease;
         }
 
-        .control-toggle {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+.control-toggle {
+    cursor: pointer;
+    position: relative;
+    z-index: 10; /* Ensures it sits above any background/progress-bar overlays */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+
+.control-toggle:hover {
+    opacity: 0.8;
+}
+
+.control-toggle:active {
+    transform: scale(0.95);
+}
 
         .control-toggle svg { pointer-events: none; }
 
@@ -711,18 +719,29 @@
                 <div id="shuffle-btn" class="control-toggle" onclick="toggleShuffle()">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
                 </div>
-                <div class="control-toggle" onclick="prevTrack()">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                </div>
-                <button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-                    <svg id="play-icon" viewBox="0 0 24 24" width="20" height="20" fill="black"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <div class="control-toggle" onclick="nextTrack()">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                </div>
-                <div id="loop-btn" class="control-toggle" onclick="toggleLoop()">
-                    <svg id="loop-svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-                </div>
+<div class="control-toggle" onclick="console.log('Prev Clicked'); prevTrack();" style="padding: 5px;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+    </svg>
+</div>
+
+<button onclick="togglePlay()" id="play-btn" style="background: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10;">
+    <svg id="play-icon" viewBox="0 0 24 24" width="20" height="20" fill="black">
+        <path d="M8 5v14l11-7z"/>
+    </svg>
+</button>
+
+<div class="control-toggle" onclick="console.log('Next Clicked'); nextTrack();" style="padding: 5px;">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+    </svg>
+</div>
+
+<div id="loop-btn" class="control-toggle" onclick="toggleLoop()" style="padding: 5px;">
+    <svg id="loop-svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
+    </svg>
+</div>
             </div>
             <div style="width: 100%; max-width: 480px; display: flex; align-items: center; gap: 10px;">
                 <span id="current-time" style="font-size: 11px; color: #666; width: 35px; text-align: right;">0:00</span>
@@ -1059,40 +1078,43 @@ window.logArtistListen = async function(artistId) {
     if (!client) return;
 
     const { data: { session } } = await client.auth.getSession();
-    const user = session?.user;
-    if (!user) return;
+    if (!session?.user) return;
 
+    const userId = session.user.id;
     const cleanId = String(artistId);
+    const now = Date.now();
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
     try {
-        // 1. First, increment the global artist listener count
-        // This hits the new PostgreSQL function we just created
-        await client.rpc('increment_artist_listeners', { artist_id: cleanId });
-
-        // 2. Then, handle the user's personal "listened_artists" array
-        const { data: profile, error: fetchError } = await client
+        const { data: profile } = await client
             .from('users')
             .select('listened_artists')
-            .eq('id', user.id)
+            .eq('id', userId)
             .single();
 
-        if (fetchError) throw fetchError;
-
-        let listened = Array.isArray(profile?.listened_artists) ? profile.listened_artists : [];
-        
-        if (!listened.some(id => String(id) === cleanId)) {
-            listened.push(cleanId);
-            
-            const { error: updateError } = await client
-                .from('users')
-                .update({ listened_artists: listened })
-                .eq('id', user.id);
-                
-            if (updateError) throw updateError;
-            console.log("Registered as monthly listener for:", cleanId);
+        // Initialize as object if empty or currently an array
+        let listenedMap = profile?.listened_artists;
+        if (!listenedMap || Array.isArray(listenedMap) || typeof listenedMap !== 'object') {
+            listenedMap = {};
         }
+
+        const lastListen = listenedMap[cleanId] || 0;
+        
+        // Only update if they haven't been counted in the last 30 days
+// In window.logArtistListen...
+if ((now - lastListen) > thirtyDaysMs) {
+    listenedMap[cleanId] = now;
+    
+    // This update to the 'users' table will fire the trigger automatically
+    await client.from('users').update({ listened_artists: listenedMap }).eq('id', userId);
+
+    // REMOVE OR COMMENT OUT THIS LINE:
+    // await client.rpc('increment_artist_listeners', { artist_id: cleanId });
+    
+    console.log(`✅ Monthly listener registered via trigger for ${cleanId}`);
+}
     } catch (err) {
-        console.error("Listener Log Error:", err.message);
+        console.error("Monthly Listener Error:", err);
     }
 };
 
@@ -1122,9 +1144,10 @@ window.playTrack = function(id, autoPlay = true, explicitAlbumId = null) {
     }
 
     // --- TRACK STATE & PANEL SYNC ---
-    window.currentTrackId = id;
-    window.isPlaying = autoPlay;
-    window.CURRENT_TRACK = track; 
+window.currentTrackId = id;
+window.currentAlbumId = currentContextId; // <--- ADD THIS LINE HERE
+window.isPlaying = autoPlay;
+window.CURRENT_TRACK = track;
 
     // UI Updates
     const playIcon = document.getElementById('play-icon');
@@ -2609,25 +2632,56 @@ window.copyAlbumLink = function(albumId) {
 };
 
 window.nextTrack = function() {
-    const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
-    if (!album || !album.track_list) return false;
+    console.log(">>> nextTrack triggered");
 
-    let currentIndex = album.track_list.findIndex(t => t.id === window.currentTrackId);
+    // At the top of window.nextTrack
+const albumId = window.currentAlbumId || window.viewingAlbumId; 
+const album = window.ALBUMS.find(a => a.id === albumId);
     
-    // Look for the next playable track in the list
-    for (let i = currentIndex + 1; i < album.track_list.length; i++) {
-        const t = album.track_list[i];
-        
-        // Parity Check: Is this track released anywhere?
+    console.log("Current Album ID:", window.currentAlbumId);
+    console.log("Album found:", album ? album.name : "null");
+
+    const trackIds = album ? album.track_ids : [];
+    if (!trackIds.length) {
+        console.warn("No track IDs found for this album.");
+        return false;
+    }
+
+    let currentIndex = trackIds.findIndex(id => id === window.currentTrackId);
+    console.log("Current Track ID:", window.currentTrackId);
+    console.log("Current Index:", currentIndex);
+    
+    // Look for the next playable track
+    for (let i = currentIndex + 1; i < trackIds.length; i++) {
+        const id = trackIds[i];
+        console.log(`Checking track index ${i}: ${id}`);
+
+        if (typeof id === 'string' && id.startsWith('DISC_')) {
+            console.log("Skipping disc marker.");
+            continue;
+        }
+
+        const t = window.TRACKS[id];
+        if (!t) {
+            console.error(`Track data missing for ID: ${id}`);
+            continue;
+        }
+
+        const isActuallyComingSoon = window.isAlbumComingSoon(album);
         const parentAlbumIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
         const isReleasedElsewhere = parentAlbumIds.some(aid => {
             const otherAlb = window.ALBUMS.find(a => a.id === aid);
-            return otherAlb && !otherAlb.coming_soon;
+            return otherAlb && !window.isAlbumComingSoon(otherAlb);
         });
 
-        if (isReleasedElsewhere || !album.coming_soon) {
+        console.log(`Track: ${t.title} | ReleasedElsewhere: ${isReleasedElsewhere} | AlbumComingSoon: ${isActuallyComingSoon}`);
+
+        if (isReleasedElsewhere || !isActuallyComingSoon) {
+            console.log(`Success! Playing: ${t.title}`);
             window.playTrack(t.id, true, window.currentAlbumId);
             return true;
+        } else {
+            console.log("Track is not playable (locked).");
         }
     }
 
@@ -2636,36 +2690,49 @@ window.nextTrack = function() {
 };
 
 window.prevTrack = function() {
+    console.log(">>> prevTrack triggered");
+
     const album = window.ALBUMS.find(a => a.id === window.currentAlbumId);
-    if (!album || !album.track_list) return;
-
-    let currentIndex = album.track_list.findIndex(t => t.id === window.currentTrackId);
-
-    // If we are more than 3 seconds into a song, just restart the current song
-    if (audio.currentTime > 3) {
-        audio.currentTime = 0;
+    const trackIds = album ? album.track_ids : [];
+    
+    const player = window.audio || document.querySelector('audio');
+    if (player && player.currentTime > 3) {
+        console.log("Restarting current track (currentTime > 3s)");
+        player.currentTime = 0;
         return;
     }
 
-    // Look backward for the first playable track
+    if (!trackIds.length) {
+        console.warn("No tracks found to navigate backward.");
+        return;
+    }
+
+    let currentIndex = trackIds.findIndex(id => id === window.currentTrackId);
+    console.log("Current Index:", currentIndex);
+
     for (let i = currentIndex - 1; i >= 0; i--) {
-        const t = album.track_list[i];
-        
-        // Parity Check: Is this track released anywhere?
+        const id = trackIds[i];
+        if (typeof id === 'string' && id.startsWith('DISC_')) continue;
+
+        const t = window.TRACKS[id];
+        if (!t) continue;
+
+        const isActuallyComingSoon = window.isAlbumComingSoon(album);
         const parentAlbumIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
         const isReleasedElsewhere = parentAlbumIds.some(aid => {
             const otherAlb = window.ALBUMS.find(a => a.id === aid);
-            return otherAlb && !otherAlb.coming_soon;
+            return otherAlb && !window.isAlbumComingSoon(otherAlb);
         });
 
-        if (isReleasedElsewhere || !album.coming_soon) {
+        if (isReleasedElsewhere || !isActuallyComingSoon) {
+            console.log(`Success! Playing previous: ${t.title}`);
             window.playTrack(t.id, true, window.currentAlbumId);
             return;
         }
     }
 
-    // If no previous playable track exists, just restart the current one
-    audio.currentTime = 0;
+    console.log("No previous playable tracks. Resetting to start of current song.");
+    if (player) player.currentTime = 0;
 };
 
 window.toggleFollowArtist = async function(artistId) {
@@ -2820,17 +2887,18 @@ window.updatePlayerUI = function() {
     // 1. Swap the Mini-Player SVG Icon
     const playIcon = document.getElementById('play-icon');
     if (playIcon) {
-        if (window.isPlaying) {
-            // Pause Bars
-            playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-        } else {
-            // Play Triangle
-            playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-        }
+        playIcon.innerHTML = window.isPlaying 
+            ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>' 
+            : '<path d="M8 5v14l11-7z"/>';
     }
 
-    // 2. Sync the Album Tracklist (Green text / Speaker icons)
-    if (window.currentView === 'album' && window.viewingAlbumId) {
+    // 2. ONLY refresh the album view if the user is actually LOOKING at an album
+    // AND if that album is the one currently playing (or was just paused).
+    const isCurrentlyViewingAlbum = (window.currentView === 'album');
+    
+    if (isCurrentlyViewingAlbum && window.viewingAlbumId) {
+        // We only call this if we are physically on an album screen.
+        // This prevents the app from switching views when you hit pause from the home/artist page.
         window.viewAlbum(window.viewingAlbumId, false); 
     }
 };
@@ -2903,14 +2971,17 @@ window.initApp = async function() {
             alb.track_list = ids.map(id => window.TRACKS[id] || { id: id, title: "Unknown", missing: true });
         });
 
-        // 5. Initial UI Render
-        if (typeof renderSidebar === 'function') renderSidebar();
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const directId = urlParams.get('album') || window.location.hash.replace('#', '');
-        
-        if (directId) window.viewAlbum(directId);
-        else window.viewHome();
+// 5. Initial UI Render
+if (typeof renderSidebar === 'function') renderSidebar();
+
+// Trigger this in the background (no 'await')
+window.handleDeepLinking(); 
+
+// Immediately show home so the user isn't staring at a blank screen
+window.viewHome();
+
+// 6. Final Sync
+window.fetchUserLikes().catch(() => console.log("Auth lock busy..."));
 
         // 6. Final Sync
         // We call this last. If the LockManager is busy, the catch will prevent the app from crashing.
@@ -2936,43 +3007,36 @@ function renderSidebar() {
 window.handleDeepLinking = async function() {
     let albumId = null;
 
-    // 1. Try Local URL (Immediate)
+    // 1. Immediate Check (URL Params/Hash)
     const urlParams = new URLSearchParams(window.location.search);
     albumId = urlParams.get('album') || window.location.hash.replace('#', '');
 
     if (albumId) {
-        processDeepLink(albumId);
+        console.log("Deep link found in URL, navigating...");
+        window.viewAlbum(albumId);
         return;
     }
 
-    // 2. Create a "Waiting Room" Promise
-    console.log("Waiting for Parent Broadcast...");
-    
-    const waitForMessage = new Promise((resolve) => {
+    // 2. Background Listener (Bridge Message)
+    const receivedId = await new Promise((resolve) => {
         const listener = (event) => {
             if (event.data && event.data.type === 'SET_ALBUM') {
-                window.removeEventListener('message', listener); // Clean up
+                window.removeEventListener('message', listener);
                 resolve(event.data.id);
             }
         };
         window.addEventListener('message', listener);
         
-        // Safety timeout: If no message in 2 seconds, resolve as null
+        // If nothing comes through in 2 seconds, just stop listening
         setTimeout(() => {
             window.removeEventListener('message', listener);
             resolve(null);
         }, 2000);
     });
 
-    // 3. Wait for the promise to finish
-    const receivedId = await waitForMessage;
-
     if (receivedId) {
-        console.log("Deep link received via Bridge:", receivedId);
-        processDeepLink(receivedId);
-    } else {
-        console.log("No deep link received, loading Home.");
-        // window.viewHome();
+        console.log("Deep link received via Bridge, redirecting from Home...");
+        window.viewAlbum(receivedId);
     }
 };
 
@@ -3428,19 +3492,11 @@ window.toggleAuthMode = () => {
 };
 
 window.handleAuthSubmit = async () => {
-    // Check for the client under any of its possible names
     const client = window.sbc || window.supabaseClient;
-
     const notification = document.getElementById('auth-notification');
     const submitBtn = document.getElementById('auth-submit-btn');
 
-    // 1. Safety Check: If the client is missing, stop here.
-    if (!client || !client.auth) {
-        console.error("Critical: Supabase client (sbc) is not initialized.");
-        notification.innerHTML = "System Error: Auth service unavailable.";
-        notification.style.color = "#ff4444";
-        return;
-    }
+    if (!client || !client.auth) return;
 
     const email = document.getElementById('modal-auth-email').value.trim();
     const password = document.getElementById('modal-auth-password').value;
@@ -3452,49 +3508,51 @@ window.handleAuthSubmit = async () => {
         submitBtn.innerText = window.isSignUpMode ? "SIGN UP" : "LOGIN";
     };
 
-    if (password.length < 6) return showMsg("Password must be at least 6 characters.");
-
     submitBtn.style.opacity = "0.5";
     submitBtn.innerText = "PROCESSING...";
 
     try {
+        // --- 1. IP LOGGING ---
+        let userIp = "unknown";
+        try {
+            const ipRes = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipRes.json();
+            userIp = ipData.ip;
+        } catch (e) { console.log("IP Fetch Failed"); }
+
         if (window.isSignUpMode) {
             const username = document.getElementById('modal-auth-username').value.trim();
             const displayName = document.getElementById('modal-auth-display-name').value.trim();
 
-            // 2. Use the 'client' variable we validated above
-            const { error } = await client.auth.signUp({
+            const { data, error } = await client.auth.signUp({
                 email, 
                 password,
-                options: { 
-                    data: { 
-                        username: username, 
-                        display_name: displayName 
-                    } 
-                }
+                options: { data: { username, display_name: displayName, signup_ip: userIp } }
             });
             
             if (error) throw error;
             showMsg("Account created! Check your email.", false);
 } else {
-            const { error } = await client.auth.signInWithPassword({ email, password });
+            const { data: authData, error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
             
+            // --- ACTUAL IP INSERT LOGIC ---
+            if (authData?.user) {
+                await client.from('user_sessions').insert({ 
+                    user_id: authData.user.id, 
+                    ip_address: userIp, 
+                    user_agent: navigator.userAgent 
+                });
+                console.log("Session IP logged for user:", authData.user.id);
+            }
+
             const modal = document.getElementById('auth-modal-root');
             if (modal) modal.remove();
             
-            // 1. Update the Header/Login button
             if (window.updateAuthUI) window.updateAuthUI();
-
-            // 2. FETCH LIKES IMMEDIATELY
-            if (window.fetchUserLikes) {
-                await window.fetchUserLikes();
-                // 3. RE-RENDER SIDEBAR AFTER FETCH
-                if (window.renderSidebarLibrary) window.renderSidebarLibrary();
-            }
+            if (window.fetchUserLikes) await window.fetchUserLikes();
         }
     } catch (err) {
-        // This will now catch and show the 500 or 422 error messages properly
         showMsg(err.message);
     }
 };
@@ -3628,18 +3686,35 @@ window.addEventListener('click', (e) => {
 
 let isHydrating = false; // Flag to prevent multiple simultaneous calls
 
-window.sbc.auth.onAuthStateChange((event, session) => {
+window.sbc.auth.onAuthStateChange(async (event, session) => {
     console.log("Auth Event:", event);
     
-    // Use a non-blocking approach for hydration
     if (session?.user) {
-        // Don't await here; let it run in the background
+        // LOGGED IN
+        window.CURRENT_USER_ID = session.user.id;
         window.fetchUserLikes().catch(err => console.error("Hydration fail:", err));
-    } else if (event === 'SIGNED_OUT') {
+    } else {
+        // LOGGED OUT / GUEST MODE
+        window.CURRENT_USER_ID = null;
         window.USER_LIKES = { songs: [], artists: [], albums: [] };
+
+        // IMPORTANT: Ensure the player doesn't attribute songs to "You" 
+        // if no one is logged in.
+        if (window.CURRENT_TRACK) {
+            // Force a refresh of the player artist name to the actual track artist
+            const pArtist = document.getElementById('player-artist');
+            if (pArtist) {
+                const album = window.ALBUMS.find(a => a.track_ids.includes(window.currentTrackId));
+                const actualArtist = album ? window.ARTISTS[album.artist_id] : null;
+                pArtist.innerText = actualArtist?.name || "therichmusic";
+            }
+        }
+
+if (window.currentView === 'album' && window.viewingAlbumId) {
+            window.viewAlbum(window.viewingAlbumId, false);
+        }
+
         if (window.renderSidebarLibrary) window.renderSidebarLibrary();
-        if (window.updateLikeButtonUI) window.updateLikeButtonUI();
-        if (window.currentViewId === 'library') window.viewLibrary();
     }
 
     if (window.updateAuthUI) window.updateAuthUI();
