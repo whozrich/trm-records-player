@@ -1062,10 +1062,14 @@ window.logArtistListen = async function(artistId) {
     const user = session?.user;
     if (!user) return;
 
-    // Ensure we are working with a clean string ID
     const cleanId = String(artistId);
 
     try {
+        // 1. First, increment the global artist listener count
+        // This hits the new PostgreSQL function we just created
+        await client.rpc('increment_artist_listeners', { artist_id: cleanId });
+
+        // 2. Then, handle the user's personal "listened_artists" array
         const { data: profile, error: fetchError } = await client
             .from('users')
             .select('listened_artists')
@@ -1074,10 +1078,8 @@ window.logArtistListen = async function(artistId) {
 
         if (fetchError) throw fetchError;
 
-        // Ensure we definitely have an array
         let listened = Array.isArray(profile?.listened_artists) ? profile.listened_artists : [];
         
-        // Use a more robust check for the ID
         if (!listened.some(id => String(id) === cleanId)) {
             listened.push(cleanId);
             
@@ -1242,7 +1244,7 @@ window.logListen = async (trackId, albumId) => {
 };
 
 // Global state
-window.USER_LIKES = { songs: [], albums: [] };
+window.USER_LIKES = { songs: [], artists: [], albums: []};
 
 window.handleLikeClick = function() {
     if (window.CURRENT_TRACK) {
@@ -1317,28 +1319,37 @@ window.fetchUserLikes = async function() {
 
     const { data: { session } } = await window.sbc.auth.getSession();
     const user = session?.user;
-    if (!user) return;
+    if (!user) {
+        // Clear state if no user is found
+        window.USER_LIKES = { songs: [], artists: [], albums: [] };
+        return;
+    }
 
     window.isFetchingLikes = true;
 
     try {
         const { data, error } = await window.sbc
             .from('users')
-            .select('liked_songs, liked_albums, followedartists')
+            // Double check: Is it 'followedartists' or 'followed_artists' in your DB?
+            .select('liked_songs, liked_albums, followedartists') 
             .eq('id', user.id)
             .single();
 
         if (error) throw error;
 
         if (data) {
-            window.USER_LIKES = window.USER_LIKES || {};
-            window.USER_LIKES.songs = data.liked_songs || [];
-            window.USER_LIKES.albums = data.liked_albums || [];
-            window.USER_LIKES.artists = data.followedartists || []; // ✅ Fixed
+            // Ensure the structure remains consistent
+            window.USER_LIKES = {
+                songs: data.liked_songs || [],
+                albums: data.liked_albums || [],
+                artists: data.followedartists || [] // This maps to your window.USER_LIKES.artists
+            };
 
             console.log("Library Hydrated:", window.USER_LIKES);
 
+            // Force UI refreshes
             if (window.renderSidebarLibrary) await window.renderSidebarLibrary();
+            if (window.currentViewId === 'library' && window.viewLibrary) window.viewLibrary();
         }
 
     } catch (err) {
@@ -1352,15 +1363,14 @@ window.renderSidebarLibrary = async function() {
     const container = document.getElementById('sidebar-library-placeholder');
     if (!container) return;
 
-    // 1. IMPORTANT: Remove the "Coming Soon" styling and text
     container.style.opacity = "1"; 
-    container.style.padding = "0"; // Reset padding to match sidebar-items
+    container.style.padding = "0"; 
 
     const likedIds = window.USER_LIKES?.songs || [];
     const followedIds = window.USER_LIKES?.artists || [];
     const sortedFollowed = [...followedIds].reverse();
 
-    // --- Render liked songs ---
+    // 1. Render Liked Songs
     const songItems = likedIds.map(id => {
         const track = window.TRACKS?.[id];
         if (!track) return '';
@@ -1371,11 +1381,23 @@ window.renderSidebarLibrary = async function() {
             </div>`;
     }).join('');
 
-    // --- Render followed artists ---
+    // 2. Render Followed Artists
     const artistItems = sortedFollowed.map(id => {
-        const artist = window.ARTISTS[id] || Object.values(window.ARTISTS)
-            .find(a => String(a.id).replace(/-/g,'').toLowerCase() === String(id).replace(/-/g,'').toLowerCase());
-        if (!artist) return '';
+        // Find artist by direct key or by searching values
+        const artist = window.ARTISTS[id] || Object.values(window.ARTISTS).find(a => 
+            String(a.id) === String(id) || 
+            String(a.handle) === String(id) ||
+            String(a.name).toLowerCase().replace(/\s+/g, '-') === String(id).toLowerCase()
+        );
+        
+        if (!artist) {
+            console.warn(`Sidebar: No artist data found for ID/Handle: "${id}"`);
+            return `
+                <div class="sidebar-item" style="opacity: 0.5;">
+                    <span class="material-icons" style="width:24px; font-size:18px; color:#333; margin-right:10px;">person</span>
+                    <span style="color: #666; font-size: 13px; font-weight: 600;">Loading...</span>
+                </div>`;
+        }
         
         const visual = artist.img_url 
             ? `<img src="${artist.img_url}" style="width:24px; height:24px; border-radius:50%; margin-right:10px; object-fit:cover;">`
@@ -1388,7 +1410,6 @@ window.renderSidebarLibrary = async function() {
             </div>`;
     }).join('');
 
-    // 2. Overwrite the "Accounts coming in v1.0.5" HTML entirely
     container.innerHTML = `
         <div style="margin-top: 5px;">
             ${songItems}
@@ -1797,69 +1818,77 @@ const publicCatalogue = (window.ALBUMS || [])
         let actionTarget = "";
         let btnText = "View More";
 
-        if (s.type === "Release") {
-            const alb = publicCatalogue.find(a => a.id === s.targetId);
-            if (alb) {
-                displayImg = alb.art_url;
-                displayTitle = s.customTitle || alb.name;
-                actionTarget = `viewAlbum('${alb.id}')`;
-                if (alb.coming_soon) {
-                    tagText = "COMING SOON";
-                    subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
-                } else {
-                    tagText = "RELEASE SPOTLIGHT";
-                    if (!s.customSub) subText = "Available Now"; 
-                }
+if (s.type === "Release") {
+        const alb = publicCatalogue.find(a => String(a.id) === String(s.targetId));
+        if (alb) {
+            displayImg = alb.art_url;
+            displayTitle = s.customTitle || alb.name;
+            actionTarget = `viewAlbum('${alb.id}')`;
+            if (alb.coming_soon) {
+                tagText = "COMING SOON";
+                subText = s.customSub || `Drops in ${getDaysUntil(alb.full_release_date)} days.`;
+            } else {
+                tagText = "RELEASE SPOTLIGHT";
+                if (!s.customSub) subText = "Available Now";
             }
-} else if (s.type === "Artist") {
-            let art = null;
-            if (window.ARTISTS) {
-                // 1. Try direct lookup (mr420)
-                art = window.ARTISTS[s.targetId];
-
-                // 2. If that fails, try a flexible search (handles mr-420 vs mr420)
-                if (!art) {
-                    const cleanTarget = String(s.targetId).replace(/-/g, '').toLowerCase();
-                    art = Object.values(window.ARTISTS).find(a => 
-                        String(a.id).replace(/-/g, '').toLowerCase() === cleanTarget
-                    );
-                }
-            }
-
-            // Fallback to s.customImg if the database still returns nothing
-            displayImg = art ? (art.banner_url || art.img_url) : "";
-            displayTitle = s.customTitle || (art ? art.name : "Featured Artist");
-            
-            tagText = "ARTIST SPOTLIGHT";
-            actionTarget = `viewArtist('${art ? art.id : s.targetId}')`;
-            btnText = "View Artist";
-} else if (s.type === "Track") {
-            // 1. Find the track data globally first
-            // This assumes window.TRACKS is an object where keys are track IDs
-            let trackData = window.TRACKS ? window.TRACKS[s.targetId] : null;
-
-            // 2. Find the parent album for the art and context
-            const parentAlbums = publicCatalogue.filter(a => a.track_ids && a.track_ids.includes(s.targetId));
-            const publicReleases = parentAlbums.filter(a => !a.coming_soon);
-            let latestAlb = publicReleases.length > 0 ? publicReleases[0] : parentAlbums[0];
-
-            if (trackData && latestAlb) {
-                displayImg = trackData.art_url || latestAlb.art_url;
-                displayTitle = s.customTitle || trackData.title;
-                subText = s.customSub || (latestAlb.track_ids.length === 1 ? 'Featured Single' : 'Featured Track');
-                tagText = "TRACK HIGHLIGHT";
-                btnText = "Play Now";
-                
-                // Keep your dual-action target
-                actionTarget = `viewAlbum('${latestAlb.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}'); }, 500);`;
-            }
-        } else if (s.type === "Video") {
-            displayImg = getYTThumb(s.url);
-            displayTitle = s.customTitle || "New Video";
-            tagText = "FEATURED VIDEO";
-            actionTarget = `window.open('${s.url}', '_blank')`;
-            btnText = "Watch Now";
+        } else {
+            console.warn(`Lookup Failed: Release ID "${s.targetId}" not found in publicCatalogue.`);
         }
+    } 
+    else if (s.type === "Artist") {
+        let art = window.ARTISTS ? window.ARTISTS[s.targetId] : null;
+
+        if (!art && window.ARTISTS) {
+            const cleanTarget = String(s.targetId).replace(/-/g, '').toLowerCase();
+            art = Object.values(window.ARTISTS).find(a =>
+                String(a.id).replace(/-/g, '').toLowerCase() === cleanTarget
+            );
+        }
+
+        if (art) {
+            displayImg = art.banner_url || art.img_url;
+            displayTitle = s.customTitle || art.name;
+            tagText = "ARTIST SPOTLIGHT";
+            actionTarget = `viewArtist('${art.id}')`;
+            btnText = "View Artist";
+        } else {
+            console.warn(`Lookup Failed: Artist ID "${s.targetId}" not found in window.ARTISTS.`);
+        }
+    } 
+    else if (s.type === "Track") {
+        let trackData = window.TRACKS ? window.TRACKS[s.targetId] : null;
+        console.log("Track Data Found:", trackData);
+
+        const parentAlbum = (window.ALBUMS || []).find(a => {
+            let ids = Array.isArray(a.track_ids) ? a.track_ids : [];
+            return ids.map(String).includes(String(s.targetId));
+        });
+        console.log("Parent Album Found:", parentAlbum);
+
+        if (trackData && parentAlbum) {
+            displayImg = trackData.art_url || parentAlbum.art_url;
+            displayTitle = s.customTitle || trackData.title;
+            subText = s.customSub || (parentAlbum.track_ids.length === 1 ? 'Featured Single' : `From ${parentAlbum.name}`);
+            tagText = "TRACK HIGHLIGHT";
+            btnText = "Play Now";
+            actionTarget = `viewAlbum('${parentAlbum.id}'); setTimeout(() => { if(window.playTrack) window.playTrack('${s.targetId}', true, '${parentAlbum.id}'); }, 600);`;
+        } else {
+            console.error(`Lookup Failed: Track logic failed for ID ${s.targetId}. TrackData exists: ${!!trackData}, ParentAlbum exists: ${!!parentAlbum}`);
+            // Fallback
+            displayImg = trackData?.art_url || (window.ALBUMS && window.ALBUMS[0]?.art_url);
+            displayTitle = s.customTitle || trackData?.title || "Featured Track";
+        }
+    } 
+    else if (s.type === "Video") {
+        displayImg = getYTThumb(s.url);
+        displayTitle = s.customTitle || "New Video";
+        tagText = "FEATURED VIDEO";
+        actionTarget = `window.open('${s.url}', '_blank')`;
+        btnText = "Watch Now";
+    }
+
+    console.log("Final Render Metadata:", { displayTitle, displayImg, actionTarget });
+    console.groupEnd();
 
         if (!displayImg && publicCatalogue[0]) displayImg = publicCatalogue[0].art_url;
 
@@ -2795,9 +2824,13 @@ window.updatePlayerUI = function() {
 };
 
 window.initApp = async function() {
-    try {
-        console.log("TRM MUSIC PLAYER: Initializing Safe Mode...");
+    // 1. Set global state immediately
+    window.USER_LIKES = { songs: [], artists: [], albums: [] };
 
+    try {
+        console.log("TRM MUSIC PLAYER: Initializing...");
+
+        // 2. Core Data Fetch
         const [
             { data: artists },
             { data: albums },
@@ -2812,14 +2845,22 @@ window.initApp = async function() {
             window.sbc.from('videos').select('*')
         ]);
 
-        // Process Data
+        // 3. Process Data (Spotlight/Artists/Tracks)
         window.SPOTLIGHTS = (spotlightRows || []).map(row => ({
             type: row.type, orderId: row.id, targetId: row.target_id,
             url: row.url, customTitle: row.custom_title, customSub: row.custom_sub
         }));
         
+// Setup Artist Lookup - Map by BOTH id and name/handle to be safe
         window.ARTISTS = {};
-        if (artists) artists.forEach(a => { window.ARTISTS[a.id] = a; });
+        if (artists) {
+            artists.forEach(a => { 
+                window.ARTISTS[a.id] = a; 
+                // This is the key: if 'lc-xavier' is a handle/name, map it here too
+                if (a.handle) window.ARTISTS[a.handle] = a;
+                if (a.name) window.ARTISTS[a.name.toLowerCase().replace(/\s+/g, '-')] = a;
+            });
+        }
 
         const trackLookup = {};
         if (tracks) tracks.forEach(t => { trackLookup[t.id] = t; });
@@ -2831,62 +2872,43 @@ window.initApp = async function() {
         }
         window.TRACKS = trackLookup; 
 
-        // --- UPDATED SMART DATE PARSER ---
+        // 4. Sorting & Formatting
         const parseSmartDate = (dateStr) => {
             if (!dateStr || dateStr === 'RELEASED') return 0;
-            
-            // Handle ordinal suffixes (1st, 2nd, etc)
             const cleanDate = String(dateStr).replace(/(\d+)(st|nd|rd|th)/, "$1");
-            
-            // Check if it's just a 4-digit year (e.g., "2026")
-            if (/^\d{4}$/.test(cleanDate)) {
-                // Set to end of year for sorting purposes
-                return new Date(`${cleanDate}-12-31T23:59:59`).getTime();
-            }
-            
-            return Date.parse(cleanDate) || 0;
+            return /^\d{4}$/.test(cleanDate) ? new Date(`${cleanDate}-12-31`).getTime() : Date.parse(cleanDate) || 0;
         };
 
-        // Apply smart sorting to the global ALBUMS list
-        window.ALBUMS = (albums || []).sort((a, b) => {
-            return parseSmartDate(b.full_release_date || b.release_date || b.year) - 
-                   parseSmartDate(a.full_release_date || a.release_date || a.year);
-        });
+        window.ALBUMS = (albums || []).sort((a, b) => 
+            parseSmartDate(b.full_release_date || b.release_date) - parseSmartDate(a.full_release_date || a.release_date)
+        );
 
         window.ALBUMS.forEach(alb => {
-            let ids = [];
-            if (Array.isArray(alb.track_ids)) {
-                ids = alb.track_ids;
-            } else if (typeof alb.track_ids === 'string') {
-                if (alb.track_ids.startsWith('[')) {
-                    try { ids = JSON.parse(alb.track_ids); } catch(e) { ids = []; }
-                } else {
-                    ids = alb.track_ids.split(',').map(s => s.trim());
-                }
+            let ids = Array.isArray(alb.track_ids) ? alb.track_ids : [];
+            if (typeof alb.track_ids === 'string') {
+                try { ids = alb.track_ids.startsWith('[') ? JSON.parse(alb.track_ids) : alb.track_ids.split(',').map(s => s.trim()); } catch(e) { ids = []; }
             }
-            alb.track_list = ids.map(id => {
-                if (typeof id === 'string' && id.startsWith('DISC_')) return id;
-                return window.TRACKS[id] || { id: id, title: "Unknown Track", duration: "0:00", missing: true };
-            });
+            alb.track_list = ids.map(id => window.TRACKS[id] || { id: id, title: "Unknown", missing: true });
         });
 
-        console.log(`System Ready. Albums: ${window.ALBUMS.length}, Tracks: ${Object.keys(window.TRACKS).length}`);
-        
-        renderSidebar();
+        // 5. Initial UI Render
+        if (typeof renderSidebar === 'function') renderSidebar();
         
         const urlParams = new URLSearchParams(window.location.search);
-        const directAlbumId = urlParams.get('album') || window.location.hash.replace('#', '');
+        const directId = urlParams.get('album') || window.location.hash.replace('#', '');
         
-        if (directAlbumId) window.viewAlbum(directAlbumId);
+        if (directId) window.viewAlbum(directId);
         else window.viewHome();
 
-        window.fetchUserLikes();
+        // 6. Final Sync
+        // We call this last. If the LockManager is busy, the catch will prevent the app from crashing.
+        window.fetchUserLikes().catch(() => console.log("Auth lock busy, retrying via listener..."));
 
     } catch (e) { 
-        console.error("Initialization failed:", e); 
+        console.error("Init Error:", e); 
         window.viewHome();
     }
-}
+};
 
 function renderSidebar() {
     const sb = document.getElementById('sidebar-releases');
@@ -2999,6 +3021,18 @@ async function toggleDesktopPiP() {
 
 window.openPatchNotes = function() {
     const versionHistory = [
+        {
+            version: "v1.0.5.3",
+            date: "February 19, 2026",
+            notes: [
+                "🐜 Squashed a bug relating to new artist's stats not showing on the app!",
+                "🎨 Artist Hub is our next big ambition! So expect us to... <a href='https://trm-brand-shop.fourthwall.com/pages/music-player#goin-dark-5' target='_blank' rel='noopener noreferrer' style='color:#00ff88; text-decoration:none;'>go dark...</a>",
+            ],
+            actionButton: {
+                text: "Support TRM BRAND via Ko-Fi",
+                url: "https://ko-fi.com/mybudshadow"
+            }
+        },
                         {
             version: "v1.0.5.2",
             date: "February 18, 2026",
@@ -3323,13 +3357,13 @@ window.openAuthModal = function(mode = 'login') {
                     <input type="email" id="modal-auth-email" placeholder="Email Address" style="background:#111; border:1px solid #222; padding:15px; border-radius:12px; color:white; outline:none; font-family:inherit;">
                     <input type="password" id="modal-auth-password" placeholder="Password" style="background:#111; border:1px solid #222; padding:15px; border-radius:12px; color:white; outline:none; font-family:inherit;">
                     
-                    <button id="auth-submit-btn" onclick="window.handleAuthSubmit()" style="background:#00ff88; color:black; font-weight:900; padding:16px; border-radius:12px; border:none; cursor:pointer; margin-top:10px; font-size:14px; letter-spacing:0.5px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">${submitText}</button>
+                    <button id="auth-submit-btn" onclick="window.handleAuthSubmit()" style="background:var(--accent-green); color:black; font-weight:900; padding:16px; border-radius:12px; border:none; cursor:pointer; margin-top:10px; font-size:14px; letter-spacing:0.5px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">${submitText}</button>
                     
                     <div id="auth-notification" style="font-size: 12px; text-align: center; min-height: 18px; border-radius: 8px;"></div>
                 </div>
 
                 <p style="text-align:center; margin-top:25px; font-size:13px; color:#444;">
-                    ${toggleText} <span onclick="window.toggleAuthMode()" style="color:#00ff88; cursor:pointer; font-weight:700;">${toggleLink}</span>
+                    ${toggleText} <span onclick="window.toggleAuthMode()" style="color:var(--accent-green); cursor:pointer; font-weight:700;">${toggleLink}</span>
                 </p>
             </div>
         `;
@@ -3430,21 +3464,21 @@ window.handleAuthSubmit = async () => {
             
             if (error) throw error;
             showMsg("Account created! Check your email.", false);
-        } else {
-            // 3. Login Logic
-            const { error } = await client.auth.signInWithPassword({ 
-                email, 
-                password 
-            });
-            
+} else {
+            const { error } = await client.auth.signInWithPassword({ email, password });
             if (error) throw error;
             
-            // Success: Remove modal and refresh UI
             const modal = document.getElementById('auth-modal-root');
             if (modal) modal.remove();
             
-            if (window.updateAuthUI) {
-                window.updateAuthUI();
+            // 1. Update the Header/Login button
+            if (window.updateAuthUI) window.updateAuthUI();
+
+            // 2. FETCH LIKES IMMEDIATELY
+            if (window.fetchUserLikes) {
+                await window.fetchUserLikes();
+                // 3. RE-RENDER SIDEBAR AFTER FETCH
+                if (window.renderSidebarLibrary) window.renderSidebarLibrary();
             }
         }
     } catch (err) {
@@ -3500,44 +3534,74 @@ window.handleLogout = async () => {
 
 window.toggleUserMenu = () => {
     const container = document.getElementById('login-btn-container');
+    if (!container) return;
+
+    // Ensure the container itself can hold the absolute menu
+    if (container.style.position !== 'relative') {
+        container.style.position = 'relative';
+    }
+
     let menu = document.getElementById('user-dropdown-menu');
     
     if (!menu) {
         menu = document.createElement('div');
         menu.id = 'user-dropdown-menu';
+        
+        // CSS Styles
         Object.assign(menu.style, {
             position: 'absolute',
-            bottom: '100%', 
-            left: '10px',
-            right: '10px',
-            background: '#0d0d0d',
-            border: '1px solid #222',
-            padding: '6px',
-            borderRadius: '12px',
+            bottom: 'calc(100% + 10px)', // Gap above the button
+            left: '0',
+            right: '0',
+            background: '#121212',
+            border: '1px solid rgba(255,255,255,0.1)',
+            padding: '8px',
+            borderRadius: '16px',
             display: 'none',
             flexDirection: 'column',
-            zIndex: '1000',
-            boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
-            marginBottom: '10px',
-            transformOrigin: 'bottom center'
+            zIndex: '9999',
+            boxShadow: '0 -15px 30px rgba(0,0,0,0.8)',
+            backdropFilter: 'blur(20px)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
         });
 
         menu.innerHTML = `
-            <div style="color: #444; font-size: 10px; font-weight: 800; padding: 8px 12px; letter-spacing: 1px;">ACCOUNT</div>
-            <button onclick="window.handleLogout()" style="all:unset; display:block; color:#ff4444; padding:12px; text-align:left; cursor:pointer; font-weight:700; font-size:12px; border-radius:8px; transition:0.2s; font-family:sans-serif;" onmouseover="this.style.background='rgba(255,0,0,0.1)'" onmouseout="this.style.background='none'">
-                LOGOUT
+            <div style="color: rgba(255,255,255,0.3); font-size: 10px; font-weight: 900; padding: 10px 12px; letter-spacing: 1.5px; text-transform: uppercase;">Manage</div>
+            <button onclick="viewAccount(); window.toggleUserMenu();" style="all:unset; display:flex; align-items:center; gap:10px; color:white; padding:12px; text-align:left; cursor:pointer; font-weight:700; font-size:13px; border-radius:10px; transition:0.2s;">
+                <span class="material-icons" style="font-size:18px;">person</span> PROFILE
+            </button>
+            <div style="height:1px; background: rgba(255,255,255,0.05); margin: 4px 8px;"></div>
+            <button onclick="window.handleLogout()" style="all:unset; display:flex; align-items:center; gap:10px; color:#ff4444; padding:12px; text-align:left; cursor:pointer; font-weight:700; font-size:13px; border-radius:10px; transition:0.2s;">
+                <span class="material-icons" style="font-size:18px;">logout</span> LOGOUT
             </button>
         `;
         container.appendChild(menu);
     }
 
     const isHidden = menu.style.display === 'none';
+    
     if (isHidden) {
+        // Close other menus if any exist
         menu.style.display = 'flex';
-        menu.classList.add('user-menu-animate');
+        // Small delay to trigger CSS transition opacity if you have it
+        setTimeout(() => {
+            menu.style.opacity = '1';
+            menu.style.transform = 'translateY(0)';
+        }, 10);
     } else {
         menu.style.display = 'none';
-        menu.classList.remove('user-menu-animate');
+    }
+
+    // Close when clicking anywhere else
+    const closeMenu = (e) => {
+        if (!container.contains(e.target)) {
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    
+    if (isHidden) {
+        setTimeout(() => document.addEventListener('click', closeMenu), 10);
     }
 };
 
@@ -3552,21 +3616,18 @@ window.addEventListener('click', (e) => {
 
 let isHydrating = false; // Flag to prevent multiple simultaneous calls
 
-window.sbc.auth.onAuthStateChange(async (event, session) => {
+window.sbc.auth.onAuthStateChange((event, session) => {
     console.log("Auth Event:", event);
     
-    // Prevent AbortError by wrapping in a silent try/catch
-    try {
-        if (session?.user) {
-            // Background hydration
-            window.fetchUserLikes();
-        } else if (event === 'SIGNED_OUT') {
-            window.USER_LIKES = { songs: [], albums: [] };
-            if (window.renderSidebarLibrary) window.renderSidebarLibrary();
-            if (window.updateLikeButtonUI) window.updateLikeButtonUI();
-        }
-    } catch (err) {
-        // Silently catch background errors
+    // Use a non-blocking approach for hydration
+    if (session?.user) {
+        // Don't await here; let it run in the background
+        window.fetchUserLikes().catch(err => console.error("Hydration fail:", err));
+    } else if (event === 'SIGNED_OUT') {
+        window.USER_LIKES = { songs: [], artists: [], albums: [] };
+        if (window.renderSidebarLibrary) window.renderSidebarLibrary();
+        if (window.updateLikeButtonUI) window.updateLikeButtonUI();
+        if (window.currentViewId === 'library') window.viewLibrary();
     }
 
     if (window.updateAuthUI) window.updateAuthUI();
