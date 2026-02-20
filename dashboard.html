@@ -1534,8 +1534,8 @@ window.viewArtist = function(artistId) {
         return days > 0 ? days : 0;
     };
 
-    // 2. Advanced Sorting Logic
-    const rawReleases = window.ALBUMS.filter(a => a.artist_id === artist.id || a.artist_id === artistId);
+    // 2. Advanced Sorting Logic (Updated to filter out hidden releases)
+    const rawReleases = window.ALBUMS.filter(a => (a.artist_id === artist.id || a.artist_id === artistId) && a.hidden !== true);
     
     const getSortPriority = (alb) => {
         const isSoon = typeof isAlbumComingSoon === 'function' && isAlbumComingSoon(alb);
