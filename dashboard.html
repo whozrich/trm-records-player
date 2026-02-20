@@ -2213,26 +2213,38 @@ window.viewAlbum = function(id, scrollToTop = true) {
 
     const calculateTotalRuntime = (tracks) => {
         let totalSeconds = 0;
-        let hasPlayableTracks = false;
+        let hasData = false;
+        
         tracks.forEach(t => {
             if (!t || typeof t === 'string') return;
-            const parentIds = t.album_id ? t.album_id.split(',').map(s => s.trim()) : [];
-            const isReleasedElsewhere = parentIds.some(aid => {
-                const other = window.ALBUMS.find(a => a.id === aid);
-                return other && !window.isAlbumComingSoon(other);
-            });
-            if (isReleasedElsewhere || isReleased) {
-                if (t.duration && t.duration !== "??:??") {
-                    const parts = t.duration.split(':');
-                    totalSeconds += (parseInt(parts[0]) * 60) + parseInt(parts[1]);
-                    hasPlayableTracks = true;
+            
+            // If the track has a duration, we count it for the UI total 
+            // regardless of release status so the user knows the "size" of the project
+            if (t.duration && t.duration !== "??:??") {
+                const parts = t.duration.split(':').map(p => parseInt(p) || 0);
+                let s = 0;
+                if (parts.length === 3) { // H:M:S
+                    s = (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+                } else if (parts.length === 2) { // M:S
+                    s = (parts[0] * 60) + parts[1];
                 }
+                totalSeconds += s;
+                if (s > 0) hasData = true;
             }
         });
-        if (!hasPlayableTracks) return null;
-        const mins = Math.floor(totalSeconds / 60);
+
+        if (!hasData) return null;
+
+        const hrs = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
         const secs = totalSeconds % 60;
-        return `${mins} min ${secs} sec`;
+
+        let display = "";
+        if (hrs > 0) display += `${hrs} hr `;
+        display += `${mins} min`;
+        if (hrs === 0 && mins < 10) display += ` ${secs} sec`; // Only show seconds for short projects
+        
+        return display;
     };
 
     const albumRuntime = calculateTotalRuntime(tks);
