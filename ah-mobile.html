@@ -92,7 +92,7 @@
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
 }
 
-        /* Search Item */
+        /*   Item */
         .search-item {
             display: flex; align-items: center; justify-content: space-between;
             background: var(--card-bg); padding: 15px;
@@ -238,6 +238,187 @@ function showArtistSearchUI() {
 
     document.getElementById('artist-search').addEventListener('input', debounce(handleArtistSearch, 400));
 }
+
+async function handleArtistSearch(e) {
+    const query = e.target.value.trim();
+    const resultsContainer = document.getElementById('search-results');
+    
+    // Use the 'client' variable you defined at the top of your script
+    if (!client) {
+        console.error("Supabase client not initialized yet.");
+        return;
+    }
+
+    if (query.length < 2) {
+        resultsContainer.innerHTML = '';
+        return;
+    }
+
+    resultsContainer.innerHTML = `<div style="color:var(--text-dim); font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>`;
+
+    try {
+        const { data: artists, error } = await client
+            .from('artists')
+            .select('id, name, banner_url, verified, id') // Added slug here so openApplyModal works
+            .ilike('name', `%${query}%`)
+            .limit(5);
+
+        if (error) throw error;
+
+        if (!artists || artists.length === 0) {
+            resultsContainer.innerHTML = `<div style="color: #444; font-size: 14px; padding: 10px;">No artists found.</div>`;
+            return;
+        }
+
+        resultsContainer.innerHTML = artists.map(artist => `
+            <div onclick="openApplyModal('${artist.name.replace(/'/g, "\\'")}', '${artist.slug || artist.id}')" 
+                 style="display: flex; align-items: center; gap: 12px; background: #0a0a0a; padding: 12px; border-radius: 12px; border: 1px solid #111; cursor: pointer;">
+                <img src="${artist.banner_url || 'https://via.placeholder.com/50'}" 
+                     style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #111;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; color: white; display: flex; align-items: center; gap: 5px;">
+                        ${artist.name}
+                        ${artist.verified ? '<i class="fas fa-check-circle" style="color: #3897f0; font-size: 12px;"></i>' : ''}
+                    </div>
+                    <div style="font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px;">Artist Entity</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: #222; font-size: 12px;"></i>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error("Search error:", err);
+        resultsContainer.innerHTML = `<div style="color: #ff4444; font-size:12px;">Search failed. Check connection.</div>`;
+    }
+}
+
+window.openApplyModal = (name, slug) => {
+    // Prevent duplicate modals
+    if (document.getElementById('apply-modal-root')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'apply-modal-root';
+    
+    // Using fixed inset and flex-end for a "Bottom Sheet" feel on mobile
+    Object.assign(modal.style, {
+        position: 'fixed', inset: '0', zIndex: '99999', 
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center', 
+        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(15px)',
+        animation: 'fadeIn 0.3s ease'
+    });
+
+    modal.innerHTML = `
+        <div class="modal-slide-up" style="background:#0d0d0d; border-top:1px solid #222; width:100%; max-height:92%; padding:30px 20px 50px 20px; border-radius:30px 30px 0 0; overflow-y:auto; position:relative;">
+            
+            <div style="width:40px; height:4px; background:#333; border-radius:10px; margin:0 auto 25px auto;"></div>
+
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:20px;">
+                <div>
+                    <h2 style="font-weight:900; margin:0; font-size:24px; letter-spacing:-0.5px;">Claim ${name}</h2>
+                    <p style="color:#666; font-size:14px; margin-top:5px;">Verification required for Artist Entities.</p>
+                </div>
+                <button onclick="document.getElementById('apply-modal-root').remove()" style="background:#1a1a1a; border:none; width:35px; height:35px; border-radius:50%; color:white;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <label style="font-size:11px; font-weight:900; color:#444; text-transform:uppercase; letter-spacing:1px; margin-left:5px;">Legal Identity</label>
+                <input type="text" id="req-name" placeholder="Full Legal Name" class="mobile-field">
+                
+                <label style="font-size:11px; font-weight:900; color:#444; text-transform:uppercase; letter-spacing:1px; margin-left:5px;">Date of Birth</label>
+                <input type="date" id="req-dob" class="mobile-field">
+                
+                <label style="font-size:11px; font-weight:900; color:#444; text-transform:uppercase; letter-spacing:1px; margin-left:5px;">Proof of Ownership</label>
+                <textarea id="req-proof" placeholder="Link to Spotify, Instagram, or Official Site..." class="mobile-field" style="min-height:100px; resize:none;"></textarea>
+                
+                <button id="submit-req-btn" onclick="submitRequest('${slug}')" style="background:white; color:black; border:none; padding:18px; border-radius:15px; font-weight:900; font-size:14px; margin-top:15px; width:100%; transition: opacity 0.2s;">
+                    SUBMIT APPLICATION
+                </button>
+                
+                <p style="color:#333; font-size:11px; text-align:center; margin-top:15px; line-height:1.4;">
+                    Applications are reviewed within 48 hours. Ensure your social profiles mention TRM for faster verification.
+                </p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    
+    // Add the specific mobile styles if not exists
+    if (!document.getElementById('mobile-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-modal-styles';
+        style.innerHTML = `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            .modal-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+            @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+            .mobile-field { 
+                background:#111; border:1px solid #222; padding:16px; border-radius:14px; 
+                color:white; font-size:16px !important; width:100%; outline:none; 
+            }
+            .mobile-field:focus { border-color: #444; }
+        `;
+        document.head.appendChild(style);
+    }
+};
+
+window.submitRequest = async (slug) => {
+    const btn = document.getElementById('submit-req-btn');
+    const name = document.getElementById('req-name').value.trim();
+    const dob = document.getElementById('req-dob').value;
+    const proof = document.getElementById('req-proof').value.trim();
+
+    const supabase = window.client || window.db;
+
+    if (!name || !dob || !proof) {
+        alert("Please fill in all verification fields.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VERIFYING...';
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) throw new Error("Please log in first.");
+
+        // 1. FETCH THE USERNAME
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', session.user.id)
+            .single();
+
+        if (userError) throw new Error("Could not retrieve your username.");
+        const currentUsername = userData.username;
+
+        // 2. PREPARE PAYLOAD WITH USERNAME
+        const payload = {
+            user_id: session.user.id,
+            username: currentUsername, // New column in public.requests
+            artist_slug: slug,        // This is the Artist ID
+            full_name: name,
+            dob: dob,
+            proof_details: proof,
+            status: 'pending'
+        };
+
+        // 3. SUBMIT TO PUBLIC.REQUESTS
+        const { error: insertError } = await supabase
+            .from('requests')
+            .insert([payload]);
+        
+        if (insertError) throw insertError;
+
+        alert(`✅ Application sent for ${currentUsername}!`);
+        document.getElementById('apply-modal-root').remove();
+
+    } catch (err) {
+        alert("Submission failed: " + err.message);
+        btn.disabled = false;
+        btn.innerHTML = 'SUBMIT APPLICATION';
+    }
+};
 
 window.switchView = (viewId) => {
     console.log("Switching to:", viewId);
