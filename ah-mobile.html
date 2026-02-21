@@ -222,7 +222,7 @@ function showArtistSearchUI() {
     
     viewport.innerHTML = `
         <div style="width: 100%; text-align: left;">
-            <h1 style="font-weight:900; font-size:32px; margin-bottom: 10px; letter-spacing:-1px;">Artist Hub</h1>
+            <h1 style="font-weight:900; font-size:32px; margin-bottom: 10px; letter-spacing:-1px;">Artist Hub Mobile (Beta)</h1>
             <p style="color:#666; margin-bottom: 30px; font-size: 15px;">Search for your name to claim your profile.</p>
             
             <input type="text" id="artist-search" class="mobile-input" placeholder="Search artists...">
@@ -260,10 +260,10 @@ window.switchView = (viewId) => {
             renderReleasesView(content);
             break;
         case 'analytics':
-            content.innerHTML = `<h2 style="font-weight:900;">Analytics</h2><p style="color:#666;">Detailed stats are best viewed on desktop.</p>`;
+            content.innerHTML = `<h2 style="font-weight:900;">Analytics</h2><p style="color:#666;">Work In Progress!</p>`;
             break;
         case 'profile':
-            content.innerHTML = `<h2 style="font-weight:900;">Profile Settings</h2><p style="color:#666;">Manage your artist bio and links.</p>`;
+            content.innerHTML = `<h2 style="font-weight:900;">Profile Settings</h2><p style="color:#666;">Work In Progress!</p>`;
             break;
     }
 };
@@ -274,18 +274,7 @@ function renderHomeView(container) {
     container.innerHTML = `
         <div style="margin-bottom: 30px;">
             <h1 style="font-weight: 900; font-size: 28px; margin-bottom: 5px;">Dashboard</h1>
-            <p style="color: #666; font-size: 14px;">Your music performance at a glance.</p>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
-            <div style="background: #0d0d0d; padding: 20px; border-radius: 20px; border: 1px solid #111;">
-                <span style="font-size: 10px; font-weight: 900; color: var(--accent-green);">TOTAL PLAYS</span>
-                <h2 style="margin: 5px 0 0; font-weight: 900;">--</h2>
-            </div>
-            <div style="background: #0d0d0d; padding: 20px; border-radius: 20px; border: 1px solid #111;">
-                <span style="font-size: 10px; font-weight: 900; color: var(--accent-green);">FOLLOWERS</span>
-                <h2 style="margin: 5px 0 0; font-weight: 900;">--</h2>
-            </div>
+            <p style="color: #666; font-size: 14px;">Manage your music at just a glance!</p>
         </div>
 
         <h3 style="font-weight: 900; margin-bottom: 15px;">Latest Activity</h3>
@@ -314,7 +303,7 @@ function renderLoginState() {
             <div style="width: 80px; height: 80px; background: rgba(114, 104, 255, 0.05); border: 1px solid rgba(114, 104, 255, 0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;">
                 <i class="fa-solid fa-lock fa-2xl" style="color: var(--accent-green);"></i>
             </div>
-            <h1 style="font-weight:900; font-size: 28px; margin-bottom: 10px;">Artist Hub</h1>
+            <h1 style="font-weight:900; font-size: 28px; margin-bottom: 10px;">Artist Hub Mobile (Beta)</h1>
             <p style="color:#888; margin-bottom: 30px; font-size: 15px; line-height: 1.5;">Access your studio tools, analytics, and release management on the go.</p>
             <button onclick="window.openAuthModal('login')" class="btn-main" style="background:var(--accent-green); color:white;">LOGIN TO ACCOUNT</button>
             <p style="margin-top: 20px; font-size: 12px; color: #444; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Artist Verification Required</p>
@@ -473,7 +462,7 @@ async function showMobileDashboard(artistSlug) {
     viewport.innerHTML = `
         <div id="mobile-shell" style="display: flex; flex-direction: column; height: 100vh;">
             <header style="padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #111;">
-                <span style="font-weight: 900; letter-spacing: -1px; font-size: 20px;">Artist Hub</span>
+                <span style="font-weight: 900; letter-spacing: -1px; font-size: 20px;">Artist Hub Mobile (Beta)</span>
                 <div id="login-btn-container"></div>
             </header>
 
